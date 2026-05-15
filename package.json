@@ -11,6 +11,9 @@
     "push:env": "tsx scripts/push-vercel-env.ts",
     "reset": "tsx scripts/reset-db.ts",
     "reset:force": "tsx scripts/reset-db.ts --force",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:demo:force": "tsx scripts/seed-demo.ts --force",
+    "fresh": "npm run reset:force && npm run seed:demo",
     "test": "vitest run",
     "test:watch": "vitest"
   },
