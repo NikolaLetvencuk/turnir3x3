@@ -38,7 +38,7 @@ function LiveClock({ match }: { match: Match }) {
   return (
     <div className="text-center">
       {isLive && (
-        <div className="text-red-600 font-bold text-2xl animate-pulse">{minute}'</div>
+        <div className="text-red-600 font-bold text-2xl animate-pulse">{minute}&apos;</div>
       )}
       <div className="text-xs text-zinc-500">{phaseLabel(match.phase)}</div>
     </div>

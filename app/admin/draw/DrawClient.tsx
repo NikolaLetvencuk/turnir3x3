@@ -100,7 +100,7 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
                   <span className="truncate">{t.name}</span>
                 </div>
               ))}
-              {teams.length === 0 && <p className="text-sm text-zinc-500 col-span-full">Dodaj prvo timove u sekciji „Timovi".</p>}
+              {teams.length === 0 && <p className="text-sm text-zinc-500 col-span-full">Dodaj prvo timove u sekciji „Timovi“.</p>}
             </div>
           </div>
         </>

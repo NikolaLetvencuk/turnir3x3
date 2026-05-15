@@ -42,7 +42,7 @@ function ClockDisplay({ match }: { match: Match }) {
     <div className="text-center">
       {isLive && (
         <div className="inline-flex items-center gap-2 text-red-600 font-bold text-xl animate-pulse">
-          <span className="live-dot" /> {minute}'
+          <span className="live-dot" /> {minute}&apos;
           <span className="text-xs text-zinc-500 font-medium">{phaseLabel(match.phase)}</span>
         </div>
       )}
