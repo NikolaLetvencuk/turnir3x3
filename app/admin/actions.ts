@@ -390,6 +390,86 @@ export async function deleteMatchEvent(formData: FormData): Promise<ActionResult
   }) as Promise<ActionResult>;
 }
 
+// DRAW: commit pre-computed draw to DB; wipes existing groups/group_teams/rounds/matches first
+export async function commitDraw(payload: {
+  groups: Array<{ name: string; team_ids: string[] }>;
+  rounds: Array<{ name: string; matches: Array<{ group_index: number; home_team_id: string; away_team_id: string }> }>;
+}): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    // Wipe existing fixtures (keep teams, players)
+    await admin.from("match_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await admin.from("matches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await admin.from("group_teams").delete().neq("group_id", "00000000-0000-0000-0000-000000000000");
+    await admin.from("rounds").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await admin.from("groups").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+    // Insert groups
+    const groupRows = payload.groups.map((g, i) => ({ name: g.name, display_order: i }));
+    const { data: insertedGroups, error: gErr } = await admin.from("groups").insert(groupRows).select();
+    if (gErr || !insertedGroups) return { ok: false, error: gErr?.message ?? "Greška sa grupama" };
+
+    // group_teams
+    const gtRows: Array<{ group_id: string; team_id: string }> = [];
+    insertedGroups.forEach((g: any, i: number) => {
+      payload.groups[i].team_ids.forEach((tid) => gtRows.push({ group_id: g.id, team_id: tid }));
+    });
+    if (gtRows.length) {
+      const { error: gtErr } = await admin.from("group_teams").insert(gtRows);
+      if (gtErr) return { ok: false, error: gtErr.message };
+    }
+
+    // rounds
+    const roundRows = payload.rounds.map((r, i) => ({ name: r.name, stage: "group", display_order: i }));
+    const { data: insertedRounds, error: rErr } = await admin.from("rounds").insert(roundRows).select();
+    if (rErr || !insertedRounds) return { ok: false, error: rErr?.message ?? "Greška sa kolima" };
+
+    // matches
+    const matchRows: any[] = [];
+    insertedRounds.forEach((r: any, ri: number) => {
+      payload.rounds[ri].matches.forEach((m) => {
+        matchRows.push({
+          round_id: r.id,
+          group_id: insertedGroups[m.group_index].id,
+          home_team_id: m.home_team_id,
+          away_team_id: m.away_team_id,
+        });
+      });
+    });
+    if (matchRows.length) {
+      const { error: mErr } = await admin.from("matches").insert(matchRows);
+      if (mErr) return { ok: false, error: mErr.message };
+    }
+
+    revalidatePath("/standings");
+    revalidatePath("/matches");
+    revalidatePath("/admin");
+    revalidatePath("/admin/groups");
+    revalidatePath("/admin/matches");
+    revalidatePath("/admin/schedule");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// SCHEDULE: move a match to a different round
+export async function moveMatchToRound(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const match_id = formData.get("match_id") as string;
+    const round_id = formData.get("round_id") as string;
+    if (!match_id || !round_id) return { ok: false, error: "Neispravni podaci" };
+    const admin = createAdminClient();
+    // Verify target round is not active/finished
+    const { data: round } = await admin.from("rounds").select("status").eq("id", round_id).maybeSingle();
+    const rstatus = (round as any)?.status;
+    if (rstatus === "active" || rstatus === "finished") return { ok: false, error: "Kolo je zaključano" };
+    const { error } = await admin.from("matches").update({ round_id }).eq("id", match_id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/schedule");
+    revalidatePath("/matches");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 // FANTASY
 export async function recalcRound(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {

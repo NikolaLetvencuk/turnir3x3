@@ -12,11 +12,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ["/admin", "Pregled"],
     ["/admin/teams", "Timovi"],
     ["/admin/players", "Igrači"],
-    ["/admin/groups", "Grupe"],
-    ["/admin/rounds", "Kola"],
+    ["/admin/draw", "Žreb"],
+    ["/admin/schedule", "Raspored"],
     ["/admin/matches", "Mečevi"],
     ["/admin/bracket", "Eliminacije"],
     ["/admin/fantasy", "Fantasy"],
+    ["/admin/danger-zone", "⚠ Reset"],
   ] as const;
 
   return (
