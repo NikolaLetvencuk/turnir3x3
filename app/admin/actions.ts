@@ -287,16 +287,45 @@ export async function deleteMatch(formData: FormData): Promise<ActionResult> {
   }) as Promise<ActionResult>;
 }
 
-export async function startMatch(formData: FormData): Promise<ActionResult> {
+export async function startFirstHalf(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
     const { data: match } = await admin.from("matches").select("round_id").eq("id", id).maybeSingle();
     if (!match) return { ok: false, error: "Meč ne postoji" };
-    await admin.rpc("lock_round", { p_round_id: match.round_id });
-    const { error } = await admin.from("matches").update({ status: "live", started_at: new Date().toISOString() }).eq("id", id);
+    await admin.rpc("lock_round", { p_round_id: (match as any).round_id });
+    const now = new Date().toISOString();
+    const { error } = await admin.from("matches")
+      .update({ phase: "first_half", started_at: now, second_half_started_at: null, finished_at: null })
+      .eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/matches");
+    revalidatePath(`/admin/matches/${id}/live`);
+    revalidatePath(`/matches/${id}`);
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+export async function endFirstHalf(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const id = formData.get("id") as string;
+    const admin = createAdminClient();
+    const { error } = await admin.from("matches").update({ phase: "halftime" }).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/admin/matches/${id}/live`);
+    revalidatePath(`/matches/${id}`);
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+export async function startSecondHalf(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const id = formData.get("id") as string;
+    const admin = createAdminClient();
+    const { error } = await admin.from("matches")
+      .update({ phase: "second_half", second_half_started_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
     revalidatePath(`/admin/matches/${id}/live`);
     revalidatePath(`/matches/${id}`);
     return { ok: true };
@@ -307,59 +336,47 @@ export async function finishMatch(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
-    const { error } = await admin.from("matches").update({ status: "finished", finished_at: new Date().toISOString() }).eq("id", id);
+    const { data: m } = await admin.from("matches").select("started_at, phase").eq("id", id).maybeSingle();
+    if (!m) return { ok: false, error: "Meč ne postoji" };
+    if (!(m as any).started_at) return { ok: false, error: "Meč nije pokrenut" };
+    const { error } = await admin.from("matches")
+      .update({ phase: "finished", finished_at: new Date().toISOString() })
+      .eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/matches");
     revalidatePath(`/admin/matches/${id}/live`);
     revalidatePath(`/matches/${id}`);
+    revalidatePath("/standings");
     return { ok: true };
   }) as Promise<ActionResult>;
 }
 
-export async function updateMatchScore(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
-    const id = formData.get("id") as string;
-    const home_score = Number(formData.get("home_score") ?? 0);
-    const away_score = Number(formData.get("away_score") ?? 0);
-    const admin = createAdminClient();
-    const { error } = await admin.from("matches").update({ home_score, away_score }).eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    revalidatePath(`/admin/matches/${id}/live`);
-    revalidatePath(`/matches/${id}`);
-    return { ok: true };
-  }) as Promise<ActionResult>;
-}
+// MATCH EVENTS — score is maintained by DB trigger refresh_match_score
+const eventSchema = z.object({
+  match_id: z.string().uuid(),
+  player_id: z.string().uuid(),
+  team_id: z.string().uuid(),
+  assist_player_id: z.string().uuid().nullable().optional(),
+  event_type: z.enum(["goal", "own_goal", "yellow_card", "red_card"]),
+  minute: z.number().int().min(0).max(200),
+});
 
-// MATCH EVENTS
 export async function createMatchEvent(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
-    const match_id = formData.get("match_id") as string;
-    const player_id = formData.get("player_id") as string;
-    const team_id = formData.get("team_id") as string;
-    const assist_player_id = (formData.get("assist_player_id") as string) || null;
-    const event_type = formData.get("event_type") as string;
-    const minute = formData.get("minute") ? Number(formData.get("minute")) : null;
-    if (!match_id || !player_id || !team_id || !event_type) return { ok: false, error: "Neispravni podaci" };
+    const parsed = eventSchema.safeParse({
+      match_id: formData.get("match_id"),
+      player_id: formData.get("player_id"),
+      team_id: formData.get("team_id"),
+      assist_player_id: (formData.get("assist_player_id") as string) || null,
+      event_type: formData.get("event_type"),
+      minute: formData.get("minute") ? Number(formData.get("minute")) : NaN,
+    });
+    if (!parsed.success) return { ok: false, error: "Svi podaci uključujući minut su obavezni" };
     const admin = createAdminClient();
-
-    // Update score if goal / own_goal
-    if (event_type === "goal" || event_type === "own_goal") {
-      const { data: m } = await admin.from("matches").select("home_team_id, away_team_id, home_score, away_score").eq("id", match_id).maybeSingle();
-      if (m) {
-        const scoringTeam = event_type === "own_goal"
-          ? (team_id === m.home_team_id ? m.away_team_id : m.home_team_id)
-          : team_id;
-        const updates: any = {};
-        if (scoringTeam === m.home_team_id) updates.home_score = (m.home_score ?? 0) + 1;
-        else if (scoringTeam === m.away_team_id) updates.away_score = (m.away_score ?? 0) + 1;
-        if (Object.keys(updates).length) await admin.from("matches").update(updates).eq("id", match_id);
-      }
-    }
-
-    const { error } = await admin.from("match_events").insert({ match_id, player_id, team_id, assist_player_id, event_type, minute });
+    const { error } = await admin.from("match_events").insert(parsed.data);
     if (error) return { ok: false, error: error.message };
-    revalidatePath(`/admin/matches/${match_id}/live`);
-    revalidatePath(`/matches/${match_id}`);
+    revalidatePath(`/admin/matches/${parsed.data.match_id}/live`);
+    revalidatePath(`/matches/${parsed.data.match_id}`);
     return { ok: true };
   }) as Promise<ActionResult>;
 }
@@ -369,19 +386,6 @@ export async function deleteMatchEvent(formData: FormData): Promise<ActionResult
     const id = formData.get("id") as string;
     const match_id = formData.get("match_id") as string;
     const admin = createAdminClient();
-    const { data: ev } = await admin.from("match_events").select("event_type, team_id").eq("id", id).maybeSingle();
-    if (ev && (ev.event_type === "goal" || ev.event_type === "own_goal")) {
-      const { data: m } = await admin.from("matches").select("home_team_id, away_team_id, home_score, away_score").eq("id", match_id).maybeSingle();
-      if (m) {
-        const scoringTeam = ev.event_type === "own_goal"
-          ? (ev.team_id === m.home_team_id ? m.away_team_id : m.home_team_id)
-          : ev.team_id;
-        const updates: any = {};
-        if (scoringTeam === m.home_team_id) updates.home_score = Math.max(0, (m.home_score ?? 0) - 1);
-        else if (scoringTeam === m.away_team_id) updates.away_score = Math.max(0, (m.away_score ?? 0) - 1);
-        if (Object.keys(updates).length) await admin.from("matches").update(updates).eq("id", match_id);
-      }
-    }
     const { error } = await admin.from("match_events").delete().eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath(`/admin/matches/${match_id}/live`);
