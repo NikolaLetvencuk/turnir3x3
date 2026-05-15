@@ -21,7 +21,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
-        <h1 className="text-2xl font-bold">Turnir Kula 3v3</h1>
+        <h1 className="text-2xl font-bold">Turnir Kula</h1>
         <p className="text-emerald-50 mt-1 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
         <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">
           Sastavi svoj fantasy tim →
