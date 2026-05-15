@@ -19,11 +19,51 @@ import type { Database } from "@/types/database";
 type Match = Database["public"]["Tables"]["matches"]["Row"] & {
   home_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null } | null;
   away_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null } | null;
+  round?: { stage: string; name: string } | null;
 };
 type Ev = Database["public"]["Tables"]["match_events"]["Row"];
 type PlayerLite = { id: string; name: string; team_id: string | null; photo_url: string | null };
 
 const eventIcon = (t: string) => t === "goal" ? "⚽" : t === "own_goal" ? "⚽AG" : t === "yellow_card" ? "🟨" : t === "red_card" ? "🟥" : "•";
+
+function FinishMatchButtons({ match, run }: { match: Match; run: ReturnType<typeof useActionRunner> }) {
+  const isKnockout = match.round?.stage === "knockout";
+  const tied = match.home_score === match.away_score;
+  const [pickingWinner, setPickingWinner] = useState(false);
+
+  async function finishWithWinner(winnerId: string | null) {
+    const fd = new FormData();
+    fd.set("id", match.id);
+    if (winnerId) fd.set("knockout_winner_id", winnerId);
+    await run(finishMatch, fd, { successMessage: "Završeno" });
+  }
+
+  if (isKnockout && tied) {
+    if (pickingWinner) {
+      return (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-sm text-zinc-600">Pobednik:</span>
+          <button onClick={() => finishWithWinner(match.home_team_id)} className="btn-primary">{match.home_team?.name}</button>
+          <button onClick={() => finishWithWinner(match.away_team_id)} className="btn-primary">{match.away_team?.name}</button>
+          <button onClick={() => setPickingWinner(false)} className="btn-secondary">Otkaži</button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => setPickingWinner(true)} className="btn-secondary">Penali</button>
+        <button onClick={() => setPickingWinner(true)} className="btn-secondary">Produžeci</button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => {
+      if (!confirm("Završi meč?")) return;
+      finishWithWinner(null);
+    }} className="btn-danger">Završi meč</button>
+  );
+}
 
 function LiveClock({ match }: { match: Match }) {
   const [, setTick] = useState(0);
@@ -50,7 +90,7 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
   const run = useActionRunner();
   const m = match as Match;
 
-  const [selectedTeam, setSelectedTeam] = useState<string>(m.home_team_id);
+  const [selectedTeam, setSelectedTeam] = useState<string>(m.home_team_id ?? "");
   const [eventType, setEventType] = useState("goal");
   const [playerId, setPlayerId] = useState("");
   const [assistId, setAssistId] = useState("");
@@ -125,12 +165,7 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
           {m.phase === "halftime" && (
             <button onClick={() => setPhase(startSecondHalf, "Drugo poluvreme")} className="btn-primary">Pokreni drugo poluvreme</button>
           )}
-          {m.phase === "second_half" && (
-            <button onClick={() => {
-              if (!confirm("Završi meč?")) return;
-              setPhase(finishMatch, "Završeno");
-            }} className="btn-danger">Završi meč</button>
-          )}
+          {m.phase === "second_half" && <FinishMatchButtons match={m} run={run} />}
           {m.phase === "finished" && (
             <span className="text-sm text-zinc-500">Meč je završen.</span>
           )}
@@ -142,8 +177,8 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
           <h2 className="font-medium">Dodaj događaj</h2>
           <div className="grid grid-cols-2 gap-2">
             <select className="input" value={selectedTeam} onChange={(e) => { setSelectedTeam(e.target.value); setPlayerId(""); setAssistId(""); }}>
-              <option value={m.home_team_id}>{m.home_team?.name}</option>
-              <option value={m.away_team_id}>{m.away_team?.name}</option>
+              <option value={m.home_team_id ?? ""}>{m.home_team?.name}</option>
+              <option value={m.away_team_id ?? ""}>{m.away_team?.name}</option>
             </select>
             <select className="input" value={eventType} onChange={(e) => setEventType(e.target.value)}>
               <option value="goal">Gol</option>

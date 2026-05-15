@@ -394,16 +394,21 @@ export type Database = {
       }
       matches: {
         Row: {
+          away_placeholder: string | null
           away_score: number
-          away_team_id: string
+          away_team_id: string | null
+          away_team_id_manual: string | null
           bracket_position: string | null
           created_at: string
           finished_at: string | null
           group_id: string | null
+          home_placeholder: string | null
           home_score: number
-          home_team_id: string
+          home_team_id: string | null
+          home_team_id_manual: string | null
           id: string
           kickoff_at: string | null
+          knockout_winner_id: string | null
           phase: string
           round_id: string
           second_half_started_at: string | null
@@ -411,16 +416,21 @@ export type Database = {
           status: string
         }
         Insert: {
+          away_placeholder?: string | null
           away_score?: number
-          away_team_id: string
+          away_team_id?: string | null
+          away_team_id_manual?: string | null
           bracket_position?: string | null
           created_at?: string
           finished_at?: string | null
           group_id?: string | null
+          home_placeholder?: string | null
           home_score?: number
-          home_team_id: string
+          home_team_id?: string | null
+          home_team_id_manual?: string | null
           id?: string
           kickoff_at?: string | null
+          knockout_winner_id?: string | null
           phase?: string
           round_id: string
           second_half_started_at?: string | null
@@ -428,16 +438,21 @@ export type Database = {
           status?: string
         }
         Update: {
+          away_placeholder?: string | null
           away_score?: number
-          away_team_id?: string
+          away_team_id?: string | null
+          away_team_id_manual?: string | null
           bracket_position?: string | null
           created_at?: string
           finished_at?: string | null
           group_id?: string | null
+          home_placeholder?: string | null
           home_score?: number
-          home_team_id?: string
+          home_team_id?: string | null
+          home_team_id_manual?: string | null
           id?: string
           kickoff_at?: string | null
+          knockout_winner_id?: string | null
           phase?: string
           round_id?: string
           second_half_started_at?: string | null
@@ -453,6 +468,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "matches_away_team_id_manual_fkey"
+            columns: ["away_team_id_manual"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "matches_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
@@ -462,6 +484,20 @@ export type Database = {
           {
             foreignKeyName: "matches_home_team_id_fkey"
             columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_home_team_id_manual_fkey"
+            columns: ["home_team_id_manual"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_knockout_winner_id_fkey"
+            columns: ["knockout_winner_id"]
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
@@ -566,7 +602,6 @@ export type Database = {
           id: string
           name: string
           photo_url: string | null
-          position: string | null
           team_id: string | null
         }
         Insert: {
@@ -574,7 +609,6 @@ export type Database = {
           id?: string
           name: string
           photo_url?: string | null
-          position?: string | null
           team_id?: string | null
         }
         Update: {
@@ -582,7 +616,6 @@ export type Database = {
           id?: string
           name?: string
           photo_url?: string | null
-          position?: string | null
           team_id?: string | null
         }
         Relationships: [
@@ -676,10 +709,38 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_state: {
+        Row: {
+          advancing_per_group: number | null
+          best_thirds: number | null
+          group_stage_locked: boolean
+          group_stage_locked_at: string | null
+          id: boolean
+          include_third_place: boolean
+        }
+        Insert: {
+          advancing_per_group?: number | null
+          best_thirds?: number | null
+          group_stage_locked?: boolean
+          group_stage_locked_at?: string | null
+          id?: boolean
+          include_third_place?: boolean
+        }
+        Update: {
+          advancing_per_group?: number | null
+          best_thirds?: number | null
+          group_stage_locked?: boolean
+          group_stage_locked_at?: string | null
+          id?: boolean
+          include_third_place?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       standings: {
         Row: {
+          discipline_points: number | null
           draws: number | null
           goal_diff: number | null
           goals_against: number | null
@@ -688,14 +749,21 @@ export type Database = {
           losses: number | null
           played: number | null
           points: number | null
+          ppg: number | null
+          red_cards: number | null
           team_id: string | null
           wins: number | null
+          yellow_cards: number | null
         }
         Relationships: []
       }
     }
     Functions: {
       generate_invite_code: { Args: never; Returns: string }
+      h2h_points: {
+        Args: { p_team_a: string; p_team_b: string }
+        Returns: number
+      }
       lock_round: { Args: { p_round_id: string }; Returns: undefined }
       recalculate_player_points_for_round: {
         Args: { p_round_id: string }

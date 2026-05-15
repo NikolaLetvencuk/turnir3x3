@@ -47,7 +47,6 @@ export default async function PlayerPage({ params }: { params: { id: string } })
                 <span>{player.team.name}</span>
               </>
             ) : "Bez tima"}
-            {player.position ? <span>· {player.position}</span> : null}
           </p>
           <p className="text-sm mt-2">Trenutna cena: <span className="font-semibold">{Number(latestPrice).toFixed(2)}</span></p>
         </div>
