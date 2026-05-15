@@ -144,6 +144,24 @@ Nakon grupne faze:
    - Ako je izjednačeno: admin bira pobednika kroz dugmad **Penali / Produžeci**
 9. Manuelni override: klik na bilo koji slot → dropdown sa svim timovima → izaberi tim. Manuelne dodele preživljavaju re-lock i re-resolve.
 
+## Manuelne izmene mečeva
+
+Mečevi se ne kreiraju ručno — postoje samo oni koji su generisani:
+
+- **Grupna faza:** automatski preko `/admin/draw` (round-robin svako sa svakim u grupi)
+- **Nokaut:** automatski preko `/admin/bracket` (sa placeholder pozicijama)
+
+Admin može da:
+- ✅ Dodeli kolo / datum meču (drag-drop u `/admin/schedule`)
+- ✅ Postavi vreme početka (kickoff_at)
+- ✅ Pokrene/zaustavi meč i unese događaje (`/admin/matches/[id]/live`)
+- ✅ Obriše pojedinačan događaj iz event feed-a
+- ✅ Za nokaut mečeve: manuelno postavi tim u slot (override placeholder-a)
+- ❌ NE može da kreira nov meč
+- ❌ NE može da obriše pojedinačan meč
+
+Za brisanje svih mečeva: `npm run reset` (soft) ili `/admin/danger-zone` → „Resetuj turnir".
+
 ### Nokaut placeholderi
 
 - `A1`, `B2`, `C3` — pozicija u grupi
