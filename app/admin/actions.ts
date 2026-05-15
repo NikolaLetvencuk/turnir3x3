@@ -62,6 +62,51 @@ export async function deleteTeam(formData: FormData): Promise<ActionResult> {
   }) as Promise<ActionResult>;
 }
 
+// PLAYER PHOTOS
+export async function uploadPlayerPhoto(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const player_id = formData.get("player_id") as string;
+    const file = formData.get("file") as File | null;
+    if (!player_id || !file) return { ok: false, error: "Nedostaje fajl ili igrač" };
+    if (file.size > 200 * 1024) return { ok: false, error: "Fajl je veći od 200KB" };
+    const admin = createAdminClient();
+
+    const path = `${player_id}/${Date.now()}.jpg`;
+    const buf = Buffer.from(await file.arrayBuffer());
+    const { error: upErr } = await admin.storage
+      .from("player-photos")
+      .upload(path, buf, { contentType: "image/jpeg", upsert: true });
+    if (upErr) return { ok: false, error: upErr.message };
+
+    const { data: pub } = admin.storage.from("player-photos").getPublicUrl(path);
+    const photo_url = pub.publicUrl;
+
+    // Delete old files for this player (cleanup)
+    const { data: prior } = await admin.storage.from("player-photos").list(player_id, { limit: 100 });
+    const toDelete = (prior ?? []).filter((f) => f.name !== path.split("/")[1]).map((f) => `${player_id}/${f.name}`);
+    if (toDelete.length) await admin.storage.from("player-photos").remove(toDelete);
+
+    const { error } = await admin.from("players").update({ photo_url }).eq("id", player_id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/players");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+export async function removePlayerPhoto(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const player_id = formData.get("player_id") as string;
+    const admin = createAdminClient();
+    const { data: prior } = await admin.storage.from("player-photos").list(player_id, { limit: 100 });
+    const paths = (prior ?? []).map((f) => `${player_id}/${f.name}`);
+    if (paths.length) await admin.storage.from("player-photos").remove(paths);
+    const { error } = await admin.from("players").update({ photo_url: null }).eq("id", player_id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/players");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 // PLAYERS
 export async function createPlayer(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
@@ -95,6 +140,13 @@ export async function deletePlayer(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
+    try {
+      const { data: prior } = await admin.storage.from("player-photos").list(id, { limit: 100 });
+      const paths = (prior ?? []).map((f) => `${id}/${f.name}`);
+      if (paths.length) await admin.storage.from("player-photos").remove(paths);
+    } catch {
+      // best-effort
+    }
     const { error } = await admin.from("players").delete().eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/players");

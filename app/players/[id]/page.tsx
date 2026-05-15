@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { TeamCrest } from "@/components/TeamCrest";
 
 export const revalidate = 0;
 
@@ -34,10 +36,21 @@ export default async function PlayerPage({ params }: { params: { id: string } })
 
   return (
     <div className="space-y-4">
-      <div className="card">
-        <h1 className="text-2xl font-bold">{player.name}</h1>
-        <p className="text-sm text-zinc-500">{(player as any).team?.name ?? "Bez tima"}{player.position ? ` · ${player.position}` : ""}</p>
-        <p className="text-sm mt-2">Trenutna cena: <span className="font-semibold">{Number(latestPrice).toFixed(2)}</span></p>
+      <div className="card flex items-center gap-4">
+        <PlayerAvatar name={player.name} photoUrl={player.photo_url} teamPrimary={player.team?.primary_color} size={72} />
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{player.name}</h1>
+          <p className="text-sm text-zinc-500 inline-flex items-center gap-2">
+            {player.team ? (
+              <>
+                <TeamCrest name={player.team.name} shortName={player.team.short_name} primaryColor={player.team.primary_color} secondaryColor={player.team.secondary_color} size={20} />
+                <span>{player.team.name}</span>
+              </>
+            ) : "Bez tima"}
+            {player.position ? <span>· {player.position}</span> : null}
+          </p>
+          <p className="text-sm mt-2">Trenutna cena: <span className="font-semibold">{Number(latestPrice).toFixed(2)}</span></p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">

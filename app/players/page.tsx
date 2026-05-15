@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { getTopScorers } from "@/lib/standings";
 
 export const revalidate = 0;
 
 export default async function PlayersPage({ searchParams }: { searchParams: { sort?: string } }) {
   const supabase = createClient();
-  const [pricesRes, scorers] = await Promise.all([
+  const [pricesRes, scorers, playersRes, teamsRes] = await Promise.all([
     supabase.from("player_prices").select("player_id, price, round_id, round:rounds(display_order)").order("round_id"),
     getTopScorers(500),
+    supabase.from("players").select("id, photo_url, team_id"),
+    supabase.from("teams").select("id, primary_color"),
   ]);
   const prices = (pricesRes.data ?? []) as any[];
   const priceMap = new Map<string, number>();
@@ -21,7 +24,19 @@ export default async function PlayersPage({ searchParams }: { searchParams: { so
       priceMap.set(`${id}_o`, order);
     }
   }
-  const rows = scorers.map((s) => ({ ...s, price: priceMap.get(s.player_id) ?? 10.0 }));
+  const players = (playersRes.data ?? []) as Array<{ id: string; photo_url: string | null; team_id: string | null }>;
+  const teams = (teamsRes.data ?? []) as Array<{ id: string; primary_color: string | null }>;
+  const playerMeta = new Map(players.map((p) => [p.id, p]));
+  const teamMeta = new Map(teams.map((t) => [t.id, t]));
+  const rows = scorers.map((s) => {
+    const pm = playerMeta.get(s.player_id);
+    return {
+      ...s,
+      price: priceMap.get(s.player_id) ?? 10.0,
+      photo_url: pm?.photo_url ?? null,
+      team_primary: pm?.team_id ? teamMeta.get(pm.team_id)?.primary_color ?? null : null,
+    };
+  });
   const sort = searchParams.sort ?? "goals";
   rows.sort((a, b) => {
     if (sort === "assists") return b.assists - a.assists;
@@ -55,7 +70,12 @@ export default async function PlayersPage({ searchParams }: { searchParams: { so
           <tbody>
             {rows.map((r) => (
               <tr key={r.player_id} className="border-t border-zinc-100">
-                <td className="py-2"><Link href={`/players/${r.player_id}`} className="hover:text-emerald-700 font-medium">{r.player_name}</Link></td>
+                <td className="py-2">
+                  <Link href={`/players/${r.player_id}`} className="hover:text-emerald-700 font-medium inline-flex items-center gap-2">
+                    <PlayerAvatar name={r.player_name} photoUrl={r.photo_url} teamPrimary={r.team_primary} size={28} />
+                    {r.player_name}
+                  </Link>
+                </td>
                 <td className="text-zinc-500">{r.team_name ?? "—"}</td>
                 <td className="text-right tabular-nums">{r.goals}</td>
                 <td className="text-right tabular-nums">{r.assists}</td>
