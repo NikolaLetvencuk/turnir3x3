@@ -17,21 +17,32 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
   const [phase, setPhase] = useState<Phase>("config");
   const [result, setResult] = useState<DrawResult | null>(null);
 
+  function tryCompute(): DrawResult | null {
+    try {
+      return computeDraw(teams, groupCount);
+    } catch (e: any) {
+      push(e?.message ?? "Greška u žrebu", "error");
+      return null;
+    }
+  }
+
   function startDraw() {
     if (teams.length < groupCount * 2) {
-      push(`Premalo timova za ${groupCount} grupa — treba ti bar ${groupCount * 2}`, "error");
+      push(`Potrebno je najmanje ${groupCount * 2} timova za ${groupCount} grupa`, "error");
       return;
     }
     if (hasExisting) {
       if (!confirm("Postojeća kola, grupe i mečevi će biti obrisani. Nastaviti?")) return;
     }
-    const r = computeDraw(teams, groupCount);
+    const r = tryCompute();
+    if (!r) return;
     setResult(r);
     setPhase("animating");
   }
 
   function reroll() {
-    const r = computeDraw(teams, groupCount);
+    const r = tryCompute();
+    if (!r) return;
     setResult(r);
     setPhase("animating");
   }
