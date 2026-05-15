@@ -1,19 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRealtimeMatch } from "@/lib/hooks/useRealtimeMatch";
 import { useActionRunner } from "@/components/admin/FormButton";
-import { createMatchEvent, deleteMatchEvent, startMatch, finishMatch, updateMatchScore } from "../../../actions";
+import { TeamCrest } from "@/components/TeamCrest";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { getCurrentMinute, phaseLabel } from "@/lib/matchClock";
+import {
+  createMatchEvent,
+  deleteMatchEvent,
+  startFirstHalf,
+  endFirstHalf,
+  startSecondHalf,
+  finishMatch,
+} from "../../../actions";
 import type { Database } from "@/types/database";
 
 type Match = Database["public"]["Tables"]["matches"]["Row"] & {
-  home_team: { id: string; name: string } | null;
-  away_team: { id: string; name: string } | null;
+  home_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null } | null;
+  away_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null } | null;
 };
 type Ev = Database["public"]["Tables"]["match_events"]["Row"];
-type PlayerLite = { id: string; name: string; team_id: string | null };
+type PlayerLite = { id: string; name: string; team_id: string | null; photo_url: string | null };
 
 const eventIcon = (t: string) => t === "goal" ? "⚽" : t === "own_goal" ? "⚽AG" : t === "yellow_card" ? "🟨" : t === "red_card" ? "🟥" : "•";
+
+function LiveClock({ match }: { match: Match }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (match.phase === "first_half" || match.phase === "second_half") {
+      const id = setInterval(() => setTick((t) => t + 1), 1000);
+      return () => clearInterval(id);
+    }
+  }, [match.phase]);
+  const minute = getCurrentMinute(match as any);
+  const isLive = match.phase === "first_half" || match.phase === "second_half";
+  return (
+    <div className="text-center">
+      {isLive && (
+        <div className="text-red-600 font-bold text-2xl animate-pulse">{minute}&apos;</div>
+      )}
+      <div className="text-xs text-zinc-500">{phaseLabel(match.phase)}</div>
+    </div>
+  );
+}
 
 export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: Match; eventsInit: Ev[]; players: PlayerLite[] }) {
   const { match, events } = useRealtimeMatch(matchInit.id, matchInit, eventsInit);
@@ -26,21 +56,33 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
   const [assistId, setAssistId] = useState("");
   const [minute, setMinute] = useState<string>("");
 
+  // Default minute to current match minute when phase changes
+  useEffect(() => {
+    const cm = getCurrentMinute(m as any);
+    if (cm != null && !minute) setMinute(String(cm));
+  }, [m.phase]);
+
   const teamPlayers = players.filter((p) => p.team_id === selectedTeam);
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
   async function onAddEvent(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!playerId) return;
+    if (!minute) return;
     const fd = new FormData();
     fd.set("match_id", m.id);
+    // For own_goal, team_id stored is the player's team (scoring goes against them — trigger handles it)
     fd.set("team_id", selectedTeam);
     fd.set("player_id", playerId);
     fd.set("event_type", eventType);
     if (assistId && eventType === "goal") fd.set("assist_player_id", assistId);
-    if (minute) fd.set("minute", minute);
+    fd.set("minute", minute);
     const ok = await run(createMatchEvent, fd, { successMessage: "Dodato" });
-    if (ok) { setPlayerId(""); setAssistId(""); setMinute(""); }
+    if (ok) {
+      setPlayerId(""); setAssistId("");
+      const cm = getCurrentMinute(m as any);
+      setMinute(cm != null ? String(cm) : "");
+    }
   }
 
   async function onDeleteEvent(id: string) {
@@ -49,80 +91,83 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
     await run(deleteMatchEvent, fd, { successMessage: "Obrisano" });
   }
 
-  async function adjustScore(side: "home" | "away", delta: number) {
-    const fd = new FormData();
-    fd.set("id", m.id);
-    fd.set("home_score", String(side === "home" ? Math.max(0, m.home_score + delta) : m.home_score));
-    fd.set("away_score", String(side === "away" ? Math.max(0, m.away_score + delta) : m.away_score));
-    await run(updateMatchScore, fd, { successMessage: "Rezultat" });
+  async function setPhase(action: (fd: FormData) => Promise<any>, label: string) {
+    const fd = new FormData(); fd.set("id", m.id);
+    await run(action, fd, { successMessage: label });
   }
+
+  const canLogEvents = m.phase === "first_half" || m.phase === "second_half";
 
   return (
     <div className="space-y-4">
       <div className="card">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="text-center">
-            <div className="font-semibold">{m.home_team?.name}</div>
-            <div className="flex items-center justify-center gap-1 mt-1">
-              <button onClick={() => adjustScore("home", -1)} className="btn-secondary !py-1 !px-2 text-xs">−</button>
-              <span className="text-2xl font-bold tabular-nums">{m.home_score}</span>
-              <button onClick={() => adjustScore("home", 1)} className="btn-secondary !py-1 !px-2 text-xs">+</button>
-            </div>
+            <TeamCrest name={m.home_team?.name ?? "?"} shortName={m.home_team?.short_name} primaryColor={m.home_team?.primary_color} secondaryColor={m.home_team?.secondary_color} size={48} className="mx-auto" />
+            <div className="font-semibold mt-1 text-sm">{m.home_team?.name}</div>
+            <div className="text-2xl font-bold tabular-nums">{m.home_score}</div>
           </div>
+          <LiveClock match={m} />
           <div className="text-center">
-            {m.status === "live" && <span className="badge-live"><span className="live-dot" />UŽIVO</span>}
-            {m.status === "scheduled" && (
-              <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(); fd.set("id", m.id); await run(startMatch, fd, { successMessage: "Uživo" }); }}>
-                <button className="btn-primary text-xs">Go Live</button>
-              </form>
-            )}
-            {m.status === "finished" && <span className="badge-finished">Završeno</span>}
-          </div>
-          <div className="text-center">
-            <div className="font-semibold">{m.away_team?.name}</div>
-            <div className="flex items-center justify-center gap-1 mt-1">
-              <button onClick={() => adjustScore("away", -1)} className="btn-secondary !py-1 !px-2 text-xs">−</button>
-              <span className="text-2xl font-bold tabular-nums">{m.away_score}</span>
-              <button onClick={() => adjustScore("away", 1)} className="btn-secondary !py-1 !px-2 text-xs">+</button>
-            </div>
+            <TeamCrest name={m.away_team?.name ?? "?"} shortName={m.away_team?.short_name} primaryColor={m.away_team?.primary_color} secondaryColor={m.away_team?.secondary_color} size={48} className="mx-auto" />
+            <div className="font-semibold mt-1 text-sm">{m.away_team?.name}</div>
+            <div className="text-2xl font-bold tabular-nums">{m.away_score}</div>
           </div>
         </div>
-        {m.status === "live" && (
-          <form className="mt-3 text-center" onSubmit={async (e) => { e.preventDefault(); if (!confirm("Završi meč?")) return; const fd = new FormData(); fd.set("id", m.id); await run(finishMatch, fd, { successMessage: "Završeno" }); }}>
-            <button className="btn-danger">Završi meč</button>
-          </form>
-        )}
+
+        <div className="mt-3 flex flex-wrap gap-2 justify-center">
+          {(!m.phase || m.phase === "scheduled") && (
+            <button onClick={() => setPhase(startFirstHalf, "Pokrenuto")} className="btn-primary">Pokreni meč</button>
+          )}
+          {m.phase === "first_half" && (
+            <button onClick={() => setPhase(endFirstHalf, "Pauza")} className="btn-secondary">Kraj prvog poluvremena</button>
+          )}
+          {m.phase === "halftime" && (
+            <button onClick={() => setPhase(startSecondHalf, "Drugo poluvreme")} className="btn-primary">Pokreni drugo poluvreme</button>
+          )}
+          {m.phase === "second_half" && (
+            <button onClick={() => {
+              if (!confirm("Završi meč?")) return;
+              setPhase(finishMatch, "Završeno");
+            }} className="btn-danger">Završi meč</button>
+          )}
+          {m.phase === "finished" && (
+            <span className="text-sm text-zinc-500">Meč je završen.</span>
+          )}
+        </div>
       </div>
 
-      <form onSubmit={onAddEvent} className="card space-y-2">
-        <h2 className="font-medium">Dodaj događaj</h2>
-        <div className="grid grid-cols-2 gap-2">
-          <select className="input" value={selectedTeam} onChange={(e) => { setSelectedTeam(e.target.value); setPlayerId(""); setAssistId(""); }}>
-            <option value={m.home_team_id}>{m.home_team?.name}</option>
-            <option value={m.away_team_id}>{m.away_team?.name}</option>
-          </select>
-          <select className="input" value={eventType} onChange={(e) => setEventType(e.target.value)}>
-            <option value="goal">Gol</option>
-            <option value="own_goal">Autogol</option>
-            <option value="yellow_card">Žuti karton</option>
-            <option value="red_card">Crveni karton</option>
-          </select>
-          <select className="input" value={playerId} onChange={(e) => setPlayerId(e.target.value)} required>
-            <option value="">Igrač</option>
-            {teamPlayers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          {eventType === "goal" ? (
-            <select className="input" value={assistId} onChange={(e) => setAssistId(e.target.value)}>
-              <option value="">Bez asistencije</option>
-              {teamPlayers.filter((p) => p.id !== playerId).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+      {canLogEvents && (
+        <form onSubmit={onAddEvent} className="card space-y-2">
+          <h2 className="font-medium">Dodaj događaj</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <select className="input" value={selectedTeam} onChange={(e) => { setSelectedTeam(e.target.value); setPlayerId(""); setAssistId(""); }}>
+              <option value={m.home_team_id}>{m.home_team?.name}</option>
+              <option value={m.away_team_id}>{m.away_team?.name}</option>
             </select>
-          ) : (
-            <input className="input" type="number" placeholder="Minut" value={minute} onChange={(e) => setMinute(e.target.value)} />
-          )}
-          {eventType === "goal" && <input className="input" type="number" placeholder="Minut" value={minute} onChange={(e) => setMinute(e.target.value)} />}
-        </div>
-        <button className="btn-primary w-full">Sačuvaj događaj</button>
-      </form>
+            <select className="input" value={eventType} onChange={(e) => setEventType(e.target.value)}>
+              <option value="goal">Gol</option>
+              <option value="own_goal">Autogol</option>
+              <option value="yellow_card">Žuti karton</option>
+              <option value="red_card">Crveni karton</option>
+            </select>
+            <select className="input" value={playerId} onChange={(e) => setPlayerId(e.target.value)} required>
+              <option value="">Igrač</option>
+              {teamPlayers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            {eventType === "goal" ? (
+              <select className="input" value={assistId} onChange={(e) => setAssistId(e.target.value)}>
+                <option value="">Bez asistencije</option>
+                {teamPlayers.filter((p) => p.id !== playerId).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            ) : (
+              <input className="input" type="number" placeholder="Minut" value={minute} onChange={(e) => setMinute(e.target.value)} required />
+            )}
+            {eventType === "goal" && <input className="input" type="number" placeholder="Minut" value={minute} onChange={(e) => setMinute(e.target.value)} required />}
+          </div>
+          <button className="btn-primary w-full">Sačuvaj događaj</button>
+        </form>
+      )}
 
       <div className="card">
         <h2 className="font-medium mb-2">Tok meča</h2>
@@ -137,6 +182,7 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
                 <li key={e.id} className="py-2 flex items-center gap-2 text-sm">
                   <span className="text-xs text-zinc-500 w-8 tabular-nums">{e.minute != null ? `${e.minute}'` : "—"}</span>
                   <span>{eventIcon(e.event_type)}</span>
+                  <PlayerAvatar name={p?.name ?? "?"} photoUrl={p?.photo_url ?? null} size={24} />
                   <span className="font-medium">{p?.name ?? "?"}</span>
                   {assist && <span className="text-xs text-zinc-500">asist: {assist.name}</span>}
                   <button onClick={() => onDeleteEvent(e.id)} className="ml-auto text-xs text-red-600 hover:underline">obriši</button>

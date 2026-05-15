@@ -8,14 +8,20 @@
     "start": "next start",
     "lint": "next lint",
     "seed:admin": "tsx scripts/seed-admin.ts",
-    "push:env": "tsx scripts/push-vercel-env.ts"
+    "push:env": "tsx scripts/push-vercel-env.ts",
+    "reset": "tsx scripts/reset-db.ts",
+    "reset:force": "tsx scripts/reset-db.ts --force"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.4",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.451.0",
     "next": "14.2.13",
     "react": "^18.3.1",

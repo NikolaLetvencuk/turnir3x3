@@ -404,7 +404,9 @@ export type Database = {
           home_team_id: string
           id: string
           kickoff_at: string | null
+          phase: string
           round_id: string
+          second_half_started_at: string | null
           started_at: string | null
           status: string
         }
@@ -419,7 +421,9 @@ export type Database = {
           home_team_id: string
           id?: string
           kickoff_at?: string | null
+          phase?: string
           round_id: string
+          second_half_started_at?: string | null
           started_at?: string | null
           status?: string
         }
@@ -434,7 +438,9 @@ export type Database = {
           home_team_id?: string
           id?: string
           kickoff_at?: string | null
+          phase?: string
           round_id?: string
+          second_half_started_at?: string | null
           started_at?: string | null
           status?: string
         }
@@ -559,6 +565,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          photo_url: string | null
           position: string | null
           team_id: string | null
         }
@@ -566,6 +573,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          photo_url?: string | null
           position?: string | null
           team_id?: string | null
         }
@@ -573,6 +581,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          photo_url?: string | null
           position?: string | null
           team_id?: string | null
         }
@@ -643,6 +652,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          primary_color: string
+          secondary_color: string
           short_name: string | null
         }
         Insert: {
@@ -650,6 +661,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          primary_color?: string
+          secondary_color?: string
           short_name?: string | null
         }
         Update: {
@@ -657,13 +670,29 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          primary_color?: string
+          secondary_color?: string
           short_name?: string | null
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      standings: {
+        Row: {
+          draws: number | null
+          goal_diff: number | null
+          goals_against: number | null
+          goals_for: number | null
+          group_id: string | null
+          losses: number | null
+          played: number | null
+          points: number | null
+          team_id: string | null
+          wins: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_invite_code: { Args: never; Returns: string }
@@ -677,6 +706,8 @@ export type Database = {
         Args: { p_round_id: string }
         Returns: undefined
       }
+      refresh_match_score: { Args: { p_match_id: string }; Returns: undefined }
+      reset_tournament_data: { Args: never; Returns: undefined }
       update_player_prices: { Args: { p_round_id: string }; Returns: undefined }
     }
     Enums: {

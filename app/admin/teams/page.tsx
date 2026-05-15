@@ -6,5 +6,5 @@ export const revalidate = 0;
 export default async function TeamsAdminPage() {
   const supabase = createClient();
   const { data: teams } = await supabase.from("teams").select("*").order("name");
-  return <TeamsAdmin teams={teams ?? []} />;
+  return <TeamsAdmin teams={(teams ?? []) as any[]} />;
 }

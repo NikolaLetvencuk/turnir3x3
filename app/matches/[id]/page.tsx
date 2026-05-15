@@ -18,7 +18,7 @@ export default async function MatchDetailPage({ params }: { params: { id: string
       .eq("match_id", params.id)
       .order("minute", { ascending: true, nullsFirst: true })
       .order("created_at"),
-    supabase.from("players").select("id, name, team_id"),
+    supabase.from("players").select("id, name, team_id, photo_url"),
   ]);
 
   if (!match) notFound();

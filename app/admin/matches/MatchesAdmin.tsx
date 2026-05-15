@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { TeamCrest } from "@/components/TeamCrest";
 import { useActionRunner } from "@/components/admin/FormButton";
-import { createMatch, deleteMatch, startMatch, finishMatch } from "../actions";
+import { createMatch, deleteMatch, startFirstHalf, finishMatch } from "../actions";
 import { formatDateTime } from "@/lib/utils";
 
 type Team = { id: string; name: string };
@@ -52,7 +53,15 @@ export function MatchesAdmin({ matches, teams, rounds, groups }: { matches: Matc
               <tr key={m.id} className="border-t border-zinc-100">
                 <td className="py-2">{m.round?.name}</td>
                 <td className="text-zinc-500">{formatDateTime(m.kickoff_at)}</td>
-                <td>{m.home?.name} <b className="tabular-nums">{m.home_score}:{m.away_score}</b> {m.away?.name}</td>
+                <td>
+                  <span className="inline-flex items-center gap-1.5">
+                    <TeamCrest name={m.home?.name ?? "?"} shortName={m.home?.short_name} primaryColor={m.home?.primary_color} secondaryColor={m.home?.secondary_color} size={20} />
+                    {m.home?.name}
+                    <b className="tabular-nums mx-1">{m.home_score}:{m.away_score}</b>
+                    {m.away?.name}
+                    <TeamCrest name={m.away?.name ?? "?"} shortName={m.away?.short_name} primaryColor={m.away?.primary_color} secondaryColor={m.away?.secondary_color} size={20} />
+                  </span>
+                </td>
                 <td>
                   {m.status === "live" && <span className="badge-live"><span className="live-dot" />UŽIVO</span>}
                   {m.status === "finished" && <span className="badge-finished">Završeno</span>}
@@ -60,17 +69,17 @@ export function MatchesAdmin({ matches, teams, rounds, groups }: { matches: Matc
                 </td>
                 <td className="text-right space-x-1">
                   <Link href={`/admin/matches/${m.id}/live`} className="btn-secondary !py-1 !px-2 text-xs">Otvori</Link>
-                  {m.status === "scheduled" && (
+                  {(m.phase === "scheduled" || m.status === "scheduled") && (
                     <form className="inline" onSubmit={async (e) => {
                       e.preventDefault();
-                      if (!confirm("Pokrenuti meč uživo? Kolo će biti aktivirano.")) return;
+                      if (!confirm("Pokrenuti prvo poluvreme? Kolo će biti aktivirano.")) return;
                       const fd = new FormData(); fd.set("id", m.id);
-                      await run(startMatch, fd, { successMessage: "Uživo" });
+                      await run(startFirstHalf, fd, { successMessage: "Uživo" });
                     }}>
-                      <button className="btn-primary !py-1 !px-2 text-xs">Go Live</button>
+                      <button className="btn-primary !py-1 !px-2 text-xs">Pokreni</button>
                     </form>
                   )}
-                  {m.status === "live" && (
+                  {(m.phase === "second_half" || (m.phase == null && m.status === "live")) && (
                     <form className="inline" onSubmit={async (e) => {
                       e.preventDefault();
                       if (!confirm("Završiti meč?")) return;

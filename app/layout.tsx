@@ -6,7 +6,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { getCurrentProfile } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Turnir Kula 3v3",
+  title: "Turnir Kula",
   description: "Pratite rezultate, tabele i fantasy ligu — turnir Kula, Liparski put",
 };
 

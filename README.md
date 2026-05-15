@@ -1,6 +1,6 @@
-# Turnir Kula 3v3
+# Turnir Kula
 
-Full-stack web aplikacija za praćenje 3v3 fudbalskog turnira u Kuli (Liparski put). Public rezultati i tabele, fantasy liga sa privatnim ligama na poziv, live praćenje mečeva u realnom vremenu, admin panel za upravljanje celim turnirom.
+Full-stack web aplikacija za praćenje fudbalskog turnira u Kuli (Liparski put). Fleksibilan format (proizvoljan broj timova, igrača po timu i grupa). Public rezultati i tabele, fantasy liga sa privatnim ligama na poziv, live praćenje mečeva u realnom vremenu, admin panel za upravljanje celim turnirom.
 
 ## Live
 
