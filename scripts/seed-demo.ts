@@ -20,7 +20,7 @@ function loadEnv() {
 loadEnv();
 
 async function main() {
-  const force = process.argv.includes("--force");
+  const force = process.argv.includes("--force") || process.argv.includes("--full");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   if (!url || !key) {
@@ -33,7 +33,7 @@ async function main() {
   const res = await seedDemoData(supabase, force);
   if (!res.ok) {
     if (res.error.startsWith("Postoji")) {
-      console.error(`❌ ${res.error}\nKoristi --force za reset + seed, ili pokreni "npm run reset:force" prvo.`);
+      console.error(`❌ ${res.error}\nKoristi --force za reset + seed.`);
     } else {
       console.error(`❌ ${res.error}`);
     }
@@ -44,6 +44,9 @@ async function main() {
     console.log(`✓ ${team.name} (${team.players.length} igrača)`);
   }
   console.log(`\n🎉 Demo seed gotov: ${res.teamsInserted} timova, ${res.playersInserted} igrača`);
+  if (res.photosRestored > 0) {
+    console.log(`📸 ${res.photosRestored} slika igrača restaurirano po imenu`);
+  }
   console.log("\nSledeći koraci:");
   console.log("  1. Otvori /admin/draw u browseru");
   console.log("  2. Izaberi 2 grupe (za 4 tima → 2 po grupi)");

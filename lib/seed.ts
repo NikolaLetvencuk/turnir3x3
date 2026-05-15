@@ -57,14 +57,16 @@ export const DEMO_DATA: DemoTeam[] = [
 ];
 
 export type SeedResult =
-  | { ok: true; teamsInserted: number; playersInserted: number }
+  | { ok: true; teamsInserted: number; playersInserted: number; photosRestored: number }
   | { ok: false; error: string };
 
 /**
- * Seed demo data. If `force` is true and existing data is present, runs reset_tournament_data first.
- * If `force` is false and data exists, returns an error.
+ * Seed demo data. If `force` is true and existing data is present:
+ *   1. Backs up player photo_url's by name (resilient to UUID changes)
+ *   2. Runs nuclear `reset_tournament_data` (Storage files are NOT touched)
+ *   3. Re-inserts demo teams + players with restored photo_url where name matches
  *
- * Caller must pass a service-role Supabase client. Authorization is the caller's responsibility.
+ * Caller must pass a service-role Supabase client.
  */
 export async function seedDemoData(
   supabase: SupabaseClient,
@@ -76,16 +78,28 @@ export async function seedDemoData(
   if (countErr) return { ok: false, error: `count teams: ${countErr.message}` };
 
   const existing = count ?? 0;
-  if (existing > 0 && !force) {
-    return { ok: false, error: `Postoji ${existing} timova. Pokreni sa force=true ili reset.` };
-  }
-  if (existing > 0 && force) {
+  const photoBackup = new Map<string, string>();
+
+  if (existing > 0) {
+    if (!force) {
+      return { ok: false, error: `Postoji ${existing} timova. Pokreni sa force=true ili reset.` };
+    }
+
+    const { data: existingPlayers } = await supabase
+      .from("players")
+      .select("name, photo_url")
+      .not("photo_url", "is", null);
+    for (const p of (existingPlayers ?? []) as Array<{ name: string; photo_url: string | null }>) {
+      if (p.photo_url) photoBackup.set(p.name, p.photo_url);
+    }
+
     const { error: resetErr } = await supabase.rpc("reset_tournament_data");
     if (resetErr) return { ok: false, error: `reset: ${resetErr.message}` };
   }
 
   let teamsInserted = 0;
   let playersInserted = 0;
+  let photosRestored = 0;
   for (const team of DEMO_DATA) {
     const { data: teamRow, error: teamErr } = await supabase
       .from("teams")
@@ -101,7 +115,11 @@ export async function seedDemoData(
       return { ok: false, error: `team ${team.name}: ${teamErr?.message ?? "unknown"}` };
     }
     teamsInserted++;
-    const rows = team.players.map((name) => ({ name, team_id: (teamRow as any).id }));
+    const rows = team.players.map((name) => {
+      const photo_url = photoBackup.get(name) ?? null;
+      if (photo_url) photosRestored++;
+      return { name, team_id: (teamRow as any).id, photo_url };
+    });
     if (rows.length) {
       const { error: pErr } = await supabase.from("players").insert(rows);
       if (pErr) return { ok: false, error: `players ${team.name}: ${pErr.message}` };
@@ -109,5 +127,5 @@ export async function seedDemoData(
     }
   }
 
-  return { ok: true, teamsInserted, playersInserted };
+  return { ok: true, teamsInserted, playersInserted, photosRestored };
 }

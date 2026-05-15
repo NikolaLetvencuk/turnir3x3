@@ -21,12 +21,19 @@ function loadEnv() {
 loadEnv();
 
 async function main() {
-  const force = process.argv.includes("--force") || process.argv.includes("--yes");
-  if (!force) {
+  const full = process.argv.includes("--full");
+  const yes = process.argv.includes("--yes") || process.argv.includes("--force");
+
+  const mode = full ? "FULL" : "PROGRESS";
+  const description = full
+    ? "OBRISATI SVE uključujući timove, igrače, slike, auth korisnike"
+    : "obrisati mečeve/događaje/žreb/fantasy, ZADRŽATI timove/igrače/slike";
+
+  if (!yes) {
     const rl = createInterface({ input: stdin, output: stdout });
-    const answer = await rl.question("Type RESET to confirm full database wipe: ");
+    const answer = await rl.question(`Ovo će ${description}.\nUkucaj ${mode} da potvrdiš: `);
     rl.close();
-    if (answer.trim() !== "RESET") { console.log("Aborted."); process.exit(0); }
+    if (answer.trim() !== mode) { console.log("Aborted."); process.exit(0); }
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -39,42 +46,51 @@ async function main() {
 
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-  const { error: dbErr } = await supabase.rpc("reset_tournament_data");
-  if (dbErr) { console.error("DB reset failed:", dbErr.message); process.exit(1); }
-  console.log("✓ Tournament data wiped");
+  if (full) {
+    const { error } = await supabase.rpc("reset_tournament_data");
+    if (error) { console.error("DB reset failed:", error.message); process.exit(1); }
+    console.log("✓ Sve obrisano (timovi, igrači, mečevi)");
 
+    // Wipe storage
+    try {
+      const { data: top } = await supabase.storage.from("player-photos").list("", { limit: 10000 });
+      const paths: string[] = [];
+      for (const entry of top ?? []) {
+        if (!entry.name) continue;
+        const { data: inner } = await supabase.storage.from("player-photos").list(entry.name, { limit: 1000 });
+        for (const f of inner ?? []) paths.push(`${entry.name}/${f.name}`);
+      }
+      if (paths.length) await supabase.storage.from("player-photos").remove(paths);
+      console.log(`✓ Storage obrisan (${paths.length} fajlova)`);
+    } catch {
+      console.log("✓ Storage bucket nije prisutan");
+    }
+  } else {
+    const { error } = await supabase.rpc("reset_tournament_progress");
+    if (error) { console.error("Soft reset failed:", error.message); process.exit(1); }
+    console.log("✓ Turnir resetovan (timovi, igrači i slike zadržani)");
+  }
+
+  // Always wipe non-admin auth users
   const { data: usersList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  let removed = 0;
   for (const u of usersList?.users ?? []) {
     if (u.email !== adminEmail) {
       await supabase.auth.admin.deleteUser(u.id);
+      removed++;
     }
   }
-  console.log("✓ Non-admin users wiped");
+  console.log(`✓ Obrisano ${removed} test korisnika`);
 
-  try {
-    const { data: top } = await supabase.storage.from("player-photos").list("", { limit: 10000 });
-    const paths: string[] = [];
-    for (const entry of top ?? []) {
-      if (!entry.name) continue;
-      const { data: inner } = await supabase.storage.from("player-photos").list(entry.name, { limit: 1000 });
-      for (const f of inner ?? []) paths.push(`${entry.name}/${f.name}`);
-    }
-    if (paths.length) await supabase.storage.from("player-photos").remove(paths);
-    console.log(`✓ Player photos wiped (${paths.length} files)`);
-  } catch {
-    console.log("✓ Player photos bucket not present yet — skipped");
-  }
-
+  // Re-verify admin profile
   const { data: postList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const admin = postList?.users.find((u) => u.email === adminEmail);
   if (admin) {
     await supabase.from("profiles").upsert({ id: admin.id, email: adminEmail, role: "admin" });
-    console.log("✓ Admin profile verified");
-  } else {
-    console.log("⚠ Admin user missing — run npm run seed:admin");
+    console.log("✓ Admin profil verifikovan");
   }
 
-  console.log("\n🎉 Database reset complete.");
+  console.log(`\n🎉 ${full ? "Potpuni" : "Soft"} reset gotov.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
