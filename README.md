@@ -91,6 +91,21 @@ UI:
 
 `/admin/danger-zone` → klikni „Resetuj sve" → otkucaj `RESETUJ` → potvrdi.
 
+## Demo data
+
+Brz start sa predefinisanim timovima i igračima:
+
+```bash
+npm run fresh             # reset + seed demo (preporučeno tokom razvoja)
+# ili
+npm run seed:demo         # seed na praznoj bazi (greška ako podaci već postoje)
+npm run seed:demo:force   # obriši pa seed (bez potvrde)
+```
+
+Demo uključuje 4 tima: **Njukasl**, **Juventus**, **La Familia**, **Jasike** — sa njihovim rosterima i bojama (13 igrača ukupno).
+
+Dostupno i u admin UI: `/admin/danger-zone` → „Učitaj demo" → izaberi „Učitaj na praznu bazu" ili „Resetuj pa učitaj".
+
 ## Admin workflow — pre sezone
 
 1. **Login** kao admin na `/auth/login`

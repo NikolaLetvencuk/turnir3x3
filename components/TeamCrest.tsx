@@ -17,14 +17,17 @@ function initialsFor(name: string, shortName?: string | null) {
 }
 
 // WCAG-ish contrast helper: pick white or near-black against a color
-function contrastText(hex: string): string {
+function luminance(hex: string): number {
   const h = hex.replace("#", "");
-  if (h.length < 6) return "#ffffff";
+  if (h.length < 6) return 0;
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? "#1f2937" : "#ffffff";
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+function contrastText(hex: string): string {
+  return luminance(hex) > 0.6 ? "#1f2937" : "#ffffff";
 }
 
 export const TeamCrest = memo(function TeamCrest({
@@ -41,6 +44,10 @@ export const TeamCrest = memo(function TeamCrest({
   const idSafe = name.replace(/[^a-zA-Z0-9]/g, "_");
   const clipId = `clip-${idSafe}`;
   const textColor = contrastText(primary);
+  // Strengthen border when primary is very light (e.g., Juventus white-on-white)
+  const isLight = luminance(primary) > 0.85;
+  const borderColor = isLight ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.35)";
+  const borderWidth = isLight ? 2 : 1.5;
 
   return (
     <svg
@@ -63,8 +70,8 @@ export const TeamCrest = memo(function TeamCrest({
       <path
         d="M8 6 H56 V36 Q56 50 32 60 Q8 50 8 36 Z"
         fill="none"
-        stroke="rgba(0,0,0,0.35)"
-        strokeWidth="1.5"
+        stroke={borderColor}
+        strokeWidth={borderWidth}
       />
       <text
         x="32"
