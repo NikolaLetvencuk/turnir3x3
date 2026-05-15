@@ -2,15 +2,16 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { getGroupStandings, getTopScorers } from "@/lib/standings";
+import { TeamCrest } from "@/components/TeamCrest";
 
 export const revalidate = 0;
 
 export default async function HomePage() {
   const supabase = createClient();
   const [liveRes, upcomingRes, recentRes, groups, scorers] = await Promise.all([
-    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name), away_team:teams!matches_away_team_id_fkey(id,name,short_name)").eq("status", "live").order("started_at", { ascending: false }),
-    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name), away_team:teams!matches_away_team_id_fkey(id,name,short_name)").eq("status", "scheduled").order("kickoff_at").limit(5),
-    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name), away_team:teams!matches_away_team_id_fkey(id,name,short_name)").eq("status", "finished").order("finished_at", { ascending: false }).limit(5),
+    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "live").order("started_at", { ascending: false }),
+    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "scheduled").order("kickoff_at").limit(5),
+    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "finished").order("finished_at", { ascending: false }).limit(5),
     getGroupStandings(),
     getTopScorers(5),
   ]);
@@ -65,7 +66,12 @@ export default async function HomePage() {
                     {g.rows.slice(0, 3).map((r, i) => (
                       <tr key={r.team_id} className="border-b last:border-0 border-zinc-100">
                         <td className="py-1 text-zinc-500 w-6">{i + 1}.</td>
-                        <td className="py-1 font-medium">{r.team_name}</td>
+                        <td className="py-1 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <TeamCrest name={r.team_name} shortName={(r as any).short_name ?? null} primaryColor={(r as any).primary_color ?? null} secondaryColor={(r as any).secondary_color ?? null} size={18} />
+                            {r.team_name}
+                          </span>
+                        </td>
                         <td className="py-1 text-right tabular-nums text-zinc-500">{r.played}</td>
                         <td className="py-1 text-right tabular-nums font-semibold">{r.points}</td>
                       </tr>

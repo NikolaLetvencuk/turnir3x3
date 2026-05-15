@@ -13,13 +13,20 @@ async function withAdmin<T>(fn: () => Promise<T>): Promise<T | { ok: false; erro
 }
 
 // TEAMS
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Nevažeća hex boja");
+
 export async function createTeam(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const name = (formData.get("name") as string ?? "").trim();
     const short_name = (formData.get("short_name") as string ?? "").trim() || null;
+    const primary_color = (formData.get("primary_color") as string ?? "#1f2937").trim();
+    const secondary_color = (formData.get("secondary_color") as string ?? "#f3f4f6").trim();
     if (!name) return { ok: false, error: "Naziv obavezan" };
+    if (!hexColor.safeParse(primary_color).success || !hexColor.safeParse(secondary_color).success) {
+      return { ok: false, error: "Nevažeća boja" };
+    }
     const admin = createAdminClient();
-    const { error } = await admin.from("teams").insert({ name, short_name });
+    const { error } = await admin.from("teams").insert({ name, short_name, primary_color, secondary_color });
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/teams");
     return { ok: true };
@@ -31,8 +38,13 @@ export async function updateTeam(formData: FormData): Promise<ActionResult> {
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string ?? "").trim();
     const short_name = (formData.get("short_name") as string ?? "").trim() || null;
+    const primary_color = (formData.get("primary_color") as string ?? "#1f2937").trim();
+    const secondary_color = (formData.get("secondary_color") as string ?? "#f3f4f6").trim();
+    if (!hexColor.safeParse(primary_color).success || !hexColor.safeParse(secondary_color).success) {
+      return { ok: false, error: "Nevažeća boja" };
+    }
     const admin = createAdminClient();
-    const { error } = await admin.from("teams").update({ name, short_name }).eq("id", id);
+    const { error } = await admin.from("teams").update({ name, short_name, primary_color, secondary_color }).eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/teams");
     return { ok: true };

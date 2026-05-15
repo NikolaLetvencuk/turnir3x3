@@ -1,73 +1,127 @@
 "use client";
 
 import { useState } from "react";
+import { TeamCrest } from "@/components/TeamCrest";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { createTeam, updateTeam, deleteTeam } from "../actions";
 
-type Team = { id: string; name: string; short_name: string | null };
+type Team = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+};
+
+function CrestPreview({ name, shortName, primary, secondary }: { name: string; shortName: string; primary: string; secondary: string }) {
+  return (
+    <TeamCrest
+      name={name || "Tim"}
+      shortName={shortName}
+      primaryColor={primary}
+      secondaryColor={secondary}
+      size={48}
+    />
+  );
+}
+
+function TeamForm({ initial, onSubmit, onCancel, submitLabel }: {
+  initial?: Partial<Team>;
+  onSubmit: (fd: FormData) => Promise<boolean>;
+  onCancel?: () => void;
+  submitLabel: string;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [shortName, setShortName] = useState(initial?.short_name ?? "");
+  const [primary, setPrimary] = useState(initial?.primary_color ?? "#1f2937");
+  const [secondary, setSecondary] = useState(initial?.secondary_color ?? "#f3f4f6");
+  const sameColors = primary.toLowerCase() === secondary.toLowerCase();
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    if (initial?.id) fd.set("id", initial.id);
+    await onSubmit(fd);
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-2">
+      <div className="grid sm:grid-cols-[auto_1fr_1fr] gap-2 items-center">
+        <CrestPreview name={name} shortName={shortName} primary={primary} secondary={secondary} />
+        <input name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Naziv tima" required className="input" />
+        <input name="short_name" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="Skraćeno (npr. KUL)" maxLength={4} className="input" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="color" name="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="h-9 w-12 border border-zinc-200 rounded" />
+          <span className="text-zinc-600">Primarna</span>
+          <input value={primary} onChange={(e) => setPrimary(e.target.value)} className="input flex-1 font-mono" maxLength={7} />
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="color" name="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="h-9 w-12 border border-zinc-200 rounded" />
+          <span className="text-zinc-600">Sekundarna</span>
+          <input value={secondary} onChange={(e) => setSecondary(e.target.value)} className="input flex-1 font-mono" maxLength={7} />
+        </label>
+      </div>
+      {sameColors && <p className="text-xs text-amber-700">Boje su iste — grb će biti slabo vidljiv.</p>}
+      <div className="flex gap-2">
+        <button className="btn-primary">{submitLabel}</button>
+        {onCancel && <button type="button" onClick={onCancel} className="btn-secondary">Otkaži</button>}
+      </div>
+    </form>
+  );
+}
 
 export function TeamsAdmin({ teams }: { teams: Team[] }) {
   const run = useActionRunner();
   const [editing, setEditing] = useState<string | null>(null);
 
-  async function onCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const ok = await run(createTeam, fd);
-    if (ok) e.currentTarget.reset();
-  }
-
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Timovi</h1>
-      <form onSubmit={onCreate} className="card grid sm:grid-cols-[1fr_1fr_auto] gap-2">
-        <input name="name" placeholder="Naziv tima" required className="input" />
-        <input name="short_name" placeholder="Skraćeno" className="input" />
-        <button className="btn-primary">Dodaj</button>
-      </form>
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead><tr className="text-xs text-zinc-500"><th className="text-left py-2">Naziv</th><th className="text-left">Skraćeno</th><th></th></tr></thead>
-          <tbody>
-            {teams.map((t) => (
-              <tr key={t.id} className="border-t border-zinc-100">
-                {editing === t.id ? (
-                  <td colSpan={3} className="py-2">
-                    <form onSubmit={async (e) => {
-                      e.preventDefault();
-                      const fd = new FormData(e.currentTarget);
-                      fd.set("id", t.id);
-                      const ok = await run(updateTeam, fd);
-                      if (ok) setEditing(null);
-                    }} className="flex gap-2">
-                      <input name="name" defaultValue={t.name} className="input" />
-                      <input name="short_name" defaultValue={t.short_name ?? ""} className="input" />
-                      <button className="btn-primary">Sačuvaj</button>
-                      <button type="button" onClick={() => setEditing(null)} className="btn-secondary">Otkaži</button>
-                    </form>
-                  </td>
-                ) : (
-                  <>
-                    <td className="py-2 font-medium">{t.name}</td>
-                    <td className="text-zinc-500">{t.short_name ?? "—"}</td>
-                    <td className="text-right space-x-1">
-                      <button onClick={() => setEditing(t.id)} className="btn-secondary !py-1 !px-2 text-xs">Izmeni</button>
-                      <form className="inline" onSubmit={async (e) => {
-                        e.preventDefault();
-                        if (!confirm(`Obrisati tim "${t.name}"?`)) return;
-                        const fd = new FormData(); fd.set("id", t.id);
-                        await run(deleteTeam, fd, { successMessage: "Obrisano" });
-                      }}>
-                        <button className="btn-danger !py-1 !px-2 text-xs">Obriši</button>
-                      </form>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-            {teams.length === 0 && <tr><td colSpan={3} className="py-4 text-center text-zinc-500">Nema timova.</td></tr>}
-          </tbody>
-        </table>
+      <div className="card">
+        <h2 className="font-medium mb-2">Dodaj tim</h2>
+        <TeamForm
+          submitLabel="Dodaj"
+          onSubmit={async (fd) => run(createTeam, fd)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        {teams.map((t) => (
+          <div key={t.id} className="card">
+            {editing === t.id ? (
+              <TeamForm
+                initial={t}
+                submitLabel="Sačuvaj"
+                onCancel={() => setEditing(null)}
+                onSubmit={async (fd) => {
+                  const ok = await run(updateTeam, fd);
+                  if (ok) setEditing(null);
+                  return ok;
+                }}
+              />
+            ) : (
+              <div className="flex items-center gap-3">
+                <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} size={40} />
+                <div className="flex-1">
+                  <div className="font-medium">{t.name}</div>
+                  <div className="text-xs text-zinc-500">{t.short_name ?? "—"} · {t.primary_color} / {t.secondary_color}</div>
+                </div>
+                <button onClick={() => setEditing(t.id)} className="btn-secondary !py-1 !px-2 text-xs">Izmeni</button>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!confirm(`Obrisati tim „${t.name}"?`)) return;
+                  const fd = new FormData(); fd.set("id", t.id);
+                  await run(deleteTeam, fd, { successMessage: "Obrisano" });
+                }}>
+                  <button className="btn-danger !py-1 !px-2 text-xs">Obriši</button>
+                </form>
+              </div>
+            )}
+          </div>
+        ))}
+        {teams.length === 0 && <p className="text-sm text-zinc-500 text-center">Nema timova.</p>}
       </div>
     </div>
   );

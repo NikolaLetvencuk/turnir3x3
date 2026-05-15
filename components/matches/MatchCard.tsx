@@ -1,10 +1,18 @@
 import Link from "next/link";
+import { TeamCrest } from "@/components/TeamCrest";
 import { formatDateTime } from "@/lib/utils";
 
-type Team = { id: string; name: string; short_name: string | null };
+type Team = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+};
 type Match = {
   id: string;
   status: string;
+  phase?: string | null;
   home_score: number;
   away_score: number;
   kickoff_at: string | null;
@@ -13,8 +21,9 @@ type Match = {
 };
 
 export function MatchCard({ match }: { match: Match }) {
-  const isLive = match.status === "live";
-  const isFinished = match.status === "finished";
+  const phase = match.phase ?? match.status;
+  const isLive = phase === "first_half" || phase === "halftime" || phase === "second_half" || match.status === "live";
+  const isFinished = phase === "finished" || match.status === "finished";
   return (
     <Link
       href={`/matches/${match.id}`}
@@ -26,12 +35,18 @@ export function MatchCard({ match }: { match: Match }) {
         {isFinished && <span className="badge-finished">Završeno</span>}
         {!isLive && !isFinished && <span className="badge-scheduled">Zakazano</span>}
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-medium truncate flex-1">{match.home_team?.name ?? "?"}</span>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <TeamCrest name={match.home_team?.name ?? "?"} shortName={match.home_team?.short_name} primaryColor={match.home_team?.primary_color} secondaryColor={match.home_team?.secondary_color} size={28} />
+          <span className="font-medium truncate">{match.home_team?.name ?? "?"}</span>
+        </div>
         <span className="font-bold tabular-nums text-lg">
           {isLive || isFinished ? `${match.home_score} : ${match.away_score}` : "—"}
         </span>
-        <span className="font-medium truncate flex-1 text-right">{match.away_team?.name ?? "?"}</span>
+        <div className="flex items-center gap-2 min-w-0 justify-end">
+          <span className="font-medium truncate text-right">{match.away_team?.name ?? "?"}</span>
+          <TeamCrest name={match.away_team?.name ?? "?"} shortName={match.away_team?.short_name} primaryColor={match.away_team?.primary_color} secondaryColor={match.away_team?.secondary_color} size={28} />
+        </div>
       </div>
     </Link>
   );
