@@ -76,35 +76,38 @@ Deploy:
 npx vercel --prod --token "$VERCEL_TOKEN" --yes
 ```
 
-## Database reset (HIGH PRIORITY ALAT)
+## Resetovanje baze
 
-Briše sve podatke turnira (timovi, igrači, mečevi, događaji, fantasy timovi, lige, snapshoti, bodovi, transferi, slike igrača) i sve korisnike osim admin naloga. Admin nalog ostaje aktivan.
+Tri nivoa resetovanja, po destruktivnosti:
 
-CLI:
+| Komanda | Šta zadržava | Šta briše | Kada koristiti |
+|---------|--------------|-----------|----------------|
+| `npm run reset` | **Timovi, igrači, slike** | Mečevi, događaji, fantasy, žreb, grupna faza, test korisnici | Posle svakog testa |
+| `npm run reset:full` | Samo admin nalog | Sve, uključujući slike i Storage bucket | Kad je baza u nekonzistentnom stanju |
+| `npm run fresh:full` | Samo admin nalog | Sve, ali odmah re-seeduje demo timove | Čist start |
 
-```bash
-npm run reset           # interaktivno: traži da otkucaš RESET
-npm run reset:force     # bez potvrde — koristi u CI ili kad si siguran
-```
+Sve komande podržavaju `--yes` / `--force` flag za neinteraktivni rež (npr. `npm run reset:force`).
 
-UI:
+Tipičan razvojni tok:
 
-`/admin/danger-zone` → klikni „Resetuj sve" → otkucaj `RESETUJ` → potvrdi.
+1. **Prvi put:** `npm run fresh:full` → otvori `/admin/players` → uploaduj slike za svakog igrača
+2. **Tokom testiranja:** `npm run reset` → mečevi obrisani, timovi i slike ostaju
+3. **Re-seed demo (bez gubitka slika):** `npm run seed:demo:force` — slike se restauriraju po imenu igrača
+4. **Ako baza puca:** `npm run fresh:full` → potpuni reset + demo seed
+
+UI: `/admin/danger-zone` — tri kartice:
+- **Resetuj turnir** (amber) — soft reset, zadržava timove i slike
+- **Potpuni reset** (crveni) — briše sve uključujući Storage
+- **Učitaj demo** (plavi) — seed sa restauracijom slika po imenu
 
 ## Demo data
 
-Brz start sa predefinisanim timovima i igračima:
-
-```bash
-npm run fresh             # reset + seed demo (preporučeno tokom razvoja)
-# ili
-npm run seed:demo         # seed na praznoj bazi (greška ako podaci već postoje)
-npm run seed:demo:force   # obriši pa seed (bez potvrde)
-```
-
 Demo uključuje 4 tima: **Njukasl**, **Juventus**, **La Familia**, **Jasike** — sa njihovim rosterima i bojama (13 igrača ukupno).
 
-Dostupno i u admin UI: `/admin/danger-zone` → „Učitaj demo" → izaberi „Učitaj na praznu bazu" ili „Resetuj pa učitaj".
+```bash
+npm run seed:demo          # seed na praznoj bazi
+npm run seed:demo:force    # obriši DB pa seed (slike igrača se restauriraju po imenu)
+```
 
 ## Admin workflow — pre sezone
 

@@ -776,6 +776,7 @@ export type Database = {
       }
       refresh_match_score: { Args: { p_match_id: string }; Returns: undefined }
       reset_tournament_data: { Args: never; Returns: undefined }
+      reset_tournament_progress: { Args: never; Returns: undefined }
       update_player_prices: { Args: { p_round_id: string }; Returns: undefined }
     }
     Enums: {
