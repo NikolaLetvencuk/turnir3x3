@@ -333,18 +333,41 @@ export async function startSecondHalf(formData: FormData): Promise<ActionResult>
 export async function finishMatch(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const id = formData.get("id") as string;
+    const knockoutWinnerId = (formData.get("knockout_winner_id") as string) || null;
     const admin = createAdminClient();
-    const { data: m } = await admin.from("matches").select("started_at, phase").eq("id", id).maybeSingle();
+    const { data: m } = await admin
+      .from("matches")
+      .select("started_at, phase, home_score, away_score, bracket_position, round:rounds(stage)")
+      .eq("id", id)
+      .maybeSingle();
     if (!m) return { ok: false, error: "Meč ne postoji" };
-    if (!(m as any).started_at) return { ok: false, error: "Meč nije pokrenut" };
-    const { error } = await admin.from("matches")
-      .update({ phase: "finished", finished_at: new Date().toISOString() })
-      .eq("id", id);
+    const mm = m as any;
+    if (!mm.started_at) return { ok: false, error: "Meč nije pokrenut" };
+
+    const isKnockout = mm.round?.stage === "knockout";
+    const tied = mm.home_score === mm.away_score;
+    if (isKnockout && tied && !knockoutWinnerId) {
+      return { ok: false, error: "Izjednačeno u nokautu — izaberi pobednika" };
+    }
+
+    const update: any = { phase: "finished", finished_at: new Date().toISOString() };
+    if (isKnockout && knockoutWinnerId) update.knockout_winner_id = knockoutWinnerId;
+
+    const { error } = await admin.from("matches").update(update).eq("id", id);
     if (error) return { ok: false, error: error.message };
+
+    // Propagate to next round if knockout
+    if (isKnockout) {
+      const { resolveAllPlaceholders } = await import("@/lib/resolveBracket");
+      await resolveAllPlaceholders();
+    }
+
     revalidatePath("/admin/matches");
     revalidatePath(`/admin/matches/${id}/live`);
     revalidatePath(`/matches/${id}`);
     revalidatePath("/standings");
+    revalidatePath("/bracket");
+    revalidatePath("/admin/bracket");
     return { ok: true };
   }) as Promise<ActionResult>;
 }

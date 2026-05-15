@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateBracket, resolvePlaceholder, type BracketSlot } from "@/lib/bracket";
+import { generateBracket } from "@/lib/bracket";
+import { resolveAllPlaceholders } from "@/lib/resolveBracket";
 
 export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -97,6 +98,64 @@ export async function generateKnockoutBracket(input: { advancingPerGroup: number
   }) as Promise<ActionResult>;
 }
 
+// Lock group stage: resolve all placeholders
+export async function lockGroupStage(input: { force: boolean }): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    if (!input.force) {
+      const { data: unfinished } = await admin.from("matches").select("id, round:rounds(stage, name)").neq("phase", "finished");
+      const groupUnfinished = (unfinished ?? []).filter((m: any) => m.round?.stage === "group");
+      if (groupUnfinished.length > 0) {
+        return { ok: false, error: `Nezavršeno još ${groupUnfinished.length} grupnih mečeva. Koristi „Force lock" ako želiš da nastaviš.` };
+      }
+    }
+    const res = await resolveAllPlaceholders();
+    if (!res.ok) return res;
+    await admin.from("tournament_state").upsert({
+      id: true,
+      group_stage_locked: true,
+      group_stage_locked_at: new Date().toISOString(),
+    });
+    revalidatePath("/admin/bracket");
+    revalidatePath("/bracket");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// Unlock: clear auto-resolved team_ids on knockout matches, keep manual overrides
+export async function unlockGroupStage(): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    const { data: matches } = await admin
+      .from("matches")
+      .select("id, home_team_id_manual, away_team_id_manual, home_placeholder, away_placeholder, round:rounds(stage)")
+      .not("bracket_position", "is", null);
+    for (const m of (matches ?? []) as any[]) {
+      if (m.round?.stage !== "knockout") continue;
+      const update: any = {};
+      if (m.home_placeholder && !m.home_team_id_manual) update.home_team_id = null;
+      if (m.away_placeholder && !m.away_team_id_manual) update.away_team_id = null;
+      if (Object.keys(update).length) await admin.from("matches").update(update).eq("id", m.id);
+    }
+    await admin.from("tournament_state").upsert({
+      id: true, group_stage_locked: false, group_stage_locked_at: null,
+    });
+    revalidatePath("/admin/bracket");
+    revalidatePath("/bracket");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// Trigger re-resolution after a knockout match finishes
+export async function resolveBracketNow(): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const res = await resolveAllPlaceholders();
+    revalidatePath("/admin/bracket");
+    revalidatePath("/bracket");
+    return res;
+  }) as Promise<ActionResult>;
+}
+
 // Manual override: set a specific team in a slot
 export async function setBracketSlot(input: { match_id: string; slot: "home" | "away"; team_id: string | null }): Promise<ActionResult> {
   return withAdmin(async () => {
@@ -123,7 +182,8 @@ export async function clearBracketOverride(input: { match_id: string; slot: "hom
     const admin = createAdminClient();
     const overrideCol = input.slot === "home" ? "home_team_id_manual" : "away_team_id_manual";
     const realCol = input.slot === "home" ? "home_team_id" : "away_team_id";
-    const { error } = await admin.from("matches").update({ [overrideCol]: null, [realCol]: null }).eq("id", input.match_id);
+    const update: Record<string, null> = { [overrideCol]: null, [realCol]: null };
+    const { error } = await admin.from("matches").update(update as any).eq("id", input.match_id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/bracket");
     revalidatePath("/bracket");
