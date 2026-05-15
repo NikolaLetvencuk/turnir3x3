@@ -15,8 +15,9 @@ Email se nalazi u `.env.local` pod `ADMIN_EMAIL`, šifra pod `ADMIN_PASSWORD`. L
 ## Tehnologija
 
 - Next.js 14 (App Router, TS strict, Tailwind)
-- Supabase (Postgres + Auth + Realtime, free tier)
+- Supabase (Postgres + Auth + Realtime + Storage, free tier)
 - Vercel (Hobby plan, free)
+- Framer Motion (animacije žreba), @dnd-kit (drag-and-drop raspored)
 - Zod + react-hook-form, lucide-react ikone, date-fns
 - Validacija: Zod sheme, sve mutacije preko Server Actions
 
@@ -41,8 +42,6 @@ RESEND_API_KEY
 RESEND_FROM_EMAIL
 ```
 
-Ako nema RESEND-a, koristi se Supabase ugrađeni mailer (rate-limited).
-
 ## Lokalni razvoj
 
 ```bash
@@ -51,7 +50,7 @@ cp .env .env.local   # popuni svoje vrednosti
 npm run dev
 ```
 
-Migracije se primenjuju sa:
+Migracije:
 
 ```bash
 npx supabase login --token "$SUPABASE_ACCESS_TOKEN"
@@ -77,31 +76,55 @@ Deploy:
 npx vercel --prod --token "$VERCEL_TOKEN" --yes
 ```
 
+## Database reset (HIGH PRIORITY ALAT)
+
+Briše sve podatke turnira (timovi, igrači, mečevi, događaji, fantasy timovi, lige, snapshoti, bodovi, transferi, slike igrača) i sve korisnike osim admin naloga. Admin nalog ostaje aktivan.
+
+CLI:
+
+```bash
+npm run reset           # interaktivno: traži da otkucaš RESET
+npm run reset:force     # bez potvrde — koristi u CI ili kad si siguran
+```
+
+UI:
+
+`/admin/danger-zone` → klikni „Resetuj sve" → otkucaj `RESETUJ` → potvrdi.
+
 ## Admin workflow — pre sezone
 
 1. **Login** kao admin na `/auth/login`
-2. **Timovi** — `/admin/teams` — dodaj sve timove
-3. **Igrači** — `/admin/players` — dodaj igrače i veži ih za timove
-4. **Grupe** — `/admin/groups` — kreiraj grupe (A, B, ...) i dodeli timove
-5. **Kola** — `/admin/rounds` — definiši sva kola unapred (grupna faza + eliminacije, naziv, faza, redosled, opcioni datum)
-6. **Mečevi** — `/admin/matches` — kreiraj fixtures, dodeli ih kolima i grupama, postavi termin
+2. **Timovi** — `/admin/teams` — dodaj sve timove sa naslovom, skraćenicom i bojama (primarna + sekundarna). Grb se generiše automatski iz boja.
+3. **Igrači** — `/admin/players` — dodaj igrače (proizvoljan broj po timu) sa opcionim fotografijama (klijent-side resize, JPEG ≤200KB).
+4. **Žreb** — `/admin/draw` — unesi broj grupa (2–8), pokreni animirani žreb, pregledaj raspored, potvrdi. Sistem generiše grupe, kola i sve round-robin mečeve u jednoj transakciji.
+5. **Raspored** — `/admin/schedule` — prevuci mečeve između kola po potrebi (zaključana kola su označena katancem).
 
 ## Admin workflow — tokom turnira
 
-1. Pre meča: otvori meč na `/admin/matches/[id]/live`
-2. **Go Live** — meč postaje uživo i kolo se aktivira (snapshoting fantasy timova)
-3. Dok meč traje, dodaj događaje (golovi, asistencije, kartoni) — rezultat se automatski ažurira, fantasy bodovi se preračunavaju
-4. Kad meč završi, klikni **Završi meč**
-5. Kad sva mečeva u kolu završe, sistem automatski:
-   - Računa konačne bodove za to kolo
-   - Ažurira cene igrača za sledeće kolo (`new_price = 10.00 + 0.1 × ukupni bodovi do sada`, minimum 4.00)
-   - Označava kolo kao završeno
-6. Nakon grupne faze: `/admin/bracket` → kreiraj eliminacione mečeve
+Sa mobilnog telefona:
+
+1. Otvori meč preko `/admin/matches` → `Otvori`
+2. **Pokreni meč** — počinje prvo poluvreme, sat ide 1' → 20'
+3. **Dodaj događaje** (gol, autogol, žuti, crveni) — minut se automatski popuni trenutnim vremenom meča, igrače biraš iz tima
+4. **Kraj prvog poluvremena** — pauza
+5. **Pokreni drugo poluvreme** — sat ide 21' → 40'
+6. **Završi meč** — fantasy bodovi se preračunaju, tabela se ažurira u realnom vremenu
+
+Sva pravila:
+- Skor se NIKAD ne unosi ručno — derivira se iz logovanih događaja (DB trigger)
+- Minut je obavezan za svaki događaj
+- Meč ne može da se završi ako nije pokrenut
+- Tabele se osvežavaju automatski preko Supabase Realtime
+
+Nakon grupne faze:
+
+7. `/admin/bracket` → kreiraj eliminacione mečeve
 
 ## Fantasy pravila
 
-- 3 igrača po timu, bez budget cap-a (cena je informativna)
-- Transferi samo izmedju kola; prvi transfer u kolu besplatan, svaki sledeći −4 boda
+- 3 igrača po fantasy timu (ovo je gameplay odluka, ne tehnički limit)
+- Bez budget cap-a (cena je informativna)
+- Transferi samo izmedju kola; prvi besplatan, svaki sledeći −4 boda
 - Lige preko 6-znakovnog invite koda (1/I i 0/O isključeni); neograničen broj liga po korisniku
 
 Bodovanje:
@@ -121,31 +144,48 @@ Bodovanje:
 
 ```
 app/
-  (public)              — početna, standings, matches, players, bracket, fantasy landing
+  (public)              — početna, standings (realtime), matches, players, bracket, fantasy landing
   auth/                 — login, register, verify, reset-password, callback
   fantasy/team/         — sastavi/izmeni svoj fantasy tim + istorija
   fantasy/leagues/      — kreiranje i pridruživanje preko koda + grid po kolu
-  admin/                — sve admin CRUD stranice + live event entry
+  admin/
+    teams               — CRUD + color pickers + crest preview
+    players             — CRUD + photo upload
+    draw                — auto-žreb sa animacijom
+    schedule            — DnD raspored mečeva po kolima
+    matches             — pregled svih mečeva
+    matches/[id]/live   — live event entry + fazni state machine + 2×20 sat
+    bracket             — eliminaciona faza
+    fantasy             — manual recalc po kolu
+    danger-zone         — reset svih podataka
 lib/
-  supabase/             — client / server / admin / middleware varijante
+  supabase/             — client / server / admin / middleware
   auth.ts               — getCurrentProfile, requireAdmin
   hooks/                — useRealtimeMatch
-  standings.ts          — server-side agregacija tabela i top scorers
-components/             — TopNav, BottomNav, ToastProvider, MatchCard, helperi
-supabase/migrations/    — 0001 init (šema + funkcije + RLS), 0002 realtime, 0003 trigger fix
-scripts/                — seed-admin.ts, push-vercel-env.ts
+  standings.ts          — server-side agregacija (čita iz `standings` view-a)
+  draw.ts               — Fisher-Yates + snake distribution + round-robin
+  matchClock.ts         — getCurrentMinute, phaseLabel
+  reset.ts              — zajednička reset rutina (CLI i UI dele)
+components/
+  TeamCrest             — SVG grb iz boja
+  PlayerAvatar          — foto ili initials sa team-primary background
+  admin/DrawAnimation   — Framer Motion ceremonija
+supabase/migrations/    — 0001 init, 0002 realtime, 0003 trigger fix, 0004 reset RPC,
+                          0005 colors, 0006 photos+storage, 0007 phases, 0008 standings view, 0009 score trigger
+scripts/                — seed-admin.ts, push-vercel-env.ts, reset-db.ts
 types/database.ts       — generisani Supabase tipovi
 ```
 
 ## Sigurnost
 
 - RLS uključen na svim tabelama
-- Service role ključ isključivo u `lib/supabase/admin.ts`, koristi se samo iz Server Actions i Route Handlers
+- Service role ključ isključivo u `lib/supabase/admin.ts`
 - Trigger blokira menjanje `profiles.role` van service-role konteksta
-- Fantasy team se ne može menjati kad postoji aktivno kolo (RLS policy + app-level provera)
+- Reset RPC `reset_tournament_data` revoke-ovan od `anon`/`authenticated` — zove samo service role
 - Sve forme imaju Zod validaciju i server-side proveru
-- Realtime kanali (postgres_changes) su filtrirani po match_id na klijentu
+- Storage bucket `player-photos` je public za čitanje, upload samo preko admin server actiona
+- Score je derived iz match_events preko DB trigger-a — nije moguće upisati direktno
 
 ## Build
 
-`npm run build` mora da prođe bez TS i lint grešaka. CI je samo Vercelov default.
+`npm run build` mora da prođe bez TS i lint grešaka.
