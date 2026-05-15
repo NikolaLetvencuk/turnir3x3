@@ -244,46 +244,9 @@ export async function activateRound(formData: FormData): Promise<ActionResult> {
   }) as Promise<ActionResult>;
 }
 
-// MATCHES
-const matchSchema = z.object({
-  round_id: z.string().uuid(),
-  group_id: z.string().uuid().nullable().optional(),
-  home_team_id: z.string().uuid(),
-  away_team_id: z.string().uuid(),
-  kickoff_at: z.string().nullable().optional(),
-  bracket_position: z.string().nullable().optional(),
-});
-
-export async function createMatch(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
-    const parsed = matchSchema.safeParse({
-      round_id: formData.get("round_id"),
-      group_id: (formData.get("group_id") as string) || null,
-      home_team_id: formData.get("home_team_id"),
-      away_team_id: formData.get("away_team_id"),
-      kickoff_at: (formData.get("kickoff_at") as string) || null,
-      bracket_position: (formData.get("bracket_position") as string) || null,
-    });
-    if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
-    if (parsed.data.home_team_id === parsed.data.away_team_id) return { ok: false, error: "Domaćin i gost moraju biti različiti" };
-    const admin = createAdminClient();
-    const { error } = await admin.from("matches").insert(parsed.data);
-    if (error) return { ok: false, error: error.message };
-    revalidatePath("/admin/matches");
-    return { ok: true };
-  }) as Promise<ActionResult>;
-}
-
-export async function deleteMatch(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
-    const id = formData.get("id") as string;
-    const admin = createAdminClient();
-    const { error } = await admin.from("matches").delete().eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    revalidatePath("/admin/matches");
-    return { ok: true };
-  }) as Promise<ActionResult>;
-}
+// MATCHES — matches are created exclusively by the draw (commitDraw) and bracket generator
+// (generateKnockoutBracket), both of which use the admin client directly. There is no
+// public createMatch / deleteMatch Server Action; matches can only be cleared via reset.
 
 export async function startFirstHalf(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
