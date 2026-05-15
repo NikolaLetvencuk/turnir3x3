@@ -112,10 +112,9 @@ export async function createPlayer(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const name = (formData.get("name") as string ?? "").trim();
     const team_id = (formData.get("team_id") as string) || null;
-    const position = (formData.get("position") as string) || null;
     if (!name) return { ok: false, error: "Ime obavezno" };
     const admin = createAdminClient();
-    const { error } = await admin.from("players").insert({ name, team_id, position });
+    const { error } = await admin.from("players").insert({ name, team_id });
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/players");
     return { ok: true };
@@ -127,9 +126,8 @@ export async function updatePlayer(formData: FormData): Promise<ActionResult> {
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string ?? "").trim();
     const team_id = (formData.get("team_id") as string) || null;
-    const position = (formData.get("position") as string) || null;
     const admin = createAdminClient();
-    const { error } = await admin.from("players").update({ name, team_id, position }).eq("id", id);
+    const { error } = await admin.from("players").update({ name, team_id }).eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/players");
     return { ok: true };

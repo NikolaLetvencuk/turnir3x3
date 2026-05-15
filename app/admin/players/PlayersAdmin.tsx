@@ -5,7 +5,7 @@ import { useActionRunner } from "@/components/admin/FormButton";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { createPlayer, deletePlayer, removePlayerPhoto, updatePlayer, uploadPlayerPhoto } from "../actions";
 
-type Player = { id: string; name: string; team_id: string | null; position: string | null; photo_url: string | null };
+type Player = { id: string; name: string; team_id: string | null; photo_url: string | null };
 type Team = { id: string; name: string; primary_color: string | null };
 
 async function resizeToJpeg(file: File, maxSize = 400, quality = 0.85): Promise<Blob> {
@@ -81,36 +81,34 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Igrači</h1>
-      <form onSubmit={onCreate} className="card grid sm:grid-cols-[1.5fr_1fr_1fr_auto] gap-2">
+      <form onSubmit={onCreate} className="card grid sm:grid-cols-[1.5fr_1fr_auto] gap-2">
         <input name="name" placeholder="Ime i prezime" required className="input" />
         <select name="team_id" className="input">
           <option value="">— bez tima —</option>
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
-        <input name="position" placeholder="Pozicija (opciono)" className="input" />
         <button className="btn-primary">Dodaj</button>
       </form>
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
-          <thead><tr className="text-xs text-zinc-500"><th className="text-left py-2 w-12"></th><th className="text-left">Ime</th><th className="text-left">Tim</th><th className="text-left">Pozicija</th><th></th></tr></thead>
+          <thead><tr className="text-xs text-zinc-500"><th className="text-left py-2 w-12"></th><th className="text-left">Ime</th><th className="text-left">Tim</th><th></th></tr></thead>
           <tbody>
             {players.map((p) => (
               <tr key={p.id} className="border-t border-zinc-100">
                 {editing === p.id ? (
-                  <td colSpan={5} className="py-2">
+                  <td colSpan={4} className="py-2">
                     <form onSubmit={async (e) => {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget);
                       fd.set("id", p.id);
                       const ok = await run(updatePlayer, fd);
                       if (ok) setEditing(null);
-                    }} className="grid grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-2">
+                    }} className="grid grid-cols-[1.5fr_1fr_auto_auto] gap-2">
                       <input name="name" defaultValue={p.name} className="input" />
                       <select name="team_id" defaultValue={p.team_id ?? ""} className="input">
                         <option value="">—</option>
                         {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
-                      <input name="position" defaultValue={p.position ?? ""} className="input" />
                       <button className="btn-primary">Sačuvaj</button>
                       <button type="button" onClick={() => setEditing(null)} className="btn-secondary">Otkaži</button>
                     </form>
@@ -122,7 +120,6 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
                     </td>
                     <td className="font-medium">{p.name}</td>
                     <td className="text-zinc-500">{p.team_id ? teamMap.get(p.team_id)?.name : "—"}</td>
-                    <td className="text-zinc-500">{p.position ?? "—"}</td>
                     <td className="text-right space-x-1 whitespace-nowrap">
                       <PhotoUploader playerId={p.id} hasPhoto={!!p.photo_url} run={run} />
                       <button onClick={() => setEditing(p.id)} className="btn-secondary !py-1 !px-2 text-xs">Izmeni</button>
@@ -139,7 +136,7 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
                 )}
               </tr>
             ))}
-            {players.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-zinc-500">Nema igrača.</td></tr>}
+            {players.length === 0 && <tr><td colSpan={4} className="py-4 text-center text-zinc-500">Nema igrača.</td></tr>}
           </tbody>
         </table>
       </div>
