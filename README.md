@@ -95,9 +95,10 @@ UI:
 
 1. **Login** kao admin na `/auth/login`
 2. **Timovi** — `/admin/teams` — dodaj sve timove sa naslovom, skraćenicom i bojama (primarna + sekundarna). Grb se generiše automatski iz boja.
-3. **Igrači** — `/admin/players` — dodaj igrače (proizvoljan broj po timu) sa opcionim fotografijama (klijent-side resize, JPEG ≤200KB).
-4. **Žreb** — `/admin/draw` — unesi broj grupa (2–8), pokreni animirani žreb, pregledaj raspored, potvrdi. Sistem generiše grupe, kola i sve round-robin mečeve u jednoj transakciji.
-5. **Raspored** — `/admin/schedule` — prevuci mečeve između kola po potrebi (zaključana kola su označena katancem).
+3. **Igrači** — `/admin/players` — dodaj igrače (proizvoljan broj po timu) sa opcionim fotografijama (klijent-side resize, JPEG ≤200KB). Bez polja „pozicija". Igrači se mogu dodavati i menjati u bilo kom trenutku turnira.
+4. **Žreb** — `/admin/draw` — unesi broj grupa (2–8), pokreni animirani žreb, pregledaj raspored, potvrdi. Radi za bilo koji par (timovi, grupe) gde imaš najmanje 2 tima po grupi.
+5. **Raspored** — `/admin/schedule` — prevuci mečeve između kola po potrebi.
+6. **Nokaut kostur (opciono — bilo kad)** — `/admin/bracket` → izaberi koliko timova prolazi (2/4/8/16), koliko direktno po grupi, klikni „Generiši nokaut". Mečevi se kreiraju sa placeholder-ima (`A1`, `B2`, `W_QF_1`, `L_SF_1`...).
 
 ## Admin workflow — tokom turnira
 
@@ -118,7 +119,19 @@ Sva pravila:
 
 Nakon grupne faze:
 
-7. `/admin/bracket` → kreiraj eliminacione mečeve
+7. `/admin/bracket` → klikni **„Zaključaj grupnu fazu"** — sistem rešava sve placeholder-e (A1, B2, BEST3_1...) u stvarne timove na osnovu tabela sa tiebreakerima (poeni, gol-razlika, golovi dati, head-to-head, disciplinski poeni). Ako neki meč nije završen, koristi **„Force lock"** sa upozorenjem.
+8. Igraj nokaut mečeve. Svaki put kad meč završi:
+   - Pobednik propagira u `W_<bracket_position>` slot
+   - Gubitnik u `L_<bracket_position>` (za meč za 3. mesto)
+   - Ako je izjednačeno: admin bira pobednika kroz dugmad **Penali / Produžeci**
+9. Manuelni override: klik na bilo koji slot → dropdown sa svim timovima → izaberi tim. Manuelne dodele preživljavaju re-lock i re-resolve.
+
+### Nokaut placeholderi
+
+- `A1`, `B2`, `C3` — pozicija u grupi
+- `BEST3_1`, `BEST3_2` — najbolji 3-plasirani po PPG-u (kada brojevi grupa nisu deljivi)
+- `W_QF_1`, `W_SF_2`, `W_F` — pobednik prethodnog meča
+- `L_SF_1`, `L_SF_2` — gubitnik (za meč za 3. mesto)
 
 ## Fantasy pravila
 
