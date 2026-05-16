@@ -248,6 +248,31 @@ export async function activateRound(formData: FormData): Promise<ActionResult> {
 // (generateKnockoutBracket), both of which use the admin client directly. There is no
 // public createMatch / deleteMatch Server Action; matches can only be cleared via reset.
 
+// Set or clear a match's kickoff date/time. Purely informational — doesn't affect phase logic.
+export async function setMatchKickoff(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const id = formData.get("id") as string;
+    const raw = (formData.get("kickoff_at") as string) || "";
+    if (!id) return { ok: false, error: "Nedostaje id meča" };
+
+    let kickoff_at: string | null = null;
+    if (raw.trim()) {
+      // Browser sends "YYYY-MM-DDTHH:mm" in local time. Treat as Europe/Belgrade local.
+      const parsed = new Date(raw);
+      if (isNaN(parsed.getTime())) return { ok: false, error: "Neispravan datum" };
+      kickoff_at = parsed.toISOString();
+    }
+    const admin = createAdminClient();
+    const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/matches");
+    revalidatePath("/admin/schedule");
+    revalidatePath("/matches");
+    revalidatePath(`/matches/${id}`);
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 export async function startFirstHalf(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const id = formData.get("id") as string;
