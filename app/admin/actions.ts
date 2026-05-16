@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { belgradeLocalToUTCISO } from "@/lib/utils";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -257,10 +258,10 @@ export async function setMatchKickoff(formData: FormData): Promise<ActionResult>
 
     let kickoff_at: string | null = null;
     if (raw.trim()) {
-      // Browser sends "YYYY-MM-DDTHH:mm" in local time. Treat as Europe/Belgrade local.
-      const parsed = new Date(raw);
-      if (isNaN(parsed.getTime())) return { ok: false, error: "Neispravan datum" };
-      kickoff_at = parsed.toISOString();
+      // Browser sends "YYYY-MM-DDTHH:mm" in admin's wall-clock — always Europe/Belgrade for this app.
+      const iso = belgradeLocalToUTCISO(raw.trim());
+      if (!iso) return { ok: false, error: "Neispravan datum" };
+      kickoff_at = iso;
     }
     const admin = createAdminClient();
     const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", id);

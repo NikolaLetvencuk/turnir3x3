@@ -41,6 +41,44 @@ export function formatDate(value: string | Date | null | undefined): string {
 }
 
 /**
+ * Convert a wall-clock string "YYYY-MM-DDTHH:mm" (as typed in datetime-local) interpreted
+ * in Europe/Belgrade into an ISO UTC timestamp string. Server timezone-independent.
+ * Two-pass iteration handles DST transitions correctly.
+ */
+export function belgradeLocalToUTCISO(raw: string): string | null {
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const h = Number(m[4]);
+  const mi = Number(m[5]);
+  const s = m[6] ? Number(m[6]) : 0;
+  const targetWallMs = Date.UTC(y, mo - 1, d, h, mi, s);
+
+  // Compute what Belgrade wall-clock shows at a given UTC instant
+  function belgradeWallAt(utcMs: number): number {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: BG_TZ,
+      hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(new Date(utcMs));
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+    let bh = get("hour");
+    if (bh === 24) bh = 0; // Intl quirk on midnight
+    return Date.UTC(get("year"), get("month") - 1, get("day"), bh, get("minute"), get("second"));
+  }
+
+  // The Belgrade offset at any UTC instant = belgradeWall - utc
+  // We want utcMs such that belgradeWallAt(utcMs) === targetWallMs
+  let utcMs = targetWallMs - (belgradeWallAt(targetWallMs) - targetWallMs);
+  // Second pass for DST edge: refine once more in case the first guess crossed a transition
+  utcMs = targetWallMs - (belgradeWallAt(utcMs) - utcMs);
+  return new Date(utcMs).toISOString();
+}
+
+/**
  * Format kickoff with weekday: "nedelja, 17.05.2026. u 21:00"
  */
 export function formatKickoff(value: string | Date | null | undefined): string {
