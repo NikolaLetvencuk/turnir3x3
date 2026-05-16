@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { useRealtimeMatch } from "@/lib/hooks/useRealtimeMatch";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { TeamCrest } from "@/components/TeamCrest";
@@ -140,6 +142,9 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
 
   return (
     <div className="space-y-4">
+      <Link href="/admin/matches" className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-emerald-700">
+        <ArrowLeft className="w-4 h-4" /> Nazad na mečeve
+      </Link>
       <div className="card">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="text-center">

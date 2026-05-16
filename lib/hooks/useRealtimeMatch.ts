@@ -7,8 +7,8 @@ import type { Database } from "@/types/database";
 type Match = Database["public"]["Tables"]["matches"]["Row"];
 type MatchEvent = Database["public"]["Tables"]["match_events"]["Row"];
 
-export function useRealtimeMatch(matchId: string, initialMatch: Match, initialEvents: MatchEvent[]) {
-  const [match, setMatch] = useState<Match>(initialMatch);
+export function useRealtimeMatch<M extends Match>(matchId: string, initialMatch: M, initialEvents: MatchEvent[]) {
+  const [match, setMatch] = useState<M>(initialMatch);
   const [events, setEvents] = useState<MatchEvent[]>(initialEvents);
 
   useEffect(() => {
@@ -18,7 +18,8 @@ export function useRealtimeMatch(matchId: string, initialMatch: Match, initialEv
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${matchId}` },
-        (payload) => setMatch(payload.new as Match),
+        // Merge: payload.new contains only base columns, preserve home_team/away_team/round joins
+        (payload) => setMatch((prev) => ({ ...prev, ...(payload.new as Partial<M>) })),
       )
       .on(
         "postgres_changes",
