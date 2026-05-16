@@ -54,6 +54,50 @@ export const DEMO_DATA: DemoTeam[] = [
       "Čelavi Šmarac 3",
     ],
   },
+  {
+    name: "Barselona",
+    short_name: "BAR",
+    primary_color: "#A50044",
+    secondary_color: "#004D98",
+    players: [
+      "Lionel Messi",
+      "Luis Suárez",
+      "Neymar Jr.",
+    ],
+  },
+  {
+    name: "Real Madrid",
+    short_name: "RMA",
+    primary_color: "#FEBE10",
+    secondary_color: "#FFFFFF",
+    players: [
+      "Cristiano Ronaldo",
+      "Gareth Bale",
+      "Karim Benzema",
+    ],
+  },
+  {
+    name: "Bajern Minhen",
+    short_name: "BAJ",
+    primary_color: "#DC052D",
+    secondary_color: "#FFFFFF",
+    players: [
+      "Robert Lewandowski",
+      "Arjen Robben",
+      "Thomas Müller",
+    ],
+  },
+  {
+    name: "Atletiko Madrid",
+    short_name: "ATM",
+    primary_color: "#CB3524",
+    secondary_color: "#272E61",
+    players: [
+      "Antoine Griezmann",
+      "Fernando Torres",
+      "Koke",
+    ],
+  },
 ];
 
 export type SeedResult =
