@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Info, Calendar, X, Lock } from "lucide-react";
+import { Info, Calendar, X, Lock, Zap } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 import { useActionRunner } from "@/components/admin/FormButton";
-import { setMatchKickoff, startFirstHalf, finishMatch } from "../actions";
+import { setMatchKickoff, startFirstHalf, finishMatch, bulkSetMatchKickoffs } from "../actions";
 import { formatKickoff, toDatetimeLocalValue, toLocalDate } from "@/lib/utils";
 
 type Match = any;
@@ -25,8 +27,14 @@ function defaultSelectedRound(rounds: Round[], matchesByRound: Map<string, Match
 
 export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Round[] }) {
   const run = useActionRunner();
+  const router = useRouter();
+  const { push } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<string>("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkStart, setBulkStart] = useState<string>("");
+  const [bulkGap, setBulkGap] = useState<number>(40);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const matchesByRound = useMemo(() => {
     const map = new Map<string, Match[]>();
@@ -72,6 +80,29 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
     fd.set("kickoff_at", value);
     const ok = await run(setMatchKickoff, fd, { successMessage: value ? "Termin sačuvan" : "Termin obrisan" });
     if (ok) setEditingId(null);
+  }
+
+  function openBulk() {
+    const firstWithKickoff = selectedMatches.find((m: any) => m.kickoff_at);
+    setBulkStart(firstWithKickoff ? toDatetimeLocalValue(firstWithKickoff.kickoff_at) : "");
+    setBulkOpen(true);
+  }
+
+  async function runBulkFill() {
+    if (!bulkStart.trim() || !Number.isFinite(bulkGap) || bulkGap < 0) return;
+    const hasExisting = selectedMatches.some((m: any) => m.kickoff_at);
+    if (hasExisting && !confirm("Postojeći termini u ovom kolu će biti prepisani. Nastaviti?")) return;
+    setBulkBusy(true);
+    const res = await bulkSetMatchKickoffs({
+      ordered_match_ids: selectedMatches.map((m: any) => m.id),
+      start: bulkStart,
+      gap_minutes: bulkGap,
+    });
+    setBulkBusy(false);
+    if (!res.ok) { push(res.error, "error"); return; }
+    push(`Popunjeno ${selectedMatches.length} termina`, "success");
+    setBulkOpen(false);
+    router.refresh();
   }
 
   return (
@@ -123,6 +154,22 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
               })}
             </div>
           </div>
+
+          {selectedMatches.length > 0 && (
+            <div className="card flex flex-wrap items-center gap-2 text-sm">
+              <button
+                onClick={openBulk}
+                className="btn-primary !py-1.5 !px-3 text-xs inline-flex items-center gap-1.5"
+                title="Automatski popuni termine za sve mečeve ovog kola"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Popuni termine
+              </button>
+              <span className="text-xs text-zinc-500">
+                Auto-popunjava {selectedMatches.length} mečeva u kolu sekvencijalno (početak + razmak).
+              </span>
+            </div>
+          )}
 
           {datesInSelected.length > 1 && (
             <div className="card flex flex-wrap items-center gap-2 text-sm">
@@ -242,6 +289,69 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
             </table>
           </div>
         </>
+      )}
+
+      {bulkOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !bulkBusy && setBulkOpen(false)}>
+          <div className="bg-white rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-emerald-600" /> Popuni termine za kolo
+            </h3>
+            <p className="text-sm text-zinc-600 mb-3">
+              Automatski postavlja termine za <b>{selectedMatches.length} mečeva</b>. Prvi meč počinje u izabrano vreme,
+              svaki sledeći pomeren za izabrani razmak.
+            </p>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="label">Početak prvog meča</span>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={bulkStart}
+                  onChange={(e) => setBulkStart(e.target.value)}
+                  autoFocus
+                />
+              </label>
+              <label className="block">
+                <span className="label">Razmak između mečeva (minuta)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1440}
+                  step={5}
+                  className="input"
+                  value={bulkGap}
+                  onChange={(e) => setBulkGap(Number(e.target.value) || 0)}
+                />
+              </label>
+
+              {bulkStart && Number.isFinite(bulkGap) && bulkGap >= 0 && selectedMatches.length > 0 && (
+                <div className="text-xs text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-md p-2 max-h-40 overflow-y-auto">
+                  <div className="font-medium text-zinc-700 mb-1">Pregled:</div>
+                  {selectedMatches.slice(0, 8).map((m: any, i: number) => {
+                    const start = new Date(bulkStart);
+                    if (isNaN(start.getTime())) return null;
+                    const t = new Date(start.getTime() + i * bulkGap * 60000);
+                    const hh = String(t.getHours()).padStart(2, "0");
+                    const mm = String(t.getMinutes()).padStart(2, "0");
+                    return (
+                      <div key={m.id} className="truncate">
+                        <span className="tabular-nums text-zinc-500">{hh}:{mm}</span> — {m.home?.name} vs {m.away?.name}
+                      </div>
+                    );
+                  })}
+                  {selectedMatches.length > 8 && <div className="text-zinc-400 mt-0.5">… i još {selectedMatches.length - 8}</div>}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button onClick={() => setBulkOpen(false)} disabled={bulkBusy} className="btn-secondary">Otkaži</button>
+              <button onClick={runBulkFill} disabled={bulkBusy || !bulkStart} className="btn-primary">
+                {bulkBusy ? "Popunjavam…" : "Popuni"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -249,6 +249,42 @@ export async function activateRound(formData: FormData): Promise<ActionResult> {
 // (generateKnockoutBracket), both of which use the admin client directly. There is no
 // public createMatch / deleteMatch Server Action; matches can only be cleared via reset.
 
+// Bulk-fill kickoff times for a list of matches, starting at `start` (Belgrade local),
+// each subsequent match offset by `gap_minutes`. Order is preserved from input.
+const bulkSchema = z.object({
+  ordered_match_ids: z.array(z.string().uuid()).min(1),
+  start: z.string().min(1),
+  gap_minutes: z.number().int().min(0).max(24 * 60),
+});
+
+export async function bulkSetMatchKickoffs(input: { ordered_match_ids: string[]; start: string; gap_minutes: number }): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const parsed = bulkSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
+
+    const startIso = belgradeLocalToUTCISO(parsed.data.start);
+    if (!startIso) return { ok: false, error: "Neispravan datum/vreme" };
+
+    const startMs = new Date(startIso).getTime();
+    const gapMs = parsed.data.gap_minutes * 60_000;
+
+    const admin = createAdminClient();
+    for (let i = 0; i < parsed.data.ordered_match_ids.length; i++) {
+      const kickoff_at = new Date(startMs + i * gapMs).toISOString();
+      const { error } = await admin
+        .from("matches")
+        .update({ kickoff_at })
+        .eq("id", parsed.data.ordered_match_ids[i]);
+      if (error) return { ok: false, error: error.message };
+    }
+
+    revalidatePath("/admin/matches");
+    revalidatePath("/admin/schedule");
+    revalidatePath("/matches");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 // Set or clear a match's kickoff date/time. Purely informational — doesn't affect phase logic.
 export async function setMatchKickoff(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
