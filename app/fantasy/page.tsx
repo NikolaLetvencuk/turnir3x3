@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
 import { getFantasyOverview, FANTASY_BUDGET } from "@/lib/fantasy";
+import { LeagueForms } from "./leagues/LeagueForms";
 
 export const revalidate = 0;
 
@@ -48,14 +49,24 @@ export default async function FantasyLandingPage() {
         </div>
         <div className="mt-4 flex gap-2 flex-wrap">
           <Link href="/fantasy/team" className="bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">Moj tim</Link>
-          <Link href="/fantasy/leagues" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Lige</Link>
+          <Link href="/fantasy/team/history" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Istorija</Link>
         </div>
       </section>
 
-      {overview.leagues.length > 0 && (
-        <section>
-          <h2 className="font-semibold mb-2">Moje lige</h2>
-          <div className="space-y-2">
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-semibold">Moje lige</h2>
+          {overview.leagues.length > 0 && (
+            <span className="text-xs text-zinc-500">{overview.leagues.length} {overview.leagues.length === 1 ? "liga" : "liga"}</span>
+          )}
+        </div>
+
+        {overview.leagues.length === 0 ? (
+          <div className="card text-sm text-zinc-600">
+            Još nisi u ni jednoj ligi. Kreiraj novu ili se pridruži preko koda ispod.
+          </div>
+        ) : (
+          <div className="space-y-2 mb-3">
             {overview.leagues.map((l) => (
               <Link
                 key={l.league_id}
@@ -64,7 +75,11 @@ export default async function FantasyLandingPage() {
               >
                 <div className="min-w-0">
                   <div className="font-medium truncate">{l.league_name}</div>
-                  <div className="text-xs text-zinc-500">{l.member_count} {l.member_count === 1 ? "član" : "članova"} · kod <span className="font-mono">{l.invite_code}</span></div>
+                  <div className="text-xs text-zinc-500 flex flex-wrap gap-x-2 gap-y-0.5">
+                    <span>{l.member_count} {l.member_count === 1 ? "član" : "članova"}</span>
+                    <span>·</span>
+                    <span>kod <span className="font-mono">{l.invite_code}</span></span>
+                  </div>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-2xl font-bold tabular-nums">{l.my_rank}.</div>
@@ -73,8 +88,10 @@ export default async function FantasyLandingPage() {
               </Link>
             ))}
           </div>
-        </section>
-      )}
+        )}
+
+        <LeagueForms />
+      </section>
 
       <section className="card">
         <h2 className="font-semibold mb-2">Pravila bodovanja</h2>

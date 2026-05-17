@@ -21,7 +21,12 @@ export function LeagueForms() {
     if (!res.ok) { push(res.error, "error"); return; }
     push(`Liga kreirana — kod ${res.data?.invite_code}`, "success");
     setName("");
-    router.refresh();
+    if (res.data?.id) {
+      router.push(`/fantasy/leagues/${res.data.id}`);
+      router.refresh();
+    } else {
+      router.refresh();
+    }
   }
 
   async function onJoin(e: React.FormEvent) {
@@ -33,7 +38,12 @@ export function LeagueForms() {
     if (!res.ok) { push(res.error, "error"); return; }
     push("Pridružen ligi", "success");
     setCode("");
-    router.refresh();
+    if (res.data?.id) {
+      router.push(`/fantasy/leagues/${res.data.id}`);
+      router.refresh();
+    } else {
+      router.refresh();
+    }
   }
 
   return (
@@ -41,12 +51,13 @@ export function LeagueForms() {
       <form onSubmit={onCreate} className="card space-y-2">
         <div className="font-medium text-sm">Kreiraj novu ligu</div>
         <input className="input" placeholder="Naziv lige" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={60} />
-        <button disabled={pending} className="btn-primary w-full">Kreiraj</button>
+        <button disabled={pending} className="btn-primary w-full">{pending ? "..." : "Kreiraj"}</button>
+        <p className="text-[11px] text-zinc-500">Dobićeš 6-znakovni kod koji deliš sa drugarima.</p>
       </form>
       <form onSubmit={onJoin} className="card space-y-2">
         <div className="font-medium text-sm">Pridruži se preko koda</div>
         <input className="input uppercase tracking-widest font-mono" placeholder="ABCD12" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} required maxLength={6} />
-        <button disabled={pending} className="btn-secondary w-full">Pridruži se</button>
+        <button disabled={pending} className="btn-secondary w-full">{pending ? "..." : "Pridruži se"}</button>
       </form>
     </div>
   );
