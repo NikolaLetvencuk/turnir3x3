@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
 import { getFantasyOverview, FANTASY_BUDGET } from "@/lib/fantasy";
-import { LeagueForms } from "./leagues/LeagueForms";
 
 export const revalidate = 0;
 
@@ -56,17 +55,15 @@ export default async function FantasyLandingPage() {
       <section>
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold">Moje lige</h2>
-          {overview.leagues.length > 0 && (
-            <span className="text-xs text-zinc-500">{overview.leagues.length} {overview.leagues.length === 1 ? "liga" : "liga"}</span>
-          )}
+          <Link href="/fantasy/leagues" className="text-xs text-emerald-700 hover:underline">+ Kreiraj / Pridruži se →</Link>
         </div>
 
         {overview.leagues.length === 0 ? (
-          <div className="card text-sm text-zinc-600">
-            Još nisi u ni jednoj ligi. Kreiraj novu ili se pridruži preko koda ispod.
-          </div>
+          <Link href="/fantasy/leagues" className="card block text-sm text-zinc-600 hover:border-emerald-300">
+            Još nisi u ni jednoj ligi. Klikni ovde da kreiraš novu ili se pridružiš preko koda.
+          </Link>
         ) : (
-          <div className="space-y-2 mb-3">
+          <div className="space-y-2">
             {overview.leagues.map((l) => (
               <Link
                 key={l.league_id}
@@ -89,8 +86,6 @@ export default async function FantasyLandingPage() {
             ))}
           </div>
         )}
-
-        <LeagueForms />
       </section>
 
       <section className="card">

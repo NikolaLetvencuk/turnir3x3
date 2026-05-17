@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,10 +26,18 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
     .insert({ name: parsed.data.name, owner_id: user.id, invite_code })
     .select("id, invite_code")
     .single();
-  if (error || !league) return { ok: false, error: error?.message ?? "Greška" };
+  if (error || !league) return { ok: false, error: error?.message ?? "Greška pri kreiranju lige" };
 
-  await admin.from("fantasy_league_members").insert({ league_id: league.id, user_id: user.id });
+  const { error: memberErr } = await admin
+    .from("fantasy_league_members")
+    .insert({ league_id: league.id, user_id: user.id });
+  if (memberErr) {
+    return { ok: false, error: `Liga kreirana ali članstvo nije: ${memberErr.message}` };
+  }
+
+  revalidatePath("/fantasy");
   revalidatePath("/fantasy/leagues");
+  revalidatePath(`/fantasy/leagues/${league.id}`);
   return { ok: true, data: { id: league.id, invite_code: league.invite_code } };
 }
 
@@ -56,6 +65,8 @@ export async function joinLeague(formData: FormData): Promise<ActionResult<{ id:
 
   const { error } = await admin.from("fantasy_league_members").insert({ league_id: league.id, user_id: user.id });
   if (error) return { ok: false, error: error.message };
+  revalidatePath("/fantasy");
   revalidatePath("/fantasy/leagues");
+  revalidatePath(`/fantasy/leagues/${league.id}`);
   return { ok: true, data: { id: league.id } };
 }
