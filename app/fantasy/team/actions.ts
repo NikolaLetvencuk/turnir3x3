@@ -15,6 +15,41 @@ const saveSchema = z.object({
   player3_id: z.string().uuid(),
 });
 
+const initSchema = z.object({
+  name: z.string().min(2).max(60),
+});
+
+/**
+ * Set the team name once — only allowed if it hasn't been set yet. Idempotent.
+ */
+export async function setTeamName(formData: FormData): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Nije prijavljen" };
+  const parsed = initSchema.safeParse({ name: (formData.get("name") as string) ?? "" });
+  if (!parsed.success) return { ok: false, error: "Naziv mora imati 2–60 znakova" };
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("fantasy_teams")
+    .select("user_id, name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const e = existing as any;
+  if (e && e.name && e.name.trim()) {
+    return { ok: false, error: "Ime tima je već postavljeno i ne može se menjati" };
+  }
+  if (e) {
+    const { error } = await admin.from("fantasy_teams").update({ name: parsed.data.name }).eq("user_id", user.id);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await admin.from("fantasy_teams").insert({ user_id: user.id, name: parsed.data.name });
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath("/fantasy/team");
+  revalidatePath("/fantasy");
+  return { ok: true };
+}
+
 // Validate budget against the prices for the upcoming round.
 async function validateBudget(admin: ReturnType<typeof createAdminClient>, ids: [string, string, string]): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: prices } = await admin
@@ -35,7 +70,8 @@ async function validateBudget(admin: ReturnType<typeof createAdminClient>, ids: 
 }
 
 /**
- * Save the user's working draft (fantasy_teams row). Can be done freely.
+ * Save the user's working draft (fantasy_teams row). Name is never updated here —
+ * it's set once via setTeamName when the user first creates their team.
  */
 export async function saveDraft(formData: FormData): Promise<ActionResult> {
   const supabase = createClient();
@@ -49,28 +85,28 @@ export async function saveDraft(formData: FormData): Promise<ActionResult> {
     player3_id: formData.get("player3_id"),
   });
   if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
-  const { name, player1_id, player2_id, player3_id } = parsed.data;
+  const { player1_id, player2_id, player3_id } = parsed.data;
   if (player1_id === player2_id || player1_id === player3_id || player2_id === player3_id) {
     return { ok: false, error: "Igrači moraju biti različiti" };
   }
 
   const admin = createAdminClient();
-
   const budget = await validateBudget(admin, [player1_id, player2_id, player3_id]);
   if (!budget.ok) return budget;
 
-  const { data: existing } = await admin.from("fantasy_teams").select("user_id").eq("user_id", user.id).maybeSingle();
-  if (existing) {
+  const { data: existing } = await admin.from("fantasy_teams").select("user_id, name").eq("user_id", user.id).maybeSingle();
+  const e = existing as any;
+  if (e) {
+    if (!e.name || !e.name.trim()) {
+      return { ok: false, error: "Prvo postavi ime tima" };
+    }
     const { error } = await admin
       .from("fantasy_teams")
-      .update({ name, player1_id, player2_id, player3_id, updated_at: new Date().toISOString() })
+      .update({ player1_id, player2_id, player3_id, updated_at: new Date().toISOString() })
       .eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
   } else {
-    const { error } = await admin
-      .from("fantasy_teams")
-      .insert({ user_id: user.id, name, player1_id, player2_id, player3_id });
-    if (error) return { ok: false, error: error.message };
+    return { ok: false, error: "Prvo postavi ime tima" };
   }
   revalidatePath("/fantasy/team");
   return { ok: true };

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Lock, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import type { RoundLite } from "./LeagueDetail";
 
+type RoundLite = { id: string; name: string; status: string; display_order: number };
 type SnapRow = {
   round_id: string;
   player1_id: string | null;
@@ -19,15 +19,15 @@ type FrpRow = { round_id: string; total_points: number };
 type TeamLite = { id: string; primary_color: string | null };
 
 export function MemberHistory({
-  userId, displayName, isMe, rounds, onClose,
+  userId, displayName, isMe, onClose,
 }: {
   userId: string;
   displayName: string;
   isMe: boolean;
-  rounds: RoundLite[];
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(true);
+  const [rounds, setRounds] = useState<RoundLite[]>([]);
   const [snaps, setSnaps] = useState<SnapRow[]>([]);
   const [playerMap, setPlayerMap] = useState<Map<string, PlayerLite>>(new Map());
   const [teamMap, setTeamMap] = useState<Map<string, TeamLite>>(new Map());
@@ -38,7 +38,8 @@ export function MemberHistory({
     let cancelled = false;
     async function load() {
       const supabase = createClient();
-      const [snapRes, playersRes, teamsRes, ppRes, frpRes] = await Promise.all([
+      const [roundsRes, snapRes, playersRes, teamsRes, ppRes, frpRes] = await Promise.all([
+        supabase.from("rounds").select("id, name, status, display_order").order("display_order"),
         supabase.from("fantasy_team_snapshots").select("round_id, player1_id, player2_id, player3_id, transfer_penalty").eq("user_id", userId),
         supabase.from("players").select("id, name, photo_url, team_id"),
         supabase.from("teams").select("id, primary_color"),
@@ -46,6 +47,7 @@ export function MemberHistory({
         supabase.from("fantasy_round_points").select("round_id, total_points").eq("user_id", userId),
       ]);
       if (cancelled) return;
+      setRounds((roundsRes.data ?? []) as RoundLite[]);
       setSnaps((snapRes.data ?? []) as SnapRow[]);
       const players = (playersRes.data ?? []) as PlayerLite[];
       setPlayerMap(new Map(players.map((p) => [p.id, p])));

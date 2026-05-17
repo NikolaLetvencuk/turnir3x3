@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { BASE_PRICE, type FantasyOverview, type LeagueRanking, type PlayerForPicker, type RoundLite } from "@/lib/fantasy-shared";
 
 export { FANTASY_BUDGET, BASE_PRICE, MIN_PRICE } from "@/lib/fantasy-shared";
@@ -9,15 +10,14 @@ export type { RoundLite, PlayerForPicker, LeagueRanking, FantasyOverview };
  * For a given user, compute their fantasy overview: totals, last round, ranks across leagues.
  */
 export async function getFantasyOverview(user_id: string): Promise<FantasyOverview> {
-  const supabase = createClient();
-  const [roundsRes, allFRPRes, myLeaguesRes, allLeagueMembersRes] = await Promise.all([
+  // Service role bypasses RLS — avoids any policy race after a fresh league create/join.
+  // We've already authenticated user_id in the page; no policy needed here.
+  const supabase = createAdminClient();
+  const [roundsRes, allFRPRes, allLeagueMembersRes, allLeaguesRes] = await Promise.all([
     supabase.from("rounds").select("id, name, status, display_order").order("display_order"),
     supabase.from("fantasy_round_points").select("user_id, round_id, total_points"),
-    supabase
-      .from("fantasy_league_members")
-      .select("league_id, league:fantasy_leagues(id, name, invite_code)")
-      .eq("user_id", user_id),
     supabase.from("fantasy_league_members").select("league_id, user_id"),
+    supabase.from("fantasy_leagues").select("id, name, invite_code"),
   ]);
 
   const rounds = (roundsRes.data ?? []) as RoundLite[];
@@ -49,14 +49,17 @@ export async function getFantasyOverview(user_id: string): Promise<FantasyOvervi
     .sort((a, b) => b.total - a.total);
   const myOverallRank = ranking.findIndex((r) => r.user_id === user_id);
 
-  const myLeagues = ((myLeaguesRes.data ?? []) as any[]).map((m) => m.league).filter(Boolean);
+  const allLeagueMembers = (allLeagueMembersRes.data ?? []) as Array<{ league_id: string; user_id: string }>;
+  const myLeagueIds = new Set(allLeagueMembers.filter((m) => m.user_id === user_id).map((m) => m.league_id));
+  const myLeagues = ((allLeaguesRes.data ?? []) as Array<{ id: string; name: string; invite_code: string }>)
+    .filter((l) => myLeagueIds.has(l.id));
   const membersByLeague = new Map<string, string[]>();
-  for (const m of (allLeagueMembersRes.data ?? []) as Array<{ league_id: string; user_id: string }>) {
+  for (const m of allLeagueMembers) {
     const arr = membersByLeague.get(m.league_id) ?? [];
     arr.push(m.user_id);
     membersByLeague.set(m.league_id, arr);
   }
-  const leagues: LeagueRanking[] = myLeagues.map((l: any) => {
+  const leagues: LeagueRanking[] = myLeagues.map((l) => {
     const memberIds = membersByLeague.get(l.id) ?? [];
     const sorted = memberIds
       .map((uid) => ({ uid, total: totalsByUser.get(uid) ?? 0 }))

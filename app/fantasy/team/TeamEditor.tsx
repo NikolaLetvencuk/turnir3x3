@@ -6,7 +6,7 @@ import { Lock, LockOpen, X, Search } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { useToast } from "@/components/ui/Toast";
-import { saveDraft, lockTeamForUpcomingRound } from "./actions";
+import { saveDraft, lockTeamForUpcomingRound, setTeamName } from "./actions";
 import { FANTASY_BUDGET, BASE_PRICE, type FantasyOverview, type PlayerForPicker } from "@/lib/fantasy-shared";
 
 type Draft = {
@@ -78,10 +78,14 @@ export function TeamEditor({
   const [slot1, setSlot1] = useState<string>(draft?.player1_id ?? "");
   const [slot2, setSlot2] = useState<string>(draft?.player2_id ?? "");
   const [slot3, setSlot3] = useState<string>(draft?.player3_id ?? "");
-  const [name, setName] = useState(draft?.name ?? "");
+  const [pendingName, setPendingName] = useState("");
+  const [namePending, setNamePending] = useState(false);
   const [search, setSearch] = useState("");
   const [detailPlayer, setDetailPlayer] = useState<PlayerForPicker | null>(null);
   const [pending, setPending] = useState(false);
+
+  const teamName = (draft?.name ?? "").trim();
+  const hasTeamName = teamName.length > 0;
 
   const playerMap = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const selected = [slot1, slot2, slot3];
@@ -114,6 +118,10 @@ export function TeamEditor({
   }
 
   async function persistDraft(silent: boolean = false) {
+    if (!hasTeamName) {
+      if (!silent) push("Prvo postavi ime tima", "error");
+      return false;
+    }
     if (!isComplete) {
       if (!silent) push("Izaberi 3 igrača pre čuvanja drafta", "error");
       return false;
@@ -124,13 +132,22 @@ export function TeamEditor({
     }
     setPending(true);
     const fd = new FormData();
-    fd.set("name", name);
     fd.set("player1_id", slot1);
     fd.set("player2_id", slot2);
     fd.set("player3_id", slot3);
     const ok = await run(saveDraft as any, fd, { successMessage: silent ? undefined : "Draft sačuvan" });
     setPending(false);
     return ok;
+  }
+
+  async function saveTeamName() {
+    if (pendingName.trim().length < 2) { push("Ime mora imati bar 2 znaka", "error"); return; }
+    setNamePending(true);
+    const fd = new FormData();
+    fd.set("name", pendingName.trim());
+    const ok = await run(setTeamName as any, fd, { successMessage: "Ime tima postavljeno" });
+    setNamePending(false);
+    if (ok) setPendingName("");
   }
 
   async function onLock() {
@@ -151,6 +168,40 @@ export function TeamEditor({
     isComplete &&
     selectedIds.length === lockedIds.length &&
     selectedIds.every((id) => lockedIds.includes(id));
+
+  if (!hasTeamName) {
+    return (
+      <div className="space-y-4">
+        <div className="card bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+          <h1 className="text-xl font-bold">Dobrodošao u fantasy</h1>
+          <p className="text-sm text-emerald-50/90 mt-1">Pre nego što napraviš tim, izaberi ime. Ime se postavlja jednom i ne može da se menja.</p>
+        </div>
+        <form
+          onSubmit={(e) => { e.preventDefault(); saveTeamName(); }}
+          className="card space-y-3"
+        >
+          <label className="block">
+            <span className="label">Ime tvog fantasy tima</span>
+            <input
+              type="text"
+              className="input"
+              value={pendingName}
+              onChange={(e) => setPendingName(e.target.value)}
+              minLength={2}
+              maxLength={60}
+              autoFocus
+              required
+              placeholder="npr. Moj nepobedivi tim"
+            />
+            <p className="text-xs text-zinc-500 mt-1">2–60 znakova. Ovo ime se ne može menjati.</p>
+          </label>
+          <button type="submit" disabled={namePending || pendingName.trim().length < 2} className="btn-primary w-full">
+            {namePending ? "Čuvam…" : "Postavi ime i nastavi"}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -211,14 +262,10 @@ export function TeamEditor({
           ))}
         </div>
         <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <input
-            type="text"
-            className="input !py-1 !w-auto max-w-[200px]"
-            placeholder="Ime tima (opciono)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={60}
-          />
+          <div className="min-w-0">
+            <div className="text-xs text-zinc-600">Ime tima</div>
+            <div className="font-semibold truncate text-base">{teamName}</div>
+          </div>
           <div className="text-right">
             <div className="text-xs text-zinc-600">Budžet</div>
             <div className={`font-bold tabular-nums text-lg ${overBudget ? "text-red-600" : remaining < 1 ? "text-amber-600" : "text-zinc-900"}`}>
