@@ -18,7 +18,7 @@ type Match = Database["public"]["Tables"]["matches"]["Row"] & {
 type MatchEvent = Database["public"]["Tables"]["match_events"]["Row"];
 type PlayerLite = { id: string; name: string; team_id: string | null; photo_url: string | null };
 
-type StandingRow = {
+export type StandingRow = {
   team: TeamMeta;
   played: number;
   wins: number;
@@ -29,6 +29,15 @@ type StandingRow = {
   goal_diff: number;
   points: number;
 };
+
+export type FormEntry = {
+  match_id: string;
+  result: "W" | "L" | "D";
+  opponent: TeamMeta | null;
+  score: string;
+};
+
+type Tab = "form" | "players" | "standings";
 
 const eventIcon = (t: string) => {
   if (t === "goal") return "⚽";
@@ -67,6 +76,53 @@ function ClockDisplay({ match }: { match: Match }) {
   );
 }
 
+function ResultBadge({ result }: { result: "W" | "L" | "D" }) {
+  const cls =
+    result === "W" ? "bg-emerald-500 text-white" :
+    result === "L" ? "bg-red-500 text-white" :
+    "bg-amber-400 text-zinc-900";
+  return (
+    <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${cls}`}>{result}</span>
+  );
+}
+
+function FormCard({ team, entries }: { team: TeamMeta | null; entries: FormEntry[] }) {
+  if (!team) return null;
+  return (
+    <div className="card">
+      <div className="flex items-center gap-2 mb-3">
+        <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={28} />
+        <h3 className="font-semibold">{team.name}</h3>
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-sm text-zinc-500">Nema prethodnih mečeva.</p>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            {entries.slice().reverse().map((e) => <ResultBadge key={e.match_id} result={e.result} />)}
+            <span className="text-xs text-zinc-400 ml-1">(stariji → noviji)</span>
+          </div>
+          <ul className="text-xs text-zinc-600 space-y-1">
+            {entries.map((e) => (
+              <li key={e.match_id} className="flex items-center gap-2">
+                <ResultBadge result={e.result} />
+                <span className="tabular-nums">{e.score}</span>
+                <span className="text-zinc-400">vs</span>
+                {e.opponent && (
+                  <span className="inline-flex items-center gap-1">
+                    <TeamCrest name={e.opponent.name} shortName={e.opponent.short_name} primaryColor={e.opponent.primary_color} secondaryColor={e.opponent.secondary_color} size={16} />
+                    {e.opponent.name}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RosterCard({ team, players }: { team: TeamMeta | null; players: PlayerLite[] }) {
   if (!team) return null;
   const roster = players.filter((p) => p.team_id === team.id);
@@ -94,10 +150,9 @@ function RosterCard({ team, players }: { team: TeamMeta | null; players: PlayerL
 }
 
 function GroupStandingsCard({ rows, homeTeamId, awayTeamId }: { rows: StandingRow[]; homeTeamId: string | null; awayTeamId: string | null }) {
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return <p className="text-sm text-zinc-500">Tabela grupe nije dostupna.</p>;
   return (
     <section className="card overflow-x-auto">
-      <h3 className="font-semibold mb-2">Tabela grupe</h3>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-zinc-500">
@@ -138,11 +193,13 @@ function GroupStandingsCard({ rows, homeTeamId, awayTeamId }: { rows: StandingRo
   );
 }
 
-export function LiveMatchView({ matchInit, eventsInit, players, groupStandings }: {
+export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, formHome, formAway }: {
   matchInit: Match;
   eventsInit: MatchEvent[];
   players: PlayerLite[];
   groupStandings: StandingRow[];
+  formHome: FormEntry[];
+  formAway: FormEntry[];
 }) {
   const { match, events } = useRealtimeMatch(matchInit.id, matchInit, eventsInit);
   const m = match as Match;
@@ -157,8 +214,10 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings }
     if (id === m.away_team_id) return m.away_team?.primary_color ?? null;
     return null;
   };
-  const isPreMatch = !m.phase || m.phase === "scheduled";
   const hasStarted = m.phase === "first_half" || m.phase === "halftime" || m.phase === "second_half" || m.phase === "finished";
+
+  const [tab, setTab] = useState<Tab>("form");
+  const hasStandings = groupStandings.length > 0;
 
   return (
     <div className="space-y-4">
@@ -182,18 +241,7 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings }
         </div>
       </div>
 
-      {isPreMatch ? (
-        <>
-          <GroupStandingsCard rows={groupStandings} homeTeamId={m.home_team_id} awayTeamId={m.away_team_id} />
-          <section>
-            <h2 className="font-semibold mb-2">Sastavi timova</h2>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <RosterCard team={m.home_team} players={players} />
-              <RosterCard team={m.away_team} players={players} />
-            </div>
-          </section>
-        </>
-      ) : (
+      {hasStarted && (
         <section>
           <h2 className="font-semibold mb-2">Tok meča</h2>
           {events.length === 0 ? (
@@ -222,6 +270,43 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings }
           )}
         </section>
       )}
+
+      <div className="card !p-0 overflow-hidden">
+        <div className="flex border-b border-zinc-200">
+          <button
+            onClick={() => setTab("form")}
+            className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "form" ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+          >Forma</button>
+          <button
+            onClick={() => setTab("players")}
+            className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "players" ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+          >Igrači</button>
+          {hasStandings && (
+            <button
+              onClick={() => setTab("standings")}
+              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "standings" ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+            >Tabela</button>
+          )}
+        </div>
+
+        <div className="p-3">
+          {tab === "form" && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              <FormCard team={m.home_team} entries={formHome} />
+              <FormCard team={m.away_team} entries={formAway} />
+            </div>
+          )}
+          {tab === "players" && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              <RosterCard team={m.home_team} players={players} />
+              <RosterCard team={m.away_team} players={players} />
+            </div>
+          )}
+          {tab === "standings" && hasStandings && (
+            <GroupStandingsCard rows={groupStandings} homeTeamId={m.home_team_id} awayTeamId={m.away_team_id} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
