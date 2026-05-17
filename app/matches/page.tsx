@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { MatchCard } from "@/components/matches/MatchCard";
+import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 0;
 
@@ -26,6 +27,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: { ro
 
   return (
     <div className="space-y-4">
+      <LiveRefresh tag="matches" />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold">Mečevi</h1>
         <form className="flex gap-2 text-sm">

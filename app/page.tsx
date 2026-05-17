@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { getGroupStandings, getTopScorers } from "@/lib/standings";
 import { TeamCrest } from "@/components/TeamCrest";
+import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 0;
 
@@ -21,6 +22,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-6">
+      <LiveRefresh tag="home" />
       <section className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
         <h1 className="text-2xl font-bold">Turnir Kula</h1>
         <p className="text-emerald-50 mt-1 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>

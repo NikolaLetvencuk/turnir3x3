@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Info, Calendar, X, Lock, Zap } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { useActionRunner } from "@/components/admin/FormButton";
@@ -107,6 +108,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
 
   return (
     <div className="space-y-4">
+      <LiveRefresh tag="admin-matches" />
       <h1 className="text-xl font-semibold">Mečevi</h1>
 
       <div className="card bg-sky-50 border-sky-200 text-sm text-sky-900 flex items-start gap-2">
