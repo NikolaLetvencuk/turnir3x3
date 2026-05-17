@@ -6,10 +6,10 @@ type Profile = { email: string; role: string } | null;
 export function TopNav({ profile }: { profile: Profile }) {
   return (
     <header className="bg-white border-b border-zinc-200 sticky top-0 z-30">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
+        <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
           <Trophy className="w-5 h-5 text-emerald-600" />
-          <span>Turnir Kula</span>
+          <span className="truncate">Turnir Kula</span>
         </Link>
         <nav className="hidden sm:flex items-center gap-4 text-sm">
           <Link href="/standings" className="hover:text-emerald-700">Tabele</Link>
@@ -21,13 +21,13 @@ export function TopNav({ profile }: { profile: Profile }) {
             <Link href="/admin" className="text-emerald-700 font-medium">Admin</Link>
           )}
         </nav>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm min-w-0">
           {profile ? (
-            <Link href="/profile" className="text-zinc-600 hover:text-zinc-900 truncate max-w-[140px]">
+            <Link href="/profile" className="text-zinc-600 hover:text-zinc-900 truncate max-w-[120px] sm:max-w-[180px]">
               {profile.email}
             </Link>
           ) : (
-            <Link href="/auth/login" className="btn-secondary !py-1.5 !px-3">Prijava</Link>
+            <Link href="/auth/login" className="btn-secondary !py-1.5 !px-3 shrink-0">Prijava</Link>
           )}
         </div>
       </div>

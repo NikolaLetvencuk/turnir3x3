@@ -108,12 +108,14 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
 
   return (
     <div className="space-y-4">
-      <div className="card flex items-center gap-4">
-        <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={64} />
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{team.name}</h1>
+      <div className="card flex items-center gap-3 sm:gap-4">
+        <div className="shrink-0">
+          <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={56} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold break-words leading-tight">{team.name}</h1>
           {team.short_name && <p className="text-sm text-zinc-500">{team.short_name}</p>}
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="inline-block w-4 h-4 rounded border border-zinc-300" style={{ background: team.primary_color ?? "#1f2937" }} />
             <span className="inline-block w-4 h-4 rounded border border-zinc-300" style={{ background: team.secondary_color ?? "#f3f4f6" }} />
             <span className="text-xs text-zinc-400">{players.length} {players.length === 1 ? "igrač" : "igrača"}</span>
@@ -153,16 +155,14 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                         <li key={m.id}>
                           <Link href={`/matches/${m.id}`} className="flex items-center gap-2 py-2 hover:bg-zinc-50 -mx-2 px-2 rounded">
                             {res && <ResultBadge result={res} />}
-                            <span className="text-xs text-zinc-500 w-20">{m.round?.name}</span>
-                            <span className="tabular-nums font-semibold">{us} : {them}</span>
-                            <span className="text-zinc-400 text-xs">vs</span>
+                            <span className="tabular-nums font-semibold shrink-0">{us} : {them}</span>
                             {opp && (
-                              <span className="inline-flex items-center gap-1.5 text-sm">
+                              <span className="inline-flex items-center gap-1.5 text-sm min-w-0">
                                 <TeamCrest name={opp.name} shortName={opp.short_name} primaryColor={opp.primary_color} secondaryColor={opp.secondary_color} size={20} />
-                                {opp.name}
+                                <span className="truncate">{opp.name}</span>
                               </span>
                             )}
-                            <span className="text-xs text-zinc-400 ml-auto">{formatKickoff(m.kickoff_at)}</span>
+                            <span className="text-xs text-zinc-400 ml-auto shrink-0">{m.round?.name}</span>
                           </Link>
                         </li>
                       );
@@ -180,15 +180,14 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                       return (
                         <li key={m.id}>
                           <Link href={`/matches/${m.id}`} className="flex items-center gap-2 py-2 hover:bg-zinc-50 -mx-2 px-2 rounded">
-                            <span className="text-xs text-zinc-500 w-20">{m.round?.name}</span>
-                            <span className="text-zinc-400 text-xs">{isHome ? "vs" : "@"}</span>
+                            <span className="text-xs text-zinc-500 shrink-0">{m.round?.name}</span>
                             {opp && (
-                              <span className="inline-flex items-center gap-1.5 text-sm">
+                              <span className="inline-flex items-center gap-1.5 text-sm min-w-0">
                                 <TeamCrest name={opp.name} shortName={opp.short_name} primaryColor={opp.primary_color} secondaryColor={opp.secondary_color} size={20} />
-                                {opp.name}
+                                <span className="truncate">{opp.name}</span>
                               </span>
                             )}
-                            <span className="text-xs text-zinc-400 ml-auto">{formatKickoff(m.kickoff_at)}</span>
+                            <span className="text-xs text-zinc-400 ml-auto shrink-0">{formatKickoff(m.kickoff_at)}</span>
                           </Link>
                         </li>
                       );

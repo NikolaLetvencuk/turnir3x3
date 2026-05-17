@@ -147,15 +147,15 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
       </Link>
       <div className="card">
         <div className="grid grid-cols-3 items-center gap-2">
-          <div className="text-center">
+          <div className="text-center min-w-0">
             <TeamCrest name={m.home_team?.name ?? "?"} shortName={m.home_team?.short_name} primaryColor={m.home_team?.primary_color} secondaryColor={m.home_team?.secondary_color} size={48} className="mx-auto" />
-            <div className="font-semibold mt-1 text-sm">{m.home_team?.name}</div>
+            <div className="font-semibold mt-1 text-xs sm:text-sm break-words leading-tight">{m.home_team?.name}</div>
             <div className="text-2xl font-bold tabular-nums">{m.home_score}</div>
           </div>
           <LiveClock match={m} />
-          <div className="text-center">
+          <div className="text-center min-w-0">
             <TeamCrest name={m.away_team?.name ?? "?"} shortName={m.away_team?.short_name} primaryColor={m.away_team?.primary_color} secondaryColor={m.away_team?.secondary_color} size={48} className="mx-auto" />
-            <div className="font-semibold mt-1 text-sm">{m.away_team?.name}</div>
+            <div className="font-semibold mt-1 text-xs sm:text-sm break-words leading-tight">{m.away_team?.name}</div>
             <div className="text-2xl font-bold tabular-nums">{m.away_score}</div>
           </div>
         </div>

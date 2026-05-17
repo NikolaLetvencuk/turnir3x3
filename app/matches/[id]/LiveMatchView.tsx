@@ -211,25 +211,25 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
           <span>{m.round?.name ?? ""}</span>
         </div>
         <ClockDisplay match={m} />
-        <div className="mt-3 grid grid-cols-3 items-center gap-4">
-          <div className="text-center">
+        <div className="mt-3 grid grid-cols-3 items-center gap-2 sm:gap-4">
+          <div className="text-center min-w-0">
             {m.home_team ? (
               <Link href={`/teams/${m.home_team.id}`} className="block hover:opacity-80">
                 <TeamCrest name={m.home_team.name} shortName={m.home_team.short_name} primaryColor={m.home_team.primary_color} secondaryColor={m.home_team.secondary_color} size={56} className="mx-auto" />
-                <div className="font-semibold mt-1 hover:text-emerald-700">{m.home_team.name}</div>
+                <div className="font-semibold mt-1 hover:text-emerald-700 text-sm sm:text-base break-words leading-tight">{m.home_team.name}</div>
               </Link>
             ) : (
               <div className="font-semibold mt-1 text-zinc-400">?</div>
             )}
           </div>
-          <div className="text-center text-4xl font-bold tabular-nums">
-            {hasStarted ? `${m.home_score} : ${m.away_score}` : <span className="text-zinc-400 text-2xl">vs</span>}
+          <div className="text-center text-3xl sm:text-4xl font-bold tabular-nums shrink-0">
+            {hasStarted ? `${m.home_score} : ${m.away_score}` : <span className="text-zinc-400 text-xl sm:text-2xl">vs</span>}
           </div>
-          <div className="text-center">
+          <div className="text-center min-w-0">
             {m.away_team ? (
               <Link href={`/teams/${m.away_team.id}`} className="block hover:opacity-80">
                 <TeamCrest name={m.away_team.name} shortName={m.away_team.short_name} primaryColor={m.away_team.primary_color} secondaryColor={m.away_team.secondary_color} size={56} className="mx-auto" />
-                <div className="font-semibold mt-1 hover:text-emerald-700">{m.away_team.name}</div>
+                <div className="font-semibold mt-1 hover:text-emerald-700 text-sm sm:text-base break-words leading-tight">{m.away_team.name}</div>
               </Link>
             ) : (
               <div className="font-semibold mt-1 text-zinc-400">?</div>

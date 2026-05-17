@@ -243,21 +243,27 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                         </button>
                       )}
                     </td>
-                    <td>
-                      <span className="inline-flex items-center gap-1.5">
-                        <TeamCrest name={m.home?.name ?? "?"} shortName={m.home?.short_name} primaryColor={m.home?.primary_color} secondaryColor={m.home?.secondary_color} size={20} />
-                        {m.home?.name}
-                        <b className="tabular-nums mx-1">{m.home_score}:{m.away_score}</b>
-                        {m.away?.name}
-                        <TeamCrest name={m.away?.name ?? "?"} shortName={m.away?.short_name} primaryColor={m.away?.primary_color} secondaryColor={m.away?.secondary_color} size={20} />
-                      </span>
+                    <td className="min-w-0">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TeamCrest name={m.home?.name ?? "?"} shortName={m.home?.short_name} primaryColor={m.home?.primary_color} secondaryColor={m.home?.secondary_color} size={18} />
+                          <span className="truncate flex-1">{m.home?.name}</span>
+                          <b className="tabular-nums shrink-0">{m.home_score}</b>
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TeamCrest name={m.away?.name ?? "?"} shortName={m.away?.short_name} primaryColor={m.away?.primary_color} secondaryColor={m.away?.secondary_color} size={18} />
+                          <span className="truncate flex-1">{m.away?.name}</span>
+                          <b className="tabular-nums shrink-0">{m.away_score}</b>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       {m.status === "live" && <span className="badge-live"><span className="live-dot" />UŽIVO</span>}
                       {m.status === "finished" && <span className="badge-finished">Završeno</span>}
                       {m.status === "scheduled" && <span className="badge-scheduled">Zakazano</span>}
                     </td>
-                    <td className="text-right space-x-1 whitespace-nowrap">
+                    <td className="text-right whitespace-nowrap">
+                      <div className="inline-flex flex-col sm:flex-row items-end sm:items-center gap-1">
                       <Link href={`/admin/matches/${m.id}/live`} className="btn-secondary !py-1 !px-2 text-xs">Otvori</Link>
                       {(m.phase === "scheduled" || m.status === "scheduled") && (
                         <form className="inline" onSubmit={async (e) => {
@@ -279,6 +285,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                           <button className="btn-primary !py-1 !px-2 text-xs">Završi</button>
                         </form>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}

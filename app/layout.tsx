@@ -8,6 +8,7 @@ import { getCurrentProfile } from "@/lib/auth";
 export const metadata: Metadata = {
   title: "Turnir Kula",
   description: "Pratite rezultate, tabele i fantasy ligu — turnir Kula, Liparski put",
+  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen flex flex-col font-sans">
         <ToastProvider>
           <TopNav profile={profile} />
-          <main className="flex-1 w-full max-w-5xl mx-auto px-4 pb-24 pt-4">
+          <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-4 pb-24 pt-4">
             {children}
           </main>
           <BottomNav isAuthed={!!profile} isAdmin={profile?.role === "admin"} />

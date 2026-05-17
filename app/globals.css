@@ -12,6 +12,29 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Allow datetime-local on iOS Safari to not zoom on focus */
+@supports (-webkit-touch-callout: none) {
+  input[type="datetime-local"],
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="text"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
@@ -26,7 +49,7 @@ html, body {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
   .card {
-    @apply bg-white rounded-xl border border-zinc-200 p-4;
+    @apply bg-white rounded-xl border border-zinc-200 p-3 sm:p-4;
   }
   .input {
     @apply w-full rounded-md border border-zinc-300 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500;
