@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TeamCrest } from "@/components/TeamCrest";
 import { getGroupStandings } from "@/lib/standings";
 import { StandingsRealtime } from "./StandingsRealtime";
@@ -36,10 +37,10 @@ export default async function StandingsPage() {
                     <tr key={r.team_id} className="border-t border-zinc-100">
                       <td className="py-2 text-zinc-500">{i + 1}.</td>
                       <td className="font-medium">
-                        <span className="inline-flex items-center gap-2">
+                        <Link href={`/teams/${r.team_id}`} className="inline-flex items-center gap-2 hover:text-emerald-700">
                           <TeamCrest name={r.team_name} shortName={r.short_name} primaryColor={r.primary_color} secondaryColor={r.secondary_color} size={24} />
                           {r.team_name}
-                        </span>
+                        </Link>
                       </td>
                       <td className="text-right tabular-nums">{r.played}</td>
                       <td className="text-right tabular-nums">{r.won}</td>

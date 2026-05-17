@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRealtimeMatch } from "@/lib/hooks/useRealtimeMatch";
 import { TeamCrest } from "@/components/TeamCrest";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
@@ -89,7 +90,7 @@ function ResultBadge({ result }: { result: "W" | "L" | "D" }) {
 function FormCard({ team, entries }: { team: TeamMeta | null; entries: FormEntry[] }) {
   if (!team) return null;
   return (
-    <div className="card">
+    <Link href={`/teams/${team.id}`} className="card block hover:border-emerald-300 transition">
       <div className="flex items-center gap-2 mb-3">
         <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={28} />
         <h3 className="font-semibold">{team.name}</h3>
@@ -97,29 +98,11 @@ function FormCard({ team, entries }: { team: TeamMeta | null; entries: FormEntry
       {entries.length === 0 ? (
         <p className="text-sm text-zinc-500">Nema prethodnih mečeva.</p>
       ) : (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5">
-            {entries.slice().reverse().map((e) => <ResultBadge key={e.match_id} result={e.result} />)}
-            <span className="text-xs text-zinc-400 ml-1">(stariji → noviji)</span>
-          </div>
-          <ul className="text-xs text-zinc-600 space-y-1">
-            {entries.map((e) => (
-              <li key={e.match_id} className="flex items-center gap-2">
-                <ResultBadge result={e.result} />
-                <span className="tabular-nums">{e.score}</span>
-                <span className="text-zinc-400">vs</span>
-                {e.opponent && (
-                  <span className="inline-flex items-center gap-1">
-                    <TeamCrest name={e.opponent.name} shortName={e.opponent.short_name} primaryColor={e.opponent.primary_color} secondaryColor={e.opponent.secondary_color} size={16} />
-                    {e.opponent.name}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+        <div className="flex items-center gap-1.5">
+          {entries.slice().reverse().map((e) => <ResultBadge key={e.match_id} result={e.result} />)}
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 
@@ -128,19 +111,21 @@ function RosterCard({ team, players }: { team: TeamMeta | null; players: PlayerL
   const roster = players.filter((p) => p.team_id === team.id);
   return (
     <div className="card">
-      <div className="flex items-center gap-2 mb-2">
+      <Link href={`/teams/${team.id}`} className="flex items-center gap-2 mb-2 hover:text-emerald-700">
         <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={28} />
         <h3 className="font-semibold">{team.name}</h3>
         <span className="text-xs text-zinc-500 ml-auto">{roster.length} {roster.length === 1 ? "igrač" : "igrača"}</span>
-      </div>
+      </Link>
       {roster.length === 0 ? (
         <p className="text-sm text-zinc-500">Nema upisanih igrača.</p>
       ) : (
         <ul className="space-y-1">
           {roster.map((p) => (
-            <li key={p.id} className="flex items-center gap-2 text-sm">
-              <PlayerAvatar name={p.name} photoUrl={p.photo_url} teamPrimary={team.primary_color} size={28} />
-              <span>{p.name}</span>
+            <li key={p.id}>
+              <Link href={`/players/${p.id}`} className="flex items-center gap-2 text-sm hover:text-emerald-700">
+                <PlayerAvatar name={p.name} photoUrl={p.photo_url} teamPrimary={team.primary_color} size={28} />
+                <span>{p.name}</span>
+              </Link>
             </li>
           ))}
         </ul>
@@ -228,15 +213,27 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
         <ClockDisplay match={m} />
         <div className="mt-3 grid grid-cols-3 items-center gap-4">
           <div className="text-center">
-            <TeamCrest name={m.home_team?.name ?? "?"} shortName={m.home_team?.short_name} primaryColor={m.home_team?.primary_color} secondaryColor={m.home_team?.secondary_color} size={56} className="mx-auto" />
-            <div className="font-semibold mt-1">{m.home_team?.name}</div>
+            {m.home_team ? (
+              <Link href={`/teams/${m.home_team.id}`} className="block hover:opacity-80">
+                <TeamCrest name={m.home_team.name} shortName={m.home_team.short_name} primaryColor={m.home_team.primary_color} secondaryColor={m.home_team.secondary_color} size={56} className="mx-auto" />
+                <div className="font-semibold mt-1 hover:text-emerald-700">{m.home_team.name}</div>
+              </Link>
+            ) : (
+              <div className="font-semibold mt-1 text-zinc-400">?</div>
+            )}
           </div>
           <div className="text-center text-4xl font-bold tabular-nums">
             {hasStarted ? `${m.home_score} : ${m.away_score}` : <span className="text-zinc-400 text-2xl">vs</span>}
           </div>
           <div className="text-center">
-            <TeamCrest name={m.away_team?.name ?? "?"} shortName={m.away_team?.short_name} primaryColor={m.away_team?.primary_color} secondaryColor={m.away_team?.secondary_color} size={56} className="mx-auto" />
-            <div className="font-semibold mt-1">{m.away_team?.name}</div>
+            {m.away_team ? (
+              <Link href={`/teams/${m.away_team.id}`} className="block hover:opacity-80">
+                <TeamCrest name={m.away_team.name} shortName={m.away_team.short_name} primaryColor={m.away_team.primary_color} secondaryColor={m.away_team.secondary_color} size={56} className="mx-auto" />
+                <div className="font-semibold mt-1 hover:text-emerald-700">{m.away_team.name}</div>
+              </Link>
+            ) : (
+              <div className="font-semibold mt-1 text-zinc-400">?</div>
+            )}
           </div>
         </div>
       </div>
@@ -257,10 +254,14 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
                     <span className="text-lg">{eventIcon(e.event_type)}</span>
                     <PlayerAvatar name={p?.name ?? "?"} photoUrl={p?.photo_url ?? null} teamPrimary={teamPrimary(e.team_id)} size={28} />
                     <div className="flex-1">
-                      <div className="font-medium">{p?.name ?? "?"}</div>
+                      {p ? (
+                        <Link href={`/players/${p.id}`} className="font-medium hover:text-emerald-700">{p.name}</Link>
+                      ) : (
+                        <div className="font-medium">?</div>
+                      )}
                       <div className="text-xs text-zinc-500">
                         {teamName(e.team_id)}
-                        {assist ? ` · asistencija: ${assist.name}` : ""}
+                        {assist ? <> · asistencija: <Link href={`/players/${assist.id}`} className="hover:text-emerald-700">{assist.name}</Link></> : ""}
                       </div>
                     </div>
                   </li>
