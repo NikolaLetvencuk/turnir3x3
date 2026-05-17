@@ -1,10 +1,41 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { BASE_PRICE, type FantasyOverview, type LeagueRanking, type PlayerForPicker, type RoundLite } from "@/lib/fantasy-shared";
+import { BASE_PRICE, DEFAULT_BUDGET, type FantasyOverview, type LeagueRanking, type PlayerForPicker, type RoundLite } from "@/lib/fantasy-shared";
 
-export { FANTASY_BUDGET, BASE_PRICE, MIN_PRICE } from "@/lib/fantasy-shared";
+export { FANTASY_BUDGET, DEFAULT_BUDGET, BASE_PRICE, MIN_PRICE } from "@/lib/fantasy-shared";
 export type { RoundLite, PlayerForPicker, LeagueRanking, FantasyOverview };
+
+/**
+ * User's budget for the upcoming round = sum of CURRENT (latest) prices of the players
+ * in their most recent locked snapshot. If no snapshot yet, defaults to 30.
+ */
+export async function getUserBudget(user_id: string): Promise<number> {
+  const admin = createAdminClient();
+  const { data: snaps } = await admin
+    .from("fantasy_team_snapshots")
+    .select("player1_id, player2_id, player3_id, round:rounds(display_order)")
+    .eq("user_id", user_id);
+  const list = ((snaps ?? []) as any[])
+    .map((s) => ({ ...s, order: s.round?.display_order ?? 0 }))
+    .sort((a, b) => b.order - a.order);
+  if (list.length === 0) return DEFAULT_BUDGET;
+  const latest = list[0];
+  const ids = [latest.player1_id, latest.player2_id, latest.player3_id].filter(Boolean) as string[];
+  if (ids.length === 0) return DEFAULT_BUDGET;
+
+  const { data: prices } = await admin
+    .from("player_prices")
+    .select("player_id, price, round:rounds(display_order)")
+    .in("player_id", ids);
+  const latestPrice = new Map<string, { price: number; order: number }>();
+  for (const p of ((prices ?? []) as any[])) {
+    const order = p.round?.display_order ?? 0;
+    const cur = latestPrice.get(p.player_id);
+    if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
+  }
+  return ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
+}
 
 /**
  * For a given user, compute their fantasy overview: totals, last round, ranks across leagues.

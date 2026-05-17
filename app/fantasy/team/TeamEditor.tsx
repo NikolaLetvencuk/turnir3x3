@@ -7,7 +7,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { useToast } from "@/components/ui/Toast";
 import { saveDraft, lockTeamForUpcomingRound, setTeamName } from "./actions";
-import { FANTASY_BUDGET, BASE_PRICE, type FantasyOverview, type PlayerForPicker } from "@/lib/fantasy-shared";
+import { BASE_PRICE, type FantasyOverview, type PlayerForPicker } from "@/lib/fantasy-shared";
 
 type Draft = {
   name: string | null;
@@ -66,11 +66,13 @@ export function TeamEditor({
   draft,
   lockedForUpcoming,
   players,
+  budget,
 }: {
   overview: FantasyOverview;
   draft: Draft;
   lockedForUpcoming: Locked;
   players: PlayerForPicker[];
+  budget: number;
 }) {
   const run = useActionRunner();
   const { push } = useToast();
@@ -92,9 +94,9 @@ export function TeamEditor({
   const selectedIds = selected.filter(Boolean);
   const slotPlayers = selected.map((id) => (id ? playerMap.get(id) ?? null : null));
   const totalCost = selectedIds.reduce((acc, id) => acc + (playerMap.get(id)?.price ?? BASE_PRICE), 0);
-  const remaining = FANTASY_BUDGET - totalCost;
+  const remaining = budget - totalCost;
   const isComplete = selectedIds.length === 3;
-  const overBudget = totalCost > FANTASY_BUDGET + 0.001;
+  const overBudget = totalCost > budget + 0.001;
   const canLock = isComplete && !overBudget && !!overview.next_round;
 
   const filteredPlayers = useMemo(() => {
@@ -269,7 +271,7 @@ export function TeamEditor({
           <div className="text-right">
             <div className="text-xs text-zinc-600">Budžet</div>
             <div className={`font-bold tabular-nums text-lg ${overBudget ? "text-red-600" : remaining < 1 ? "text-amber-600" : "text-zinc-900"}`}>
-              {totalCost.toFixed(1)} <span className="text-zinc-400 text-sm">/ {FANTASY_BUDGET.toFixed(1)}</span>
+              {totalCost.toFixed(1)} <span className="text-zinc-400 text-sm">/ {budget.toFixed(1)}</span>
             </div>
             <div className="text-xs text-zinc-500">preostalo {remaining.toFixed(1)}</div>
           </div>
@@ -297,7 +299,7 @@ export function TeamEditor({
         <ul className="divide-y divide-zinc-100">
           {filteredPlayers.map((p) => {
             const isSel = selectedIds.includes(p.id);
-            const wouldExceed = !isSel && totalCost + p.price > FANTASY_BUDGET + 0.001 && selectedIds.length < 3;
+            const wouldExceed = !isSel && totalCost + p.price > budget + 0.001 && selectedIds.length < 3;
             return (
               <li key={p.id} className="py-2 flex items-center gap-2">
                 <button onClick={() => setDetailPlayer(p)} className="shrink-0">

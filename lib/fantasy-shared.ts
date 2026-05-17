@@ -1,6 +1,8 @@
 // Client-safe constants and types for fantasy.
 // lib/fantasy.ts pulls in server-only code; this file is safe to import from client components.
 
+export const DEFAULT_BUDGET = 30.0;
+// Legacy export — UI now uses per-user budget from server. Kept for any constants references.
 export const FANTASY_BUDGET = 30.0;
 export const BASE_PRICE = 10.0;
 export const MIN_PRICE = 4.0;

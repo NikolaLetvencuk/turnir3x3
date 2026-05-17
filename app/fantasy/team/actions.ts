@@ -4,7 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { FANTASY_BUDGET, BASE_PRICE } from "@/lib/fantasy-shared";
+import { BASE_PRICE } from "@/lib/fantasy-shared";
+import { getUserBudget } from "@/lib/fantasy";
 
 export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -50,8 +51,8 @@ export async function setTeamName(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
-// Validate budget against the prices for the upcoming round.
-async function validateBudget(admin: ReturnType<typeof createAdminClient>, ids: [string, string, string]): Promise<{ ok: true } | { ok: false; error: string }> {
+// Validate the 3 picks against the user's dynamic budget (team-value-based).
+async function validateBudget(admin: ReturnType<typeof createAdminClient>, user_id: string, ids: [string, string, string]): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: prices } = await admin
     .from("player_prices")
     .select("player_id, price, round_id, round:rounds(display_order)")
@@ -63,8 +64,9 @@ async function validateBudget(admin: ReturnType<typeof createAdminClient>, ids: 
     if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
   }
   const total = ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
-  if (total > FANTASY_BUDGET + 0.001) {
-    return { ok: false, error: `Prekoračen budžet (${total.toFixed(2)} / ${FANTASY_BUDGET.toFixed(2)})` };
+  const budget = await getUserBudget(user_id);
+  if (total > budget + 0.001) {
+    return { ok: false, error: `Prekoračen budžet (${total.toFixed(2)} / ${budget.toFixed(2)})` };
   }
   return { ok: true };
 }
@@ -91,7 +93,7 @@ export async function saveDraft(formData: FormData): Promise<ActionResult> {
   }
 
   const admin = createAdminClient();
-  const budget = await validateBudget(admin, [player1_id, player2_id, player3_id]);
+  const budget = await validateBudget(admin, user.id, [player1_id, player2_id, player3_id]);
   if (!budget.ok) return budget;
 
   const { data: existing } = await admin.from("fantasy_teams").select("user_id, name").eq("user_id", user.id).maybeSingle();
@@ -144,7 +146,7 @@ export async function lockTeamForUpcomingRound(): Promise<ActionResult<{ round_n
   }
 
   // Budget check
-  const budget = await validateBudget(admin, [d.player1_id, d.player2_id, d.player3_id]);
+  const budget = await validateBudget(admin, user.id, [d.player1_id, d.player2_id, d.player3_id]);
   if (!budget.ok) return budget;
 
   const { error } = await admin

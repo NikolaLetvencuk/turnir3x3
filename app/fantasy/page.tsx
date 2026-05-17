@@ -91,24 +91,34 @@ export default async function FantasyLandingPage() {
       <section className="card">
         <h2 className="font-semibold mb-2">Pravila bodovanja</h2>
         <ul className="text-sm space-y-1 text-zinc-700">
-          <li>⚽ Gol — <b>+5</b></li>
-          <li>🅰️ Asistencija — <b>+3</b></li>
-          <li>✅ Pobeda tima igrača — <b>+2</b></li>
-          <li>➖ Nerešeno — <b>+1</b></li>
-          <li>🧤 Čista mreža (tim primio 0) — <b>+2</b></li>
+          <li>⚽ Gol — <b>+3</b></li>
+          <li>🅰️ Asistencija — <b>+2</b></li>
+          <li>✅ Pobeda tima igrača — <b>+1</b></li>
+          <li>🧤 Čista mreža (tim primio 0) — <b>+1</b></li>
           <li>🟨 Žuti karton — <b>−1</b></li>
-          <li>🟥 Crveni karton — <b>−3</b></li>
-          <li>🥅 Autogol — <b>−2</b></li>
+          <li>🟥 Crveni karton — <b>−2</b></li>
+          <li>🥅 Autogol — <b>−1</b></li>
+        </ul>
+      </section>
+
+      <section className="card">
+        <h2 className="font-semibold mb-2">Cene i budžet</h2>
+        <ul className="text-sm space-y-1 text-zinc-700">
+          <li>Svaki igrač počinje na <b>10.0M</b>.</li>
+          <li>Tvoj početni budžet je <b>{FANTASY_BUDGET.toFixed(0)}M</b>.</li>
+          <li>Posle svakog kola: <b>cena = stara cena + 0.05 × (bodovi tog kola − 2)</b>, minimum <b>4.0M</b>.</li>
+          <li>10 poena → +0.4M · 0 poena → −0.1M · −2 poena (crveni) → −0.2M.</li>
+          <li>Tvoj budžet za naredno kolo = ukupna vrednost trenutnog lockovanog tima.</li>
         </ul>
       </section>
 
       <section className="card">
         <h2 className="font-semibold mb-2">Kako se igra</h2>
         <ol className="text-sm space-y-1 text-zinc-700 list-decimal list-inside">
-          <li>Sastavi tim od 3 igrača u okviru budžeta od <b>{FANTASY_BUDGET.toFixed(0)}M</b>. Svaki igrač počinje na 10M.</li>
+          <li>Postavi <b>ime tima</b> (jednom, ne menja se).</li>
+          <li>Sastavi tim od 3 igrača u okviru svog <b>budžeta</b>.</li>
           <li>Klikni <b>Lock</b> za naredno kolo. Možeš da menjaš pre nego što kolo počne.</li>
-          <li>Ako ne lock-uješ za naredno kolo, koristi se prošli tim (ili 0 ako je prvo kolo).</li>
-          <li>Nakon kola, cene se ažuriraju na osnovu performansa.</li>
+          <li>Ako ne lock-uješ, koristi se tim iz prethodnog kola (ili 0 ako je prvo kolo).</li>
         </ol>
       </section>
     </div>
