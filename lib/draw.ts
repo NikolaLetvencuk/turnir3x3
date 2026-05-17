@@ -55,12 +55,11 @@ export type DrawResult = {
 
 const ALPHABET = "ABCDEFGH";
 
-export function computeDraw(teams: DrawTeam[], groupCount: number): DrawResult {
-  if (teams.length < groupCount * 2) {
-    throw new Error(`Potrebno je najmanje ${groupCount * 2} timova za ${groupCount} grupa`);
-  }
-
-  const buckets = distributeTeams(teams, groupCount);
+/**
+ * Build round-robin fixtures + kola from pre-composed groups (no random distribution).
+ * Used by manual draw mode where admin assigns teams to groups.
+ */
+export function composeDraw(buckets: DrawTeam[][]): DrawResult {
   const groups = buckets.map((b, i) => ({
     name: `Grupa ${ALPHABET[i] ?? String(i + 1)}`,
     letter: ALPHABET[i] ?? String(i + 1),
@@ -79,4 +78,11 @@ export function computeDraw(teams: DrawTeam[], groupCount: number): DrawResult {
     rounds.push({ name: `Kolo ${r}`, matches });
   }
   return { groups, rounds };
+}
+
+export function computeDraw(teams: DrawTeam[], groupCount: number): DrawResult {
+  if (teams.length < groupCount * 2) {
+    throw new Error(`Potrebno je najmanje ${groupCount * 2} timova za ${groupCount} grupa`);
+  }
+  return composeDraw(distributeTeams(teams, groupCount));
 }

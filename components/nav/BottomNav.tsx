@@ -13,10 +13,10 @@ const items = [
   { href: "/profile", label: "Profil", icon: User },
 ];
 
-export function BottomNav({ isAuthed, isAdmin }: { isAuthed: boolean; isAdmin: boolean }) {
+export function BottomNav({ isAuthed }: { isAuthed: boolean; isAdmin?: boolean }) {
   const path = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30 sm:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30 sm:hidden pb-[env(safe-area-inset-bottom)]">
       <ul className="grid grid-cols-5 max-w-5xl mx-auto">
         {items.map((it) => {
           const active = path === it.href || (it.href !== "/" && path.startsWith(it.href));
@@ -38,11 +38,6 @@ export function BottomNav({ isAuthed, isAdmin }: { isAuthed: boolean; isAdmin: b
           );
         })}
       </ul>
-      {isAdmin && (
-        <div className="text-center py-1 bg-emerald-50 text-xs">
-          <Link href="/admin" className="text-emerald-700 font-medium">Admin panel →</Link>
-        </div>
-      )}
     </nav>
   );
 }
