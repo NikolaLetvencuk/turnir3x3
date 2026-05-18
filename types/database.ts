@@ -17,6 +17,7 @@ export type Database = {
       draw_state: {
         Row: {
           created_by: string | null
+          group_count: number | null
           id: boolean
           per_pick_ms: number
           result: Json | null
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           created_by?: string | null
+          group_count?: number | null
           id?: boolean
           per_pick_ms?: number
           result?: Json | null
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           created_by?: string | null
+          group_count?: number | null
           id?: boolean
           per_pick_ms?: number
           result?: Json | null

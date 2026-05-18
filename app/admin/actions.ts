@@ -440,21 +440,25 @@ export async function deleteMatchEvent(formData: FormData): Promise<ActionResult
   }) as Promise<ActionResult>;
 }
 
-// Schedule (or start now) a synced draw. Stores pre-computed result so all clients animate from it.
+// Schedule the live draw. Stores ONLY config (group count + time).
+// The actual random distribution is computed at timer expiry by triggerDrawIfDue,
+// using teams as they exist at that moment.
 export async function scheduleDraw(input: {
-  result: any;
-  scheduled_at: string; // ISO; pass NOW for immediate start
+  scheduled_at: string;
+  group_count: number;
   per_pick_ms?: number;
 }): Promise<ActionResult> {
   return withAdmin(async () => {
-    if (!input.result) return { ok: false, error: "Nedostaje rezultat žreba" };
+    const gc = Math.max(2, Math.min(8, Math.floor(input.group_count)));
+    if (!Number.isFinite(gc)) return { ok: false, error: "Neispravan broj grupa" };
     const admin = createAdminClient();
     const { error } = await admin.from("draw_state").upsert({
       id: true,
       state: "scheduled",
       scheduled_at: input.scheduled_at,
+      group_count: gc,
       per_pick_ms: input.per_pick_ms ?? 5000,
-      result: input.result,
+      result: null,
       updated_at: new Date().toISOString(),
     });
     if (error) return { ok: false, error: error.message };
@@ -462,6 +466,82 @@ export async function scheduleDraw(input: {
     revalidatePath("/admin/draw");
     return { ok: true };
   }) as Promise<ActionResult>;
+}
+
+// Admin can change planned group count during the countdown (while result still null).
+export async function updateScheduledGroupCount(input: { group_count: number }): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const gc = Math.max(2, Math.min(8, Math.floor(input.group_count)));
+    if (!Number.isFinite(gc)) return { ok: false, error: "Neispravan broj grupa" };
+    const admin = createAdminClient();
+    const { data: existing } = await admin.from("draw_state").select("state, result").eq("id", true).maybeSingle();
+    const e = existing as any;
+    if (!e || e.state !== "scheduled") return { ok: false, error: "Nema zakazanog žreba" };
+    if (e.result) return { ok: false, error: "Žreb je već povučen — broj grupa se ne može menjati" };
+    const { error } = await admin
+      .from("draw_state")
+      .update({ group_count: gc, updated_at: new Date().toISOString() })
+      .eq("id", true);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/draw");
+    revalidatePath("/admin/draw");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// Anyone-callable: clients call this when their countdown hits zero.
+// Atomically computes random distribution from CURRENT teams using stored group_count.
+export async function triggerDrawIfDue(): Promise<ActionResult> {
+  const admin = createAdminClient();
+  const { data: ds } = await admin
+    .from("draw_state")
+    .select("state, scheduled_at, group_count, result")
+    .eq("id", true)
+    .maybeSingle();
+  const d = ds as any;
+  if (!d) return { ok: false, error: "Nema draw stanja" };
+  if (d.state !== "scheduled") return { ok: false, error: "Žreb nije zakazan" };
+  if (d.result) return { ok: true }; // already drawn
+  if (!d.scheduled_at) return { ok: false, error: "Nema vremena žreba" };
+  if (new Date(d.scheduled_at).getTime() > Date.now()) return { ok: false, error: "Tajmer još nije istekao" };
+
+  const groupCount = Math.max(2, Math.min(8, Number(d.group_count ?? 2)));
+
+  const { data: teams } = await admin
+    .from("teams")
+    .select("id, name, short_name, primary_color, secondary_color");
+  const teamList = ((teams ?? []) as any[]).map((t) => ({
+    id: t.id, name: t.name, short_name: t.short_name,
+    primary_color: t.primary_color, secondary_color: t.secondary_color,
+  }));
+
+  if (teamList.length < groupCount * 2) {
+    await admin.from("draw_state").update({
+      state: "idle",
+      scheduled_at: null,
+      result: null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", true);
+    revalidatePath("/draw");
+    return { ok: false, error: `Nije bilo dovoljno timova (${teamList.length} < ${groupCount * 2})` };
+  }
+
+  const { computeDraw } = await import("@/lib/draw");
+  const result = computeDraw(teamList as any, groupCount);
+
+  // Atomic claim: only one concurrent caller wins
+  const { data: updated, error } = await admin
+    .from("draw_state")
+    .update({ result: result as any, state: "running", updated_at: new Date().toISOString() })
+    .eq("id", true)
+    .is("result", null)
+    .eq("state", "scheduled")
+    .select()
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!updated) return { ok: true }; // race lost — someone else won; that's fine
+  revalidatePath("/draw");
+  return { ok: true };
 }
 
 // After the live animation finishes, admin commits the pre-computed result to actual tables.

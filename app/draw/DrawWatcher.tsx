@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DrawAnimation } from "@/components/admin/DrawAnimation";
 import { TeamCrest } from "@/components/TeamCrest";
 import { useToast } from "@/components/ui/Toast";
-import { commitScheduledDraw, cancelScheduledDraw } from "@/app/admin/actions";
+import { commitScheduledDraw, cancelScheduledDraw, triggerDrawIfDue } from "@/app/admin/actions";
 import type { DrawResult } from "@/lib/draw";
 
 type DrawState = {
@@ -52,6 +52,23 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     return () => clearInterval(id);
   }, []);
 
+  // When countdown expires and result is still null, ask the server to compute.
+  // Idempotent — only the first concurrent call wins.
+  useEffect(() => {
+    if (!state || state.state !== "scheduled" || state.result) return;
+    if (!state.scheduled_at) return;
+    const due = new Date(state.scheduled_at).getTime() <= Date.now();
+    if (!due) return;
+    let cancelled = false;
+    (async () => {
+      const res = await triggerDrawIfDue();
+      // Ignore the result; either we won the race (realtime will deliver the update)
+      // or someone else did, or we got "Tajmer još nije istekao" — all OK.
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
+  }, [state?.state, state?.result, state?.scheduled_at, now]);
+
   const scheduledMs = state?.scheduled_at ? new Date(state.scheduled_at).getTime() : null;
   const timeToStart = scheduledMs != null ? scheduledMs - now : null;
   const SHUFFLE_MS = 5000;
@@ -79,7 +96,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
   }
 
   // Decide which screen to show
-  if (!state || state.state === "idle" || !state.result) {
+  if (!state || state.state === "idle") {
     return (
       <div className="card text-center py-12 space-y-2">
         <Sparkles className="w-10 h-10 text-zinc-300 mx-auto" />
@@ -90,7 +107,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     );
   }
 
-  if (state.state === "committed") {
+  if (state.state === "committed" && state.result) {
     return (
       <div className="space-y-4">
         <div className="card text-center bg-emerald-50 border-emerald-200">
@@ -106,9 +123,20 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     );
   }
 
+  // Countdown phase: timer in future, no result yet
   if (timeToStart != null && timeToStart > 0) {
-    // Show countdown
-    return <Countdown scheduledMs={scheduledMs!} now={now} result={state.result} />;
+    return <Countdown scheduledMs={scheduledMs!} now={now} />;
+  }
+
+  // Timer expired but result not yet computed — show "drawing now" spinner
+  if (!state.result) {
+    return (
+      <div className="card text-center py-12 space-y-3">
+        <Sparkles className="w-12 h-12 text-emerald-500 mx-auto animate-pulse" />
+        <h1 className="font-semibold text-zinc-800 text-lg">Povlačenje žreba…</h1>
+        <p className="text-sm text-zinc-500">Sačekaj nekoliko sekundi.</p>
+      </div>
+    );
   }
 
   // Animation done — show final groups; same "completed" message for everyone.
@@ -149,9 +177,8 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
   );
 }
 
-function Countdown({ scheduledMs, now, result }: { scheduledMs: number; now: number; result: DrawResult }) {
+function Countdown({ scheduledMs, now }: { scheduledMs: number; now: number }) {
   const c = formatCountdown(scheduledMs - now);
-  const teamCount = result.groups.reduce((acc, g) => acc + g.teams.length, 0);
   return (
     <div className="space-y-4">
       <div className="card bg-gradient-to-br from-emerald-600 to-emerald-700 text-white text-center py-10">
@@ -178,19 +205,6 @@ function Countdown({ scheduledMs, now, result }: { scheduledMs: number; now: num
             <div className="text-4xl font-bold">{c.s}</div>
             <div className="text-[10px] text-emerald-100/80 uppercase tracking-wider">sek</div>
           </div>
-        </div>
-        <p className="text-sm text-emerald-100/80 mt-4">{teamCount} timova · {result.groups.length} grupa</p>
-      </div>
-
-      <div className="card">
-        <h2 className="font-medium mb-2">Timovi u žrebu</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {result.groups.flatMap((g) => g.teams).map((t) => (
-            <div key={t.id} className="flex items-center gap-2 text-sm min-w-0">
-              <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} size={28} />
-              <span className="truncate">{t.name}</span>
-            </div>
-          ))}
         </div>
       </div>
     </div>
