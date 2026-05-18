@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
 import type { DrawResult, DrawTeam } from "@/lib/draw";
 
-type Stage = "shuffle" | "pick" | "done";
+const INTRO_MS = 3500;
+const SETUP_MS = 2500;
+const FINALE_MS = 5000;
+const DEFAULT_PER_PICK_MS = 5000;
 
-const SHUFFLE_MS = 5000; // 5s of opening shuffle for everyone to notice
-const DEFAULT_PER_PICK_MS = 5000; // ~5s per team reveal — slow enough to follow
+// Per-pick sub-phase offsets (ms from start of pick)
+const PICK_LIFT_MS = 800;
+const PICK_REVEAL_MS = 2200;
+const PICK_FLY_MS = 1200;
 
-/**
- * Animates a pre-computed draw. When `startedAtMs` is provided (Date.now() based),
- * the reveal schedule is deterministic across all clients — they all show the same
- * state at the same wall-clock instant.
- */
+type Pick = { groupIdx: number; positionInGroup: number; team: DrawTeam; pickIdx: number };
+
 export function DrawAnimation({
   result,
   onSkip,
@@ -27,112 +30,420 @@ export function DrawAnimation({
   onSkip?: () => void;
   onDone?: () => void;
   perPickMs?: number;
-  startedAtMs?: number; // wall-clock ms when the animation should have started
+  startedAtMs?: number;
   allowSkip?: boolean;
 }) {
-  const allPicks: Array<{ groupIdx: number; team: DrawTeam }> = [];
-  result.groups.forEach((g, gi) => g.teams.forEach((t) => allPicks.push({ groupIdx: gi, team: t })));
+  // Flat pick order — interleaves groups so visual feels varied (round-robin order)
+  const allPicks: Pick[] = useMemo(() => {
+    const out: Pick[] = [];
+    const maxLen = Math.max(0, ...result.groups.map((g) => g.teams.length));
+    let i = 0;
+    for (let pos = 0; pos < maxLen; pos++) {
+      result.groups.forEach((g, gi) => {
+        if (g.teams[pos]) out.push({ groupIdx: gi, positionInGroup: pos, team: g.teams[pos], pickIdx: i++ });
+      });
+    }
+    return out;
+  }, [result]);
 
   const [now, setNow] = useState<number>(() => Date.now());
-  const baseStart = startedAtMs ?? now; // if not provided, this client starts now
-  const elapsed = Math.max(0, now - baseStart);
-  const stage: Stage = elapsed < SHUFFLE_MS
-    ? "shuffle"
-    : elapsed < SHUFFLE_MS + allPicks.length * perPickMs
-    ? "pick"
-    : "done";
-  const pickElapsed = Math.max(0, elapsed - SHUFFLE_MS);
-  const revealedCount = Math.min(allPicks.length, Math.floor(pickElapsed / perPickMs));
-
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 200);
+    const id = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(id);
   }, []);
 
+  const baseStart = startedAtMs ?? now;
+  const elapsed = Math.max(0, now - baseStart);
+
+  const picksDuration = allPicks.length * perPickMs;
+  const totalDuration = INTRO_MS + SETUP_MS + picksDuration + FINALE_MS;
+
+  let phase: "intro" | "setup" | "picks" | "finale" | "done";
+  if (elapsed < INTRO_MS) phase = "intro";
+  else if (elapsed < INTRO_MS + SETUP_MS) phase = "setup";
+  else if (elapsed < INTRO_MS + SETUP_MS + picksDuration) phase = "picks";
+  else if (elapsed < totalDuration) phase = "finale";
+  else phase = "done";
+
+  const picksElapsed = Math.max(0, elapsed - INTRO_MS - SETUP_MS);
+  const currentPickIdx = Math.min(allPicks.length - 1, Math.floor(picksElapsed / perPickMs));
+  const pickStart = currentPickIdx * perPickMs;
+  const pickSub = Math.max(0, picksElapsed - pickStart);
+  const subPhase: "lift" | "reveal" | "fly" | "settle" =
+    pickSub < PICK_LIFT_MS ? "lift"
+    : pickSub < PICK_LIFT_MS + PICK_REVEAL_MS ? "reveal"
+    : pickSub < PICK_LIFT_MS + PICK_REVEAL_MS + PICK_FLY_MS ? "fly"
+    : "settle";
+
+  const settledCount = phase === "picks"
+    ? currentPickIdx + (subPhase === "settle" ? 1 : 0)
+    : (phase === "finale" || phase === "done") ? allPicks.length : 0;
+  const currentPick = phase === "picks" ? allPicks[currentPickIdx] : null;
+
   useEffect(() => {
-    if (stage === "done" && onDone) {
-      const t = setTimeout(() => onDone(), 800);
+    if (phase === "done" && onDone) {
+      const t = setTimeout(() => onDone(), 400);
       return () => clearTimeout(t);
     }
-  }, [stage, onDone]);
-
-  function skipNow() {
-    onSkip?.();
-  }
+  }, [phase, onDone]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-900/95 text-white p-4 overflow-auto">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-          <h2 className="text-xl font-bold">
-            {stage === "done" ? "Žreb završen" : "Žreb u toku…"}
-          </h2>
-          {allowSkip && stage !== "done" && (
-            <button onClick={skipNow} className="bg-white/10 hover:bg-white/20 rounded-md px-3 py-1.5 text-sm">Preskoči</button>
-          )}
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <Background />
+
+      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2 text-white/90">
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <span className="text-xs uppercase tracking-[0.2em] font-semibold">Žreb · Turnir Kula</span>
         </div>
-
-        {stage === "shuffle" && (
-          <div className="flex flex-wrap gap-3 justify-center py-12">
-            {allPicks.map((p, i) => (
-              <motion.div
-                key={p.team.id}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                  x: [0, Math.random() * 60 - 30, 0],
-                  y: [0, Math.random() * 60 - 30, 0],
-                  rotate: [0, Math.random() * 30 - 15, 0],
-                }}
-                transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.04 }}
-              >
-                <TeamCrest name={p.team.name} shortName={p.team.short_name} primaryColor={p.team.primary_color} secondaryColor={p.team.secondary_color} size={64} />
-              </motion.div>
-            ))}
-          </div>
-        )}
-
-        {(stage === "pick" || stage === "done") && (
-          <div className="grid sm:grid-cols-2 gap-3">
-            {result.groups.map((g, gi) => {
-              const picksHere = allPicks
-                .slice(0, revealedCount)
-                .filter((r) => r.groupIdx === gi);
-              return (
-                <div key={gi} className="bg-white/5 border border-white/10 rounded-lg p-3">
-                  <div className="font-semibold mb-2">{g.name}</div>
-                  <ul className="space-y-1">
-                    <AnimatePresence initial={false}>
-                      {picksHere.map((r) => (
-                        <motion.li
-                          key={r.team.id}
-                          initial={{ opacity: 0, scale: 0.6, y: -20 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          transition={{ duration: 0.6, ease: "easeOut" }}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <TeamCrest name={r.team.name} shortName={r.team.short_name} primaryColor={r.team.primary_color} secondaryColor={r.team.secondary_color} size={32} />
-                          <span className="font-medium">{r.team.name}</span>
-                        </motion.li>
-                      ))}
-                    </AnimatePresence>
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {stage === "pick" && (
-          <div className="text-center mt-6">
-            <div className="text-xs text-white/60 uppercase tracking-wider">Sledeći tim u žrebu…</div>
-            <div className="text-3xl font-bold mt-1 tabular-nums">
-              {revealedCount} / {allPicks.length}
-            </div>
-          </div>
+        {allowSkip && phase !== "done" && (
+          <button
+            onClick={onSkip}
+            className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full px-3 py-1.5 text-xs font-medium border border-white/10"
+          >
+            Preskoči
+          </button>
         )}
       </div>
+
+      <div className="absolute inset-0 flex items-center justify-center p-4 pt-14">
+        <AnimatePresence mode="wait">
+          {phase === "intro" && <IntroScreen key="intro" />}
+          {phase === "setup" && <SetupScreen key="setup" />}
+          {phase === "picks" && currentPick && (
+            <PicksStage
+              key="picks"
+              groups={result.groups}
+              currentPick={currentPick}
+              subPhase={subPhase}
+              settledCount={settledCount}
+              totalPicks={allPicks.length}
+              allPicks={allPicks}
+            />
+          )}
+          {phase === "finale" && <FinaleScreen key="finale" result={result} />}
+          {phase === "done" && <FinaleScreen key="done" result={result} stillVisible />}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+/* ============================ BACKGROUND ============================ */
+
+function Background() {
+  return (
+    <>
+      <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-emerald-950/70 to-zinc-950" />
+      <motion.div
+        className="absolute -top-32 -left-32 w-[40rem] h-[40rem] rounded-full bg-emerald-500/20 blur-3xl"
+        animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.1, 1] }}
+        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -bottom-40 -right-32 w-[36rem] h-[36rem] rounded-full bg-emerald-400/15 blur-3xl"
+        animate={{ x: [0, -30, 0], y: [0, -40, 0], scale: [1, 1.15, 1] }}
+        transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+      />
+      <div className="absolute inset-0 pointer-events-none">
+        {Array.from({ length: 40 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-[2px] h-[2px] bg-white rounded-full"
+            style={{ left: `${(i * 37) % 100}%`, top: `${(i * 53) % 100}%`, opacity: 0.6 }}
+            animate={{ opacity: [0.2, 0.8, 0.2] }}
+            transition={{ duration: 3 + (i % 5), repeat: Infinity, delay: (i % 10) * 0.3 }}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* ============================ INTRO ============================ */
+
+function IntroScreen() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.5 }}
+      className="text-center"
+    >
+      <motion.div
+        initial={{ y: 30, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="text-emerald-400 text-xs uppercase tracking-[0.4em] font-semibold mb-3"
+      >
+        Turnir Kula
+      </motion.div>
+      <motion.h1
+        initial={{ scale: 0.3, opacity: 0 }}
+        animate={{ scale: [0.3, 1.12, 1], opacity: 1 }}
+        transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], times: [0, 0.7, 1] }}
+        className="text-[18vw] sm:text-[10rem] font-black tracking-tighter leading-none text-white"
+        style={{ textShadow: "0 0 60px rgba(16,185,129,0.6), 0 0 120px rgba(16,185,129,0.3)" }}
+      >
+        ŽREB
+      </motion.h1>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, delay: 1.6 }}
+        className="text-white/70 text-sm uppercase tracking-[0.3em] mt-4"
+      >
+        Sve počinje sada
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ============================ SETUP ============================ */
+
+function SetupScreen() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className="text-center"
+    >
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+        className="w-24 h-24 mx-auto mb-6 rounded-full border-4 border-emerald-500/30 border-t-emerald-400"
+      />
+      <h2 className="text-white text-2xl font-bold tracking-tight">Pripremamo žreb…</h2>
+      <p className="text-white/60 text-sm mt-2">Timovi se ubacuju u šešir</p>
+    </motion.div>
+  );
+}
+
+/* ============================ PICKS STAGE ============================ */
+
+function PicksStage({
+  groups,
+  currentPick,
+  subPhase,
+  settledCount,
+  totalPicks,
+  allPicks,
+}: {
+  groups: DrawResult["groups"];
+  currentPick: Pick;
+  subPhase: "lift" | "reveal" | "fly" | "settle";
+  settledCount: number;
+  totalPicks: number;
+  allPicks: Pick[];
+}) {
+  const settledPicks = allPicks.slice(0, settledCount);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="w-full max-w-4xl"
+    >
+      <div className="flex justify-center gap-1.5 mb-6 flex-wrap">
+        {Array.from({ length: totalPicks }).map((_, i) => (
+          <div
+            key={i}
+            className={`h-1.5 rounded-full transition-all duration-500 ${
+              i < settledCount ? "bg-emerald-400 w-6" : i === settledCount ? "bg-emerald-400/60 w-3 animate-pulse" : "bg-white/20 w-1.5"
+            }`}
+          />
+        ))}
+      </div>
+
+      <div className="relative h-[14rem] sm:h-[18rem] mb-6 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          <SpotlightCard key={currentPick.pickIdx} pick={currentPick} subPhase={subPhase} />
+        </AnimatePresence>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3 max-h-[40vh] overflow-auto px-1 pb-2">
+        {groups.map((g, gi) => (
+          <div
+            key={gi}
+            className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-3"
+          >
+            <div className="text-emerald-400 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">
+              {g.name}
+            </div>
+            <ul className="space-y-1.5">
+              <AnimatePresence initial={false}>
+                {settledPicks
+                  .filter((p) => p.groupIdx === gi)
+                  .map((p) => (
+                    <motion.li
+                      key={p.team.id}
+                      initial={{ opacity: 0, x: -30, scale: 0.8 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      className="flex items-center gap-2 text-sm text-white"
+                    >
+                      <TeamCrest
+                        name={p.team.name}
+                        shortName={p.team.short_name}
+                        primaryColor={p.team.primary_color}
+                        secondaryColor={p.team.secondary_color}
+                        size={32}
+                      />
+                      <span className="font-medium truncate">{p.team.name}</span>
+                    </motion.li>
+                  ))}
+              </AnimatePresence>
+            </ul>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function SpotlightCard({ pick, subPhase }: { pick: Pick; subPhase: "lift" | "reveal" | "fly" | "settle" }) {
+  const groupLabel = "ABCDEFGH"[pick.groupIdx] ?? "?";
+  return (
+    <motion.div
+      initial={{ scale: 0.4, opacity: 0, y: 20 }}
+      animate={
+        subPhase === "lift"
+          ? { scale: 0.6, opacity: 0.7, y: 0 }
+          : subPhase === "reveal"
+          ? { scale: 1, opacity: 1, y: 0 }
+          : subPhase === "fly"
+          ? { scale: 0.5, opacity: 0.6, y: 80 }
+          : { scale: 0.3, opacity: 0, y: 100 }
+      }
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="relative flex flex-col items-center"
+    >
+      <motion.div
+        className="absolute inset-0 -inset-x-12 -inset-y-12 rounded-full bg-emerald-500/30 blur-3xl"
+        animate={{ scale: [0.8, 1.2, 0.9] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        animate={subPhase === "lift" ? { rotate: [-3, 3, -3] } : undefined}
+        transition={{ duration: 0.5, repeat: Infinity }}
+        className="relative z-10"
+      >
+        <TeamCrest
+          name={pick.team.name}
+          shortName={pick.team.short_name}
+          primaryColor={pick.team.primary_color}
+          secondaryColor={pick.team.secondary_color}
+          size={120}
+        />
+      </motion.div>
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={subPhase === "reveal" ? { y: 0, opacity: 1 } : { y: 0, opacity: subPhase === "lift" ? 0 : 0.6 }}
+        transition={{ duration: 0.4, delay: subPhase === "reveal" ? 0.2 : 0 }}
+        className="relative z-10 mt-4 text-center px-2"
+      >
+        <div className="text-white text-2xl sm:text-3xl font-black tracking-tight">
+          {pick.team.name}
+        </div>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={subPhase === "reveal" || subPhase === "fly" ? { scale: 1 } : { scale: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-3 py-1"
+        >
+          <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-emerald-200 text-xs font-semibold uppercase tracking-wider">Grupa {groupLabel}</span>
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ============================ FINALE ============================ */
+
+function FinaleScreen({ result, stillVisible = false }: { result: DrawResult; stillVisible?: boolean }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={stillVisible ? undefined : { opacity: 0 }}
+      transition={{ duration: 0.6 }}
+      className="text-center w-full max-w-4xl"
+    >
+      {!stillVisible && <Confetti />}
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="text-emerald-400 text-xs uppercase tracking-[0.4em] font-semibold mb-2"
+      >
+        Žreb završen
+      </motion.div>
+      <motion.h2
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: [0.5, 1.08, 1], opacity: 1 }}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], times: [0, 0.7, 1] }}
+        className="text-4xl sm:text-6xl font-black text-white mb-6 tracking-tight"
+        style={{ textShadow: "0 0 60px rgba(16,185,129,0.6)" }}
+      >
+        Grupe su izvučene
+      </motion.h2>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.6 }}
+        className="grid sm:grid-cols-2 gap-3 max-h-[50vh] overflow-auto"
+      >
+        {result.groups.map((g, gi) => (
+          <motion.div
+            key={gi}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.8 + gi * 0.1 }}
+            className="bg-white/5 backdrop-blur-md border border-emerald-400/30 rounded-2xl p-3"
+          >
+            <div className="text-emerald-400 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">{g.name}</div>
+            <ul className="space-y-1.5">
+              {g.teams.map((t) => (
+                <li key={t.id} className="flex items-center gap-2 text-sm text-white">
+                  <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} size={28} />
+                  <span className="font-medium truncate">{t.name}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        ))}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function Confetti() {
+  const emojis = ["🎉", "✨", "🎊", "⭐"];
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {Array.from({ length: 50 }).map((_, i) => {
+        const left = (i * 23.7) % 100;
+        const delay = (i * 0.05) % 2;
+        const duration = 3 + (i % 3) * 0.5;
+        const emoji = emojis[i % emojis.length];
+        return (
+          <motion.div
+            key={i}
+            className="absolute text-2xl"
+            style={{ left: `${left}%`, top: "-5%" }}
+            initial={{ y: -50, rotate: 0, opacity: 1 }}
+            animate={{ y: "110vh", rotate: 360 * (1 + (i % 3)), opacity: [1, 1, 0] }}
+            transition={{ duration, delay, ease: "linear" }}
+          >
+            {emoji}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
