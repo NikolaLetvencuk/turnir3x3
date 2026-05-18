@@ -6,7 +6,8 @@ import { TeamCrest } from "@/components/TeamCrest";
 import { DrawAnimation } from "@/components/admin/DrawAnimation";
 import { useToast } from "@/components/ui/Toast";
 import { composeDraw, computeDraw, type DrawResult, type DrawTeam } from "@/lib/draw";
-import { commitDraw } from "../actions";
+import { commitDraw, scheduleDraw, cancelScheduledDraw } from "../actions";
+import { belgradeLocalToUTCISO } from "@/lib/utils";
 
 type Phase = "config" | "animating" | "preview" | "saving";
 type Mode = "auto" | "manual";
@@ -20,6 +21,8 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
   const [groupCount, setGroupCount] = useState(Math.max(2, Math.min(8, Math.floor(teams.length / 3) || 2)));
   const [phase, setPhase] = useState<Phase>("config");
   const [result, setResult] = useState<DrawResult | null>(null);
+  const [scheduleAt, setScheduleAt] = useState<string>("");
+  const [schedulingPending, setSchedulingPending] = useState(false);
   // Manual mode: assignment of team_id -> group_index (0..groupCount-1), or null if unassigned
   const [assignment, setAssignment] = useState<Record<string, number | null>>({});
 
@@ -97,6 +100,29 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
     if (!res.ok) { push(res.error, "error"); setPhase("preview"); return; }
     push("Žreb sačuvan", "success");
     router.push("/admin/schedule");
+    router.refresh();
+  }
+
+  // Schedule the synced draw — visible to all clients on /draw
+  async function schedule(when: "now" | "later") {
+    if (!result) return;
+    if (when === "later" && !scheduleAt.trim()) { push("Izaberi datum/vreme", "error"); return; }
+    const iso = when === "now" ? new Date().toISOString() : belgradeLocalToUTCISO(scheduleAt.trim());
+    if (!iso) { push("Neispravan datum/vreme", "error"); return; }
+    setSchedulingPending(true);
+    const res = await scheduleDraw({ result, scheduled_at: iso, per_pick_ms: 5000 });
+    setSchedulingPending(false);
+    if (!res.ok) { push(res.error, "error"); return; }
+    push(when === "now" ? "Žreb je krenuo!" : "Žreb zakazan", "success");
+    router.push("/draw");
+    router.refresh();
+  }
+
+  async function cancelScheduled() {
+    if (!confirm("Otkazati zakazani žreb?")) return;
+    const res = await cancelScheduledDraw();
+    if (!res.ok) { push(res.error, "error"); return; }
+    push("Zakazani žreb otkazan", "success");
     router.refresh();
   }
 
@@ -315,12 +341,31 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
             </div>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={commit} disabled={phase === "saving"} className="btn-primary">{phase === "saving" ? "Čuvam…" : "Potvrdi"}</button>
-            {mode === "auto" && (
-              <button onClick={reroll} disabled={phase === "saving"} className="btn-secondary">Ponovi žreb</button>
-            )}
-            <button onClick={() => setPhase("config")} disabled={phase === "saving"} className="btn-secondary">Nazad na konfiguraciju</button>
+          <div className="card border-emerald-200 bg-emerald-50 space-y-2">
+            <h2 className="font-medium text-emerald-900">Pokreni live žreb (svi gledaju u isto vreme)</h2>
+            <p className="text-xs text-emerald-800">Svi prijavljeni korisnici sa otvorenom stranicom <a href="/draw" className="underline">/draw</a> vide žreb uživo. Animacija traje oko 1 minut.</p>
+            <div className="grid sm:grid-cols-[1fr_auto] gap-2 items-end">
+              <label className="block text-sm">
+                <span className="label">Zakaži za (opciono)</span>
+                <input type="datetime-local" className="input" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} />
+              </label>
+              <div className="flex gap-2">
+                <button onClick={() => schedule("now")} disabled={schedulingPending || phase === "saving"} className="btn-primary">Pokreni odmah</button>
+                <button onClick={() => schedule("later")} disabled={schedulingPending || phase === "saving" || !scheduleAt} className="btn bg-emerald-700 text-white hover:bg-emerald-800">Zakaži</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card border-zinc-200">
+            <h2 className="font-medium mb-1">Ili sačuvaj odmah bez animacije</h2>
+            <p className="text-xs text-zinc-500 mb-2">Direktno snimi rezultat (preskače live žreb).</p>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={commit} disabled={phase === "saving"} className="btn-secondary">{phase === "saving" ? "Čuvam…" : "Sačuvaj bez žreba"}</button>
+              {mode === "auto" && (
+                <button onClick={reroll} disabled={phase === "saving"} className="btn-secondary">Ponovi žreb</button>
+              )}
+              <button onClick={() => setPhase("config")} disabled={phase === "saving"} className="btn-secondary">Nazad na konfiguraciju</button>
+            </div>
           </div>
         </>
       )}

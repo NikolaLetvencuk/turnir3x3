@@ -1,63 +1,83 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TeamCrest } from "@/components/TeamCrest";
 import type { DrawResult, DrawTeam } from "@/lib/draw";
 
 type Stage = "shuffle" | "pick" | "done";
 
-export function DrawAnimation({ result, onSkip, onDone }: {
-  result: DrawResult;
-  onSkip: () => void;
-  onDone: () => void;
-}) {
-  const [stage, setStage] = useState<Stage>("shuffle");
-  const [revealedCount, setRevealedCount] = useState(0);
-  const doneFiredRef = useRef(false);
+const SHUFFLE_MS = 5000; // 5s of opening shuffle for everyone to notice
+const DEFAULT_PER_PICK_MS = 5000; // ~5s per team reveal — slow enough to follow
 
-  // Compute pick order from the stored result — animation reads from this only
+/**
+ * Animates a pre-computed draw. When `startedAtMs` is provided (Date.now() based),
+ * the reveal schedule is deterministic across all clients — they all show the same
+ * state at the same wall-clock instant.
+ */
+export function DrawAnimation({
+  result,
+  onSkip,
+  onDone,
+  perPickMs = DEFAULT_PER_PICK_MS,
+  startedAtMs,
+  allowSkip = true,
+}: {
+  result: DrawResult;
+  onSkip?: () => void;
+  onDone?: () => void;
+  perPickMs?: number;
+  startedAtMs?: number; // wall-clock ms when the animation should have started
+  allowSkip?: boolean;
+}) {
   const allPicks: Array<{ groupIdx: number; team: DrawTeam }> = [];
   result.groups.forEach((g, gi) => g.teams.forEach((t) => allPicks.push({ groupIdx: gi, team: t })));
 
-  // Total animation duration: 0.6s/team + 3s opening = matches spec
-  const shuffleMs = 1500;
-  const pickMs = 600;
+  const [now, setNow] = useState<number>(() => Date.now());
+  const baseStart = startedAtMs ?? now; // if not provided, this client starts now
+  const elapsed = Math.max(0, now - baseStart);
+  const stage: Stage = elapsed < SHUFFLE_MS
+    ? "shuffle"
+    : elapsed < SHUFFLE_MS + allPicks.length * perPickMs
+    ? "pick"
+    : "done";
+  const pickElapsed = Math.max(0, elapsed - SHUFFLE_MS);
+  const revealedCount = Math.min(allPicks.length, Math.floor(pickElapsed / perPickMs));
 
   useEffect(() => {
-    if (stage !== "shuffle") return;
-    const t = setTimeout(() => setStage("pick"), shuffleMs);
-    return () => clearTimeout(t);
-  }, [stage]);
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
-    if (stage !== "pick") return;
-    if (revealedCount >= allPicks.length) {
-      setStage("done");
-      if (!doneFiredRef.current) {
-        doneFiredRef.current = true;
-        const t = setTimeout(onDone, 800);
-        return () => clearTimeout(t);
-      }
-      return;
+    if (stage === "done" && onDone) {
+      const t = setTimeout(() => onDone(), 800);
+      return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setRevealedCount((n) => n + 1), pickMs);
-    return () => clearTimeout(t);
-  }, [stage, revealedCount, allPicks.length, onDone]);
+  }, [stage, onDone]);
 
   function skipNow() {
-    doneFiredRef.current = true;
-    setRevealedCount(allPicks.length);
-    setStage("done");
-    onSkip();
+    onSkip?.();
   }
+
+  const remainingMs = Math.max(0, SHUFFLE_MS + allPicks.length * perPickMs - elapsed);
+  const remainingS = Math.ceil(remainingMs / 1000);
 
   return (
     <div className="fixed inset-0 z-50 bg-zinc-900/95 text-white p-4 overflow-auto">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Žreb u toku…</h2>
-          <button onClick={skipNow} className="bg-white/10 hover:bg-white/20 rounded-md px-3 py-1.5 text-sm">Preskoči</button>
+        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+          <h2 className="text-xl font-bold">
+            {stage === "done" ? "Žreb završen" : "Žreb u toku…"}
+          </h2>
+          <div className="flex items-center gap-2">
+            {stage !== "done" && (
+              <span className="text-xs text-white/70 tabular-nums">{remainingS}s</span>
+            )}
+            {allowSkip && stage !== "done" && (
+              <button onClick={skipNow} className="bg-white/10 hover:bg-white/20 rounded-md px-3 py-1.5 text-sm">Preskoči</button>
+            )}
+          </div>
         </div>
 
         {stage === "shuffle" && (
@@ -69,13 +89,13 @@ export function DrawAnimation({ result, onSkip, onDone }: {
                 animate={{
                   opacity: 1,
                   scale: 1,
-                  x: [0, Math.random() * 40 - 20, 0],
-                  y: [0, Math.random() * 40 - 20, 0],
+                  x: [0, Math.random() * 60 - 30, 0],
+                  y: [0, Math.random() * 60 - 30, 0],
                   rotate: [0, Math.random() * 30 - 15, 0],
                 }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.02 }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.04 }}
               >
-                <TeamCrest name={p.team.name} shortName={p.team.short_name} primaryColor={p.team.primary_color} secondaryColor={p.team.secondary_color} size={56} />
+                <TeamCrest name={p.team.name} shortName={p.team.short_name} primaryColor={p.team.primary_color} secondaryColor={p.team.secondary_color} size={64} />
               </motion.div>
             ))}
           </div>
@@ -97,11 +117,11 @@ export function DrawAnimation({ result, onSkip, onDone }: {
                           key={r.team.id}
                           initial={{ opacity: 0, scale: 0.6, y: -20 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
-                          transition={{ duration: 0.4, ease: "easeOut" }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
                           className="flex items-center gap-2 text-sm"
                         >
-                          <TeamCrest name={r.team.name} shortName={r.team.short_name} primaryColor={r.team.primary_color} secondaryColor={r.team.secondary_color} size={28} />
-                          <span>{r.team.name}</span>
+                          <TeamCrest name={r.team.name} shortName={r.team.short_name} primaryColor={r.team.primary_color} secondaryColor={r.team.secondary_color} size={32} />
+                          <span className="font-medium">{r.team.name}</span>
                         </motion.li>
                       ))}
                     </AnimatePresence>
@@ -109,6 +129,15 @@ export function DrawAnimation({ result, onSkip, onDone }: {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {stage === "pick" && (
+          <div className="text-center mt-6">
+            <div className="text-xs text-white/60 uppercase tracking-wider">Sledeći tim u žrebu…</div>
+            <div className="text-3xl font-bold mt-1 tabular-nums">
+              {revealedCount} / {allPicks.length}
+            </div>
           </div>
         )}
       </div>

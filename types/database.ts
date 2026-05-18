@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      draw_state: {
+        Row: {
+          created_by: string | null
+          id: boolean
+          per_pick_ms: number
+          result: Json | null
+          scheduled_at: string | null
+          state: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_by?: string | null
+          id?: boolean
+          per_pick_ms?: number
+          result?: Json | null
+          scheduled_at?: string | null
+          state?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_by?: string | null
+          id?: boolean
+          per_pick_ms?: number
+          result?: Json | null
+          scheduled_at?: string | null
+          state?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       fantasy_league_members: {
         Row: {
           joined_at: string

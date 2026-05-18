@@ -440,6 +440,67 @@ export async function deleteMatchEvent(formData: FormData): Promise<ActionResult
   }) as Promise<ActionResult>;
 }
 
+// Schedule (or start now) a synced draw. Stores pre-computed result so all clients animate from it.
+export async function scheduleDraw(input: {
+  result: any;
+  scheduled_at: string; // ISO; pass NOW for immediate start
+  per_pick_ms?: number;
+}): Promise<ActionResult> {
+  return withAdmin(async () => {
+    if (!input.result) return { ok: false, error: "Nedostaje rezultat žreba" };
+    const admin = createAdminClient();
+    const { error } = await admin.from("draw_state").upsert({
+      id: true,
+      state: "scheduled",
+      scheduled_at: input.scheduled_at,
+      per_pick_ms: input.per_pick_ms ?? 5000,
+      result: input.result,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/draw");
+    revalidatePath("/admin/draw");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// After the live animation finishes, admin commits the pre-computed result to actual tables.
+export async function commitScheduledDraw(): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    const { data: ds } = await admin.from("draw_state").select("result").eq("id", true).maybeSingle();
+    const result = ((ds as any)?.result) as any;
+    if (!result || !result.groups || !result.rounds) {
+      return { ok: false, error: "Nema sačuvanog rezultata žreba" };
+    }
+    const payload = {
+      groups: result.groups.map((g: any) => ({ name: g.name, team_ids: g.teams.map((t: any) => t.id) })),
+      rounds: result.rounds.map((r: any) => ({
+        name: r.name,
+        matches: r.matches.map((m: any) => ({ group_index: m.group_index, home_team_id: m.home.id, away_team_id: m.away.id })),
+      })),
+    };
+    return commitDraw(payload);
+  }) as Promise<ActionResult>;
+}
+
+export async function cancelScheduledDraw(): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    const { error } = await admin.from("draw_state").upsert({
+      id: true,
+      state: "idle",
+      scheduled_at: null,
+      result: null,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/draw");
+    revalidatePath("/admin/draw");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 // DRAW: commit pre-computed draw to DB; wipes existing groups/group_teams/rounds/matches first
 export async function commitDraw(payload: {
   groups: Array<{ name: string; team_ids: string[] }>;
@@ -491,12 +552,16 @@ export async function commitDraw(payload: {
       if (mErr) return { ok: false, error: mErr.message };
     }
 
+    // Mark the synced draw state as committed (or reset to idle)
+    await admin.from("draw_state").upsert({ id: true, state: "committed", updated_at: new Date().toISOString() });
+
     revalidatePath("/standings");
     revalidatePath("/matches");
     revalidatePath("/admin");
     revalidatePath("/admin/groups");
     revalidatePath("/admin/matches");
     revalidatePath("/admin/schedule");
+    revalidatePath("/draw");
     return { ok: true };
   }) as Promise<ActionResult>;
 }

@@ -96,13 +96,6 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
   const [eventType, setEventType] = useState("goal");
   const [playerId, setPlayerId] = useState("");
   const [assistId, setAssistId] = useState("");
-  const [minute, setMinute] = useState<string>("");
-
-  // Default minute to current match minute when phase changes
-  useEffect(() => {
-    const cm = getCurrentMinute(m as any);
-    if (cm != null && !minute) setMinute(String(cm));
-  }, [m.phase]);
 
   const teamPlayers = players.filter((p) => p.team_id === selectedTeam);
   const playerMap = new Map(players.map((p) => [p.id, p]));
@@ -110,20 +103,25 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
   async function onAddEvent(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!playerId) return;
-    if (!minute) return;
+    // Minute is auto-computed from the match clock — admin doesn't enter it.
+    const liveMinute = getCurrentMinute(m as any);
+    const minuteToSend = liveMinute != null
+      ? liveMinute
+      : m.phase === "halftime"
+      ? 20
+      : m.phase === "finished"
+      ? 40
+      : 0;
     const fd = new FormData();
     fd.set("match_id", m.id);
-    // For own_goal, team_id stored is the player's team (scoring goes against them — trigger handles it)
     fd.set("team_id", selectedTeam);
     fd.set("player_id", playerId);
     fd.set("event_type", eventType);
     if (assistId && eventType === "goal") fd.set("assist_player_id", assistId);
-    fd.set("minute", minute);
+    fd.set("minute", String(minuteToSend));
     const ok = await run(createMatchEvent, fd, { successMessage: "Dodato" });
     if (ok) {
       setPlayerId(""); setAssistId("");
-      const cm = getCurrentMinute(m as any);
-      setMinute(cm != null ? String(cm) : "");
     }
   }
 
@@ -195,16 +193,16 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
               <option value="">Igrač</option>
               {teamPlayers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            {eventType === "goal" ? (
+            {eventType === "goal" && (
               <select className="input" value={assistId} onChange={(e) => setAssistId(e.target.value)}>
                 <option value="">Bez asistencije</option>
                 {teamPlayers.filter((p) => p.id !== playerId).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-            ) : (
-              <input className="input" type="number" placeholder="Minut" value={minute} onChange={(e) => setMinute(e.target.value)} required />
             )}
-            {eventType === "goal" && <input className="input" type="number" placeholder="Minut" value={minute} onChange={(e) => setMinute(e.target.value)} required />}
           </div>
+          <p className="text-xs text-zinc-500">
+            Minut: <b className="tabular-nums">{getCurrentMinute(m as any) ?? (m.phase === "halftime" ? 20 : m.phase === "finished" ? 40 : "—")}&apos;</b> (automatski iz sata meča)
+          </p>
           <button className="btn-primary w-full">Sačuvaj događaj</button>
         </form>
       )}
