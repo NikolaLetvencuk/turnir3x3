@@ -42,7 +42,7 @@ type Tab = "results" | "players" | "stats";
 
 function ResultBadge({ result }: { result: "W" | "L" | "D" }) {
   const cls =
-    result === "W" ? "bg-emerald-500 text-white" :
+    result === "W" ? "bg-blue-500 text-white" :
     result === "L" ? "bg-red-500 text-white" :
     "bg-amber-400 text-zinc-900";
   return <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${cls}`}>{result}</span>;
@@ -133,7 +133,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === k ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
             >{l}</button>
           ))}
         </div>
@@ -215,7 +215,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                             {p.stats.goals}G · {p.stats.assists}A · {p.stats.yellows}🟨 · {p.stats.reds}🟥
                           </div>
                         </div>
-                        <span className="text-emerald-700 text-sm">→</span>
+                        <span className="text-blue-700 text-sm">→</span>
                       </Link>
                     </li>
                   ))}
@@ -260,8 +260,8 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
 
               <div className="grid sm:grid-cols-2 gap-3">
                 {stats.biggestWin && (
-                  <div className="card border-emerald-200 bg-emerald-50">
-                    <div className="text-xs text-emerald-700 font-medium mb-1">Najveća pobeda</div>
+                  <div className="card border-blue-200 bg-blue-50">
+                    <div className="text-xs text-blue-700 font-medium mb-1">Najveća pobeda</div>
                     <div className="font-bold tabular-nums text-lg">{stats.biggestWin.us} : {stats.biggestWin.them}</div>
                     {stats.biggestWin.opp && (
                       <div className="text-sm text-zinc-600 inline-flex items-center gap-1.5 mt-1">
@@ -289,7 +289,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
 
               <div className="space-y-2">
                 {stats.topScorer && (
-                  <Link href={`/players/${stats.topScorer.id}`} className="card flex items-center gap-3 hover:border-emerald-300">
+                  <Link href={`/players/${stats.topScorer.id}`} className="card flex items-center gap-3 hover:border-blue-300">
                     <PlayerAvatar name={stats.topScorer.name} photoUrl={stats.topScorer.photo_url} teamPrimary={team.primary_color} size={40} />
                     <div className="flex-1">
                       <div className="text-xs text-zinc-500">Najbolji strelac</div>
@@ -299,7 +299,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                   </Link>
                 )}
                 {stats.topAssister && (
-                  <Link href={`/players/${stats.topAssister.id}`} className="card flex items-center gap-3 hover:border-emerald-300">
+                  <Link href={`/players/${stats.topAssister.id}`} className="card flex items-center gap-3 hover:border-blue-300">
                     <PlayerAvatar name={stats.topAssister.name} photoUrl={stats.topAssister.photo_url} teamPrimary={team.primary_color} size={40} />
                     <div className="flex-1">
                       <div className="text-xs text-zinc-500">Najviše asistencija</div>
@@ -309,7 +309,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                   </Link>
                 )}
                 {stats.mostCards && (
-                  <Link href={`/players/${stats.mostCards.id}`} className="card flex items-center gap-3 hover:border-emerald-300">
+                  <Link href={`/players/${stats.mostCards.id}`} className="card flex items-center gap-3 hover:border-blue-300">
                     <PlayerAvatar name={stats.mostCards.name} photoUrl={stats.mostCards.photo_url} teamPrimary={team.primary_color} size={40} />
                     <div className="flex-1">
                       <div className="text-xs text-zinc-500">Najviše kartona</div>

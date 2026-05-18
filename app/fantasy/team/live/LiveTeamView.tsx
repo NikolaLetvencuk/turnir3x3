@@ -25,7 +25,7 @@ export type PlayerSlot = {
 function StatChip({ label, value, accent }: { label: string; value: number; accent?: "good" | "bad" }) {
   if (!value) return null;
   const cls =
-    accent === "good" ? "bg-emerald-50 text-emerald-700"
+    accent === "good" ? "bg-blue-50 text-blue-700"
     : accent === "bad" ? "bg-red-50 text-red-700"
     : "bg-zinc-100 text-zinc-700";
   return (
@@ -52,7 +52,7 @@ function SlotCard({ slot }: { slot: PlayerSlot }) {
           <PlayerAvatar name={slot.name} photoUrl={slot.photo_url} teamPrimary={slot.team_primary} size={48} />
         </Link>
         <div className="flex-1 min-w-0">
-          <Link href={`/players/${slot.id}`} className="font-semibold truncate hover:text-emerald-700 block">{slot.name}</Link>
+          <Link href={`/players/${slot.id}`} className="font-semibold truncate hover:text-blue-700 block">{slot.name}</Link>
           <div className="text-xs text-zinc-500 truncate">{slot.team_name ?? "—"}</div>
         </div>
         <div className="text-right shrink-0">
@@ -93,19 +93,19 @@ export function LiveTeamView({ round, slots, total, bank }: {
   const allEmpty = slots.every((s) => s === null);
   return (
     <div className="space-y-3">
-      <div className="card bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+      <div className="card bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-xs text-emerald-50/80 uppercase tracking-wide">{round.status === "active" ? "AKTIVNO KOLO" : round.status === "upcoming" ? "SLEDEĆE KOLO" : "POSLEDNJE KOLO"}</div>
+            <div className="text-xs text-blue-50/80 uppercase tracking-wide">{round.status === "active" ? "AKTIVNO KOLO" : round.status === "upcoming" ? "SLEDEĆE KOLO" : "POSLEDNJE KOLO"}</div>
             <div className="text-xl font-bold">{round.name}</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-emerald-50/80">Bodovi tima</div>
+            <div className="text-xs text-blue-50/80">Bodovi tima</div>
             <div className="text-3xl font-bold tabular-nums">{total}</div>
           </div>
         </div>
         {bank !== null && bank > 0 && (
-          <div className="text-xs text-emerald-50/80 mt-2">U banci: <b className="text-white tabular-nums">{Number(bank).toFixed(1)}M</b></div>
+          <div className="text-xs text-blue-50/80 mt-2">U banci: <b className="text-white tabular-nums">{Number(bank).toFixed(1)}M</b></div>
         )}
       </div>
 

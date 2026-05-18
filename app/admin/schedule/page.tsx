@@ -18,7 +18,7 @@ export default async function SchedulePage() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Raspored po kolima</h1>
-        <Link href="/admin/draw" className="text-sm text-emerald-700 hover:underline">Novi žreb →</Link>
+        <Link href="/admin/draw" className="text-sm text-blue-700 hover:underline">Novi žreb →</Link>
       </div>
       <p className="text-sm text-zinc-600">Prevuci meč iz jednog kola u drugo da bi promenio raspored. Zaključana kola su označena katancem.</p>
       <ScheduleBoard rounds={(rounds ?? []) as any[]} matches={(matches ?? []) as any[]} />

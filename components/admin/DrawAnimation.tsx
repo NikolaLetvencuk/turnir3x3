@@ -33,17 +33,19 @@ export function DrawAnimation({
   startedAtMs?: number;
   allowSkip?: boolean;
 }) {
-  // Flat pick order — interleaves groups so visual feels varied (round-robin order)
+  // Suspenseful pick order: shuffle deterministically by team UUID so viewers can't
+  // predict which group the next-drawn team will go to. The order is identical for
+  // all clients because all UUIDs are the same on every device.
   const allPicks: Pick[] = useMemo(() => {
-    const out: Pick[] = [];
-    const maxLen = Math.max(0, ...result.groups.map((g) => g.teams.length));
-    let i = 0;
-    for (let pos = 0; pos < maxLen; pos++) {
-      result.groups.forEach((g, gi) => {
-        if (g.teams[pos]) out.push({ groupIdx: gi, positionInGroup: pos, team: g.teams[pos], pickIdx: i++ });
+    const raw: Pick[] = [];
+    result.groups.forEach((g, gi) => {
+      g.teams.forEach((team, pos) => {
+        raw.push({ groupIdx: gi, positionInGroup: pos, team, pickIdx: 0 });
       });
-    }
-    return out;
+    });
+    raw.sort((a, b) => a.team.id.localeCompare(b.team.id));
+    raw.forEach((p, i) => (p.pickIdx = i));
+    return raw;
   }, [result]);
 
   const [now, setNow] = useState<number>(() => Date.now());
@@ -93,7 +95,7 @@ export function DrawAnimation({
 
       <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2 text-white/90">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <Sparkles className="w-4 h-4 text-blue-400" />
           <span className="text-xs uppercase tracking-[0.2em] font-semibold">Žreb · Turnir Kula</span>
         </div>
         {allowSkip && phase !== "done" && (
@@ -134,14 +136,14 @@ export function DrawAnimation({
 function Background() {
   return (
     <>
-      <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-emerald-950/70 to-zinc-950" />
+      <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-blue-950/70 to-zinc-950" />
       <motion.div
-        className="absolute -top-32 -left-32 w-[40rem] h-[40rem] rounded-full bg-emerald-500/20 blur-3xl"
+        className="absolute -top-32 -left-32 w-[40rem] h-[40rem] rounded-full bg-blue-500/20 blur-3xl"
         animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.1, 1] }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute -bottom-40 -right-32 w-[36rem] h-[36rem] rounded-full bg-emerald-400/15 blur-3xl"
+        className="absolute -bottom-40 -right-32 w-[36rem] h-[36rem] rounded-full bg-blue-400/15 blur-3xl"
         animate={{ x: [0, -30, 0], y: [0, -40, 0], scale: [1, 1.15, 1] }}
         transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 4 }}
       />
@@ -175,7 +177,7 @@ function IntroScreen() {
         initial={{ y: 30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="text-emerald-400 text-xs uppercase tracking-[0.4em] font-semibold mb-3"
+        className="text-blue-400 text-xs uppercase tracking-[0.4em] font-semibold mb-3"
       >
         Turnir Kula
       </motion.div>
@@ -184,7 +186,7 @@ function IntroScreen() {
         animate={{ scale: [0.3, 1.12, 1], opacity: 1 }}
         transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], times: [0, 0.7, 1] }}
         className="text-[18vw] sm:text-[10rem] font-black tracking-tighter leading-none text-white"
-        style={{ textShadow: "0 0 60px rgba(16,185,129,0.6), 0 0 120px rgba(16,185,129,0.3)" }}
+        style={{ textShadow: "0 0 60px rgba(37,99,235,0.6), 0 0 120px rgba(37,99,235,0.3)" }}
       >
         ŽREB
       </motion.h1>
@@ -214,7 +216,7 @@ function SetupScreen() {
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-        className="w-24 h-24 mx-auto mb-6 rounded-full border-4 border-emerald-500/30 border-t-emerald-400"
+        className="w-24 h-24 mx-auto mb-6 rounded-full border-4 border-blue-500/30 border-t-blue-400"
       />
       <h2 className="text-white text-2xl font-bold tracking-tight">Pripremamo žreb…</h2>
       <p className="text-white/60 text-sm mt-2">Timovi se ubacuju u šešir</p>
@@ -253,7 +255,7 @@ function PicksStage({
           <div
             key={i}
             className={`h-1.5 rounded-full transition-all duration-500 ${
-              i < settledCount ? "bg-emerald-400 w-6" : i === settledCount ? "bg-emerald-400/60 w-3 animate-pulse" : "bg-white/20 w-1.5"
+              i < settledCount ? "bg-blue-400 w-6" : i === settledCount ? "bg-blue-400/60 w-3 animate-pulse" : "bg-white/20 w-1.5"
             }`}
           />
         ))}
@@ -271,7 +273,7 @@ function PicksStage({
             key={gi}
             className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-3"
           >
-            <div className="text-emerald-400 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">
+            <div className="text-blue-400 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">
               {g.name}
             </div>
             <ul className="space-y-1.5">
@@ -323,7 +325,7 @@ function SpotlightCard({ pick, subPhase }: { pick: Pick; subPhase: "lift" | "rev
       className="relative flex flex-col items-center"
     >
       <motion.div
-        className="absolute inset-0 -inset-x-12 -inset-y-12 rounded-full bg-emerald-500/30 blur-3xl"
+        className="absolute inset-0 -inset-x-12 -inset-y-12 rounded-full bg-blue-500/30 blur-3xl"
         animate={{ scale: [0.8, 1.2, 0.9] }}
         transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
       />
@@ -353,10 +355,10 @@ function SpotlightCard({ pick, subPhase }: { pick: Pick; subPhase: "lift" | "rev
           initial={{ scale: 0 }}
           animate={subPhase === "reveal" || subPhase === "fly" ? { scale: 1 } : { scale: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-3 py-1"
+          className="mt-2 inline-flex items-center gap-1.5 bg-blue-500/20 backdrop-blur-md border border-blue-400/30 rounded-full px-3 py-1"
         >
-          <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-emerald-200 text-xs font-semibold uppercase tracking-wider">Grupa {groupLabel}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-blue-200 text-xs font-semibold uppercase tracking-wider">Grupa {groupLabel}</span>
         </motion.div>
       </motion.div>
     </motion.div>
@@ -379,7 +381,7 @@ function FinaleScreen({ result, stillVisible = false }: { result: DrawResult; st
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="text-emerald-400 text-xs uppercase tracking-[0.4em] font-semibold mb-2"
+        className="text-blue-400 text-xs uppercase tracking-[0.4em] font-semibold mb-2"
       >
         Žreb završen
       </motion.div>
@@ -388,7 +390,7 @@ function FinaleScreen({ result, stillVisible = false }: { result: DrawResult; st
         animate={{ scale: [0.5, 1.08, 1], opacity: 1 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], times: [0, 0.7, 1] }}
         className="text-4xl sm:text-6xl font-black text-white mb-6 tracking-tight"
-        style={{ textShadow: "0 0 60px rgba(16,185,129,0.6)" }}
+        style={{ textShadow: "0 0 60px rgba(37,99,235,0.6)" }}
       >
         Grupe su izvučene
       </motion.h2>
@@ -404,9 +406,9 @@ function FinaleScreen({ result, stillVisible = false }: { result: DrawResult; st
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 + gi * 0.1 }}
-            className="bg-white/5 backdrop-blur-md border border-emerald-400/30 rounded-2xl p-3"
+            className="bg-white/5 backdrop-blur-md border border-blue-400/30 rounded-2xl p-3"
           >
-            <div className="text-emerald-400 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">{g.name}</div>
+            <div className="text-blue-400 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">{g.name}</div>
             <ul className="space-y-1.5">
               {g.teams.map((t) => (
                 <li key={t.id} className="flex items-center gap-2 text-sm text-white">

@@ -36,7 +36,7 @@ function Slot({ team, placeholder, manual, onClick }: { team: TeamLite | null; p
       <button onClick={onClick} disabled={!onClick} className="flex items-center gap-2 w-full text-left py-1 px-2 rounded hover:bg-zinc-100 disabled:hover:bg-transparent">
         <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={20} />
         <span className="text-sm truncate">{team.name}</span>
-        {manual && <span className="text-[10px] text-emerald-600 ml-auto">M</span>}
+        {manual && <span className="text-[10px] text-blue-600 ml-auto">M</span>}
       </button>
     );
   }
@@ -98,7 +98,7 @@ export function BracketTree({
                   <div className={`${winnerId && aTeam?.id === winnerId ? "font-semibold" : ""}`}>
                     <Slot team={aTeam ?? null} placeholder={m.away_placeholder} manual={!!m.away_team_id_manual} onClick={onSlotClick ? () => onSlotClick(m.id, "away", m.away_team_id) : undefined} />
                   </div>
-                  <Link href={`/admin/matches/${m.id}/live`} className="block text-[10px] text-emerald-700 mt-1 hover:underline">otvori →</Link>
+                  <Link href={`/admin/matches/${m.id}/live`} className="block text-[10px] text-blue-700 mt-1 hover:underline">otvori →</Link>
                 </div>
               );
             })}

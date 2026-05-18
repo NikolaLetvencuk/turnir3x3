@@ -27,7 +27,7 @@ export function MatchCard({ match }: { match: Match }) {
   return (
     <Link
       href={`/matches/${match.id}`}
-      className="block card hover:border-emerald-300 transition"
+      className="block card hover:border-blue-300 transition"
     >
       <div className="flex items-center justify-between text-xs text-zinc-500 mb-2 gap-2">
         <span className="truncate">{formatDateTime(match.kickoff_at)}</span>

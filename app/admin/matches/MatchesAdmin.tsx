@@ -142,7 +142,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                     onClick={() => setSelectedRoundId(r.id)}
                     className={`px-3 py-1.5 rounded-md text-sm inline-flex items-center gap-1.5 transition ${
                       active
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-blue-600 text-white"
                         : finished
                         ? "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
                         : "bg-white text-zinc-700 hover:bg-zinc-100 border border-zinc-200"
@@ -150,7 +150,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                   >
                     {finished && <Lock className="w-3 h-3" />}
                     {r.name}
-                    <span className={`text-xs ${active ? "text-emerald-100" : "text-zinc-400"}`}>({count})</span>
+                    <span className={`text-xs ${active ? "text-blue-100" : "text-zinc-400"}`}>({count})</span>
                   </button>
                 );
               })}
@@ -239,7 +239,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                       ) : (
                         <button
                           onClick={() => setEditingId(m.id)}
-                          className="text-left hover:text-emerald-700"
+                          className="text-left hover:text-blue-700"
                         >
                           {m.kickoff_at ? formatKickoff(m.kickoff_at) : <span className="text-zinc-400 italic">+ dodaj termin</span>}
                         </button>
@@ -304,7 +304,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !bulkBusy && setBulkOpen(false)}>
           <div className="bg-white rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-600" /> Popuni termine za kolo
+              <Zap className="w-4 h-4 text-blue-600" /> Popuni termine za kolo
             </h3>
             <p className="text-sm text-zinc-600 mb-3">
               Automatski postavlja termine za <b>{selectedMatches.length} mečeva</b>. Prvi meč počinje u izabrano vreme,

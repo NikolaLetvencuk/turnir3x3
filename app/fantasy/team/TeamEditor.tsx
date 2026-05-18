@@ -33,7 +33,7 @@ function PlayerCard({ player, onRemove }: { player: PlayerForPicker | null; onRe
     );
   }
   return (
-    <div className="relative rounded-xl bg-gradient-to-b from-white to-zinc-50 border-2 border-emerald-300 shadow-md aspect-[3/4] p-2 flex flex-col items-center justify-between text-center">
+    <div className="relative rounded-xl bg-gradient-to-b from-white to-zinc-50 border-2 border-blue-300 shadow-md aspect-[3/4] p-2 flex flex-col items-center justify-between text-center">
       {onRemove && (
         <button
           onClick={onRemove}
@@ -43,7 +43,7 @@ function PlayerCard({ player, onRemove }: { player: PlayerForPicker | null; onRe
           <X className="w-3 h-3" />
         </button>
       )}
-      <div className="absolute top-1 left-1 text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 font-bold tabular-nums z-10">
+      <div className="absolute top-1 left-1 text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 font-bold tabular-nums z-10">
         {player.price.toFixed(1)}
       </div>
       <div className="w-full flex-1 flex items-center justify-center min-h-0 mt-3">
@@ -220,9 +220,9 @@ export function TeamEditor({
   if (!hasTeamName) {
     return (
       <div className="space-y-4">
-        <div className="card bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+        <div className="card bg-gradient-to-br from-blue-600 to-blue-700 text-white">
           <h1 className="text-xl font-bold">Dobrodošao u fantasy</h1>
-          <p className="text-sm text-emerald-50/90 mt-1">Pre nego što napraviš tim, izaberi ime. Ime se postavlja jednom i ne može da se menja.</p>
+          <p className="text-sm text-blue-50/90 mt-1">Pre nego što napraviš tim, izaberi ime. Ime se postavlja jednom i ne može da se menja.</p>
         </div>
         <form
           onSubmit={(e) => { e.preventDefault(); saveTeamName(); }}
@@ -254,28 +254,28 @@ export function TeamEditor({
   return (
     <div className="space-y-4">
       {/* Hero — totals + lock status */}
-      <div className="card bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+      <div className="card bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs text-emerald-50/80">Ukupno bodova</div>
+            <div className="text-xs text-blue-50/80">Ukupno bodova</div>
             <div className="text-3xl font-bold tabular-nums">{overview.total_points}</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-emerald-50/80">{overview.last_round_name ?? "Prošlo kolo"}</div>
+            <div className="text-xs text-blue-50/80">{overview.last_round_name ?? "Prošlo kolo"}</div>
             <div className="text-2xl font-bold tabular-nums">
-              {overview.last_round_points === null ? <span className="text-emerald-50/60 text-sm">još nije bilo</span> : overview.last_round_points}
+              {overview.last_round_points === null ? <span className="text-blue-50/60 text-sm">još nije bilo</span> : overview.last_round_points}
             </div>
           </div>
         </div>
         {overview.overall_rank !== null && (
-          <div className="text-xs text-emerald-50/80 mt-2">Pozicija ukupno: <b className="text-white">{overview.overall_rank}.</b> od {overview.overall_total}</div>
+          <div className="text-xs text-blue-50/80 mt-2">Pozicija ukupno: <b className="text-white">{overview.overall_rank}.</b> od {overview.overall_total}</div>
         )}
       </div>
 
       {/* Lock status */}
       {overview.next_round ? (
-        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-emerald-200 bg-emerald-50" : lockedForUpcoming ? "border-amber-200 bg-amber-50" : "border-zinc-200"}`}>
-          {matchesLocked ? <Lock className="w-5 h-5 text-emerald-600 shrink-0" /> : <LockOpen className="w-5 h-5 text-zinc-500 shrink-0" />}
+        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-blue-200 bg-blue-50" : lockedForUpcoming ? "border-amber-200 bg-amber-50" : "border-zinc-200"}`}>
+          {matchesLocked ? <Lock className="w-5 h-5 text-blue-600 shrink-0" /> : <LockOpen className="w-5 h-5 text-zinc-500 shrink-0" />}
           <div className="flex-1 text-sm">
             <div className="font-medium">{overview.next_round.name}</div>
             <div className="text-xs text-zinc-600">
@@ -295,9 +295,9 @@ export function TeamEditor({
       )}
 
       {/* Pitch view */}
-      <div className="card relative bg-gradient-to-b from-emerald-100 via-emerald-50 to-white border-emerald-200">
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-emerald-300/40" />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-emerald-300/40" />
+      <div className="card relative bg-gradient-to-b from-blue-100 via-blue-50 to-white border-blue-200">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-blue-300/40" />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-blue-300/40" />
         <div className="relative grid grid-cols-3 gap-2 sm:gap-3">
           {slotPlayers.map((p, idx) => (
             <PlayerCard
@@ -377,7 +377,7 @@ export function TeamEditor({
             return (
               <div
                 key={p.id}
-                className={`relative rounded-lg border transition ${isSel ? "border-emerald-400 bg-emerald-50/40" : "border-zinc-200 bg-white"}`}
+                className={`relative rounded-lg border transition ${isSel ? "border-blue-400 bg-blue-50/40" : "border-zinc-200 bg-white"}`}
               >
                 <div className="flex items-center gap-3 p-2.5">
                   <button onClick={() => setDetailPlayer(p)} className="shrink-0">
@@ -417,7 +417,7 @@ export function TeamEditor({
                           ? "inline-flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-md px-2 py-1 text-xs font-medium"
                           : wouldExceed
                           ? "inline-flex items-center gap-1 bg-zinc-100 text-zinc-400 rounded-md px-2 py-1 text-xs font-medium cursor-not-allowed"
-                          : "inline-flex items-center gap-1 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md px-2 py-1 text-xs font-medium"
+                          : "inline-flex items-center gap-1 bg-blue-600 text-white hover:bg-blue-700 rounded-md px-2 py-1 text-xs font-medium"
                       }
                     >
                       {isSel ? <><Check className="w-3 h-3" />Izabran</> : wouldExceed ? "Skupo" : <><Plus className="w-3 h-3" />Dodaj</>}

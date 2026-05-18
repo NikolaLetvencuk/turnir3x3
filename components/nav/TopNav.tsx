@@ -12,25 +12,25 @@ export function TopNav({ profile }: { profile: Profile }) {
         <div className="flex items-center gap-1 min-w-0">
           <BackButton />
           <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
-            <Trophy className="w-5 h-5 text-emerald-600" />
+            <Trophy className="w-5 h-5 text-blue-600" />
             <span className="truncate">Turnir Kula</span>
           </Link>
         </div>
         <nav className="hidden sm:flex items-center gap-4 text-sm">
-          <Link href="/standings" className="hover:text-emerald-700">Tabele</Link>
-          <Link href="/matches" className="hover:text-emerald-700">Mečevi</Link>
-          <Link href="/players" className="hover:text-emerald-700">Igrači</Link>
-          <Link href="/bracket" className="hover:text-emerald-700">Eliminacije</Link>
-          <Link href="/fantasy" className="hover:text-emerald-700">Fantasy</Link>
+          <Link href="/standings" className="hover:text-blue-700">Tabele</Link>
+          <Link href="/matches" className="hover:text-blue-700">Mečevi</Link>
+          <Link href="/players" className="hover:text-blue-700">Igrači</Link>
+          <Link href="/bracket" className="hover:text-blue-700">Eliminacije</Link>
+          <Link href="/fantasy" className="hover:text-blue-700">Fantasy</Link>
           {isAdmin && (
-            <Link href="/admin" className="text-emerald-700 font-medium">Admin</Link>
+            <Link href="/admin" className="text-blue-700 font-medium">Admin</Link>
           )}
         </nav>
         <div className="flex items-center gap-2 text-sm min-w-0">
           {isAdmin && (
             <Link
               href="/admin"
-              className="sm:hidden inline-flex items-center gap-1 bg-emerald-600 text-white rounded-md px-2.5 py-1.5 text-xs font-medium shrink-0"
+              className="sm:hidden inline-flex items-center gap-1 bg-blue-600 text-white rounded-md px-2.5 py-1.5 text-xs font-medium shrink-0"
             >
               Admin
             </Link>

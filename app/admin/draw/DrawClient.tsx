@@ -164,7 +164,7 @@ export function DrawClient({
               <button
                 key={k}
                 onClick={() => setMode(k)}
-                className={`flex-1 py-2 px-3 text-sm font-medium transition ${mode === k ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+                className={`flex-1 py-2 px-3 text-sm font-medium transition ${mode === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
               >
                 {k === "auto" ? "Live žreb (sa tajmerom)" : "Ručno raspoređivanje"}
               </button>
@@ -197,7 +197,7 @@ export function DrawClient({
                 <p className="text-xs text-zinc-500">Trenutno prijavljeno timova: <b>{teams.length}</b>. Treba ti bar {groupCount * 2}.</p>
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={() => onSchedule("now")} disabled={pending || teams.length < groupCount * 2} className="btn-primary">Pokreni odmah</button>
-                  <button onClick={() => onSchedule("later")} disabled={pending || !scheduleAt || teams.length < groupCount * 2} className="btn bg-emerald-700 text-white hover:bg-emerald-800">Zakaži</button>
+                  <button onClick={() => onSchedule("later")} disabled={pending || !scheduleAt || teams.length < groupCount * 2} className="btn bg-blue-700 text-white hover:bg-blue-800">Zakaži</button>
                 </div>
               </>
             ) : (
@@ -235,7 +235,7 @@ export function DrawClient({
                 <div className="text-xs">
                   {unassignedCount > 0
                     ? <span className="text-amber-700">{unassignedCount} timova nije raspoređeno</span>
-                    : <span className="text-emerald-700">Svi raspoređeni ✓</span>}
+                    : <span className="text-blue-700">Svi raspoređeni ✓</span>}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={buildManualResult} disabled={!manualValid} className="btn-primary">Generiši i pregledaj</button>
@@ -298,15 +298,15 @@ function ScheduledDrawStatus({
   const [gcInput, setGcInput] = useState<number>(ds.group_count ?? 2);
 
   return (
-    <div className="card border-emerald-300 bg-emerald-50 space-y-3">
+    <div className="card border-blue-300 bg-blue-50 space-y-3">
       <div>
-        <h2 className="font-semibold text-emerald-900">Aktivan žreb</h2>
-        <p className="text-sm text-emerald-800">
+        <h2 className="font-semibold text-blue-900">Aktivan žreb</h2>
+        <p className="text-sm text-blue-800">
           Zakazano za <b>{ds.scheduled_at ? formatKickoff(ds.scheduled_at) : "—"}</b>.
         </p>
-        {isPending && <p className="text-xs text-emerald-700">Tajmer ističe za {Math.ceil(timeToStart / 1000)}s.</p>}
+        {isPending && <p className="text-xs text-blue-700">Tajmer ističe za {Math.ceil(timeToStart / 1000)}s.</p>}
         {!isPending && !alreadyDrawn && <p className="text-xs text-amber-700">Tajmer je istekao. Čeka se da klijent pokrene povlačenje.</p>}
-        {alreadyDrawn && <p className="text-xs text-emerald-700">Žreb je povučen, animacija je u toku ili završena.</p>}
+        {alreadyDrawn && <p className="text-xs text-blue-700">Žreb je povučen, animacija je u toku ili završena.</p>}
       </div>
 
       {isPending && !alreadyDrawn && (

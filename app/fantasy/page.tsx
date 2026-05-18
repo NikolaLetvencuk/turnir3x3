@@ -10,11 +10,11 @@ export default async function FantasyLandingPage() {
   if (!profile) {
     return (
       <div className="space-y-6">
-        <section className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+        <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
           <h1 className="text-2xl font-bold">Fantasy turnira</h1>
-          <p className="text-emerald-50 mt-2">Izaberi 3 igrača (budžet {FANTASY_BUDGET.toFixed(0)}M). Skupljaj bodove. Takmiči se sa drugarima u privatnim ligama.</p>
+          <p className="text-blue-50 mt-2">Izaberi 3 igrača (budžet {FANTASY_BUDGET.toFixed(0)}M). Skupljaj bodove. Takmiči se sa drugarima u privatnim ligama.</p>
           <div className="mt-4 flex gap-2">
-            <Link href="/auth/register" className="bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">Registracija</Link>
+            <Link href="/auth/register" className="bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Registracija</Link>
             <Link href="/auth/login" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Prijava</Link>
           </div>
         </section>
@@ -26,28 +26,28 @@ export default async function FantasyLandingPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+      <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <h1 className="text-2xl font-bold">Fantasy</h1>
         <div className="mt-3 flex flex-wrap items-baseline gap-4">
           <div>
-            <div className="text-xs text-emerald-50/80">Ukupno</div>
+            <div className="text-xs text-blue-50/80">Ukupno</div>
             <div className="text-3xl font-bold tabular-nums">{overview.total_points}</div>
           </div>
           <div>
-            <div className="text-xs text-emerald-50/80">{overview.last_round_name ?? "Prošlo kolo"}</div>
+            <div className="text-xs text-blue-50/80">{overview.last_round_name ?? "Prošlo kolo"}</div>
             <div className="text-2xl font-bold tabular-nums">
-              {overview.last_round_points === null ? <span className="text-emerald-50/70 text-sm">još nije bilo</span> : overview.last_round_points}
+              {overview.last_round_points === null ? <span className="text-blue-50/70 text-sm">još nije bilo</span> : overview.last_round_points}
             </div>
           </div>
           {overview.overall_rank !== null && (
             <div>
-              <div className="text-xs text-emerald-50/80">Pozicija ukupno</div>
-              <div className="text-2xl font-bold">{overview.overall_rank}.<span className="text-emerald-50/70 text-sm font-normal"> od {overview.overall_total}</span></div>
+              <div className="text-xs text-blue-50/80">Pozicija ukupno</div>
+              <div className="text-2xl font-bold">{overview.overall_rank}.<span className="text-blue-50/70 text-sm font-normal"> od {overview.overall_total}</span></div>
             </div>
           )}
         </div>
         <div className="mt-4 flex gap-2 flex-wrap">
-          <Link href="/fantasy/team" className="bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
+          <Link href="/fantasy/team" className="bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
           <Link href="/fantasy/team/live" className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Pregled tima u tekućem kolu</Link>
           <Link href="/fantasy/team/history" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Istorija</Link>
         </div>
@@ -56,11 +56,11 @@ export default async function FantasyLandingPage() {
       <section>
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold">Moje lige</h2>
-          <Link href="/fantasy/leagues" className="text-xs text-emerald-700 hover:underline">+ Kreiraj / Pridruži se →</Link>
+          <Link href="/fantasy/leagues" className="text-xs text-blue-700 hover:underline">+ Kreiraj / Pridruži se →</Link>
         </div>
 
         {overview.leagues.length === 0 ? (
-          <Link href="/fantasy/leagues" className="card block text-sm text-zinc-600 hover:border-emerald-300">
+          <Link href="/fantasy/leagues" className="card block text-sm text-zinc-600 hover:border-blue-300">
             Još nisi u ni jednoj ligi. Klikni ovde da kreiraš novu ili se pridružiš preko koda.
           </Link>
         ) : (
@@ -69,7 +69,7 @@ export default async function FantasyLandingPage() {
               <Link
                 key={l.league_id}
                 href={`/fantasy/leagues/${l.league_id}`}
-                className="card flex items-center justify-between gap-2 hover:border-emerald-300"
+                className="card flex items-center justify-between gap-2 hover:border-blue-300"
               >
                 <div className="min-w-0">
                   <div className="font-medium truncate">{l.league_name}</div>

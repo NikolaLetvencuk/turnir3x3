@@ -110,9 +110,9 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
   if (state.state === "committed" && state.result) {
     return (
       <div className="space-y-4">
-        <div className="card text-center bg-emerald-50 border-emerald-200">
-          <div className="text-emerald-700 font-semibold">Žreb je završen</div>
-          <p className="text-sm text-emerald-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
+        <div className="card text-center bg-blue-50 border-blue-200">
+          <div className="text-blue-700 font-semibold">Žreb je završen</div>
+          <p className="text-sm text-blue-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
           <div className="flex gap-2 justify-center mt-3 flex-wrap">
             <Link href="/standings" className="btn-primary">Tabele →</Link>
             <Link href="/matches" className="btn-secondary">Mečevi</Link>
@@ -132,7 +132,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
   if (!state.result) {
     return (
       <div className="card text-center py-12 space-y-3">
-        <Sparkles className="w-12 h-12 text-emerald-500 mx-auto animate-pulse" />
+        <Sparkles className="w-12 h-12 text-blue-500 mx-auto animate-pulse" />
         <h1 className="font-semibold text-zinc-800 text-lg">Povlačenje žreba…</h1>
         <p className="text-sm text-zinc-500">Sačekaj nekoliko sekundi.</p>
       </div>
@@ -144,9 +144,9 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
   if (animationDone) {
     return (
       <div className="space-y-4">
-        <div className="card text-center bg-emerald-50 border-emerald-200">
-          <div className="text-emerald-700 font-semibold">Žreb je završen</div>
-          <p className="text-sm text-emerald-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
+        <div className="card text-center bg-blue-50 border-blue-200">
+          <div className="text-blue-700 font-semibold">Žreb je završen</div>
+          <p className="text-sm text-blue-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
           <div className="flex gap-2 justify-center mt-3 flex-wrap">
             <Link href="/standings" className="btn-primary">Tabele →</Link>
             <Link href="/matches" className="btn-secondary">Mečevi</Link>
@@ -181,29 +181,29 @@ function Countdown({ scheduledMs, now }: { scheduledMs: number; now: number }) {
   const c = formatCountdown(scheduledMs - now);
   return (
     <div className="space-y-4">
-      <div className="card bg-gradient-to-br from-emerald-600 to-emerald-700 text-white text-center py-10">
-        <Clock className="w-12 h-12 mx-auto text-emerald-100/80" />
+      <div className="card bg-gradient-to-br from-blue-600 to-blue-700 text-white text-center py-10">
+        <Clock className="w-12 h-12 mx-auto text-blue-100/80" />
         <h1 className="text-xl font-bold mt-3">Žreb počinje za</h1>
         <div className="mt-4 inline-flex items-baseline gap-3 tabular-nums font-mono">
           {c.d !== "00" && (
             <div className="text-center">
               <div className="text-4xl font-bold">{c.d}</div>
-              <div className="text-[10px] text-emerald-100/80 uppercase tracking-wider">dana</div>
+              <div className="text-[10px] text-blue-100/80 uppercase tracking-wider">dana</div>
             </div>
           )}
           <div className="text-center">
             <div className="text-4xl font-bold">{c.h}</div>
-            <div className="text-[10px] text-emerald-100/80 uppercase tracking-wider">sati</div>
+            <div className="text-[10px] text-blue-100/80 uppercase tracking-wider">sati</div>
           </div>
           <span className="text-3xl">:</span>
           <div className="text-center">
             <div className="text-4xl font-bold">{c.m}</div>
-            <div className="text-[10px] text-emerald-100/80 uppercase tracking-wider">min</div>
+            <div className="text-[10px] text-blue-100/80 uppercase tracking-wider">min</div>
           </div>
           <span className="text-3xl">:</span>
           <div className="text-center">
             <div className="text-4xl font-bold">{c.s}</div>
-            <div className="text-[10px] text-emerald-100/80 uppercase tracking-wider">sek</div>
+            <div className="text-[10px] text-blue-100/80 uppercase tracking-wider">sek</div>
           </div>
         </div>
       </div>

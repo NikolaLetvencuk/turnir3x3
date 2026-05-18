@@ -28,7 +28,7 @@ export function BottomNav({ isAuthed }: { isAuthed: boolean; isAdmin?: boolean }
                 href={href}
                 className={cn(
                   "flex flex-col items-center py-2 text-xs",
-                  active ? "text-emerald-700" : "text-zinc-500",
+                  active ? "text-blue-700" : "text-zinc-500",
                 )}
               >
                 <Icon className="w-5 h-5 mb-0.5" />

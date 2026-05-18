@@ -43,7 +43,7 @@ export function LeagueDetail({
         <h1 className="text-xl font-semibold">{leagueName}</h1>
         <div className="flex items-center gap-2 mt-1 text-sm text-zinc-600 flex-wrap">
           <span>Kod:</span>
-          <button onClick={copyCode} className="font-mono text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1">
+          <button onClick={copyCode} className="font-mono text-blue-700 hover:text-blue-800 inline-flex items-center gap-1">
             {inviteCode} <Copy className="w-3.5 h-3.5" />
           </button>
           <span className="text-zinc-400">·</span>
@@ -65,12 +65,12 @@ export function LeagueDetail({
             {members.map((m) => {
               const isMe = m.user_id === currentUserId;
               return (
-                <tr key={m.user_id} className={`border-t border-zinc-100 ${isMe ? "bg-emerald-50/40" : ""}`}>
+                <tr key={m.user_id} className={`border-t border-zinc-100 ${isMe ? "bg-blue-50/40" : ""}`}>
                   <td className="py-2 px-3 text-zinc-500">{m.rank}.</td>
                   <td className="py-2">
-                    <button onClick={() => setViewing(m)} className="inline-flex items-center gap-1.5 font-medium hover:text-emerald-700 max-w-full">
+                    <button onClick={() => setViewing(m)} className="inline-flex items-center gap-1.5 font-medium hover:text-blue-700 max-w-full">
                       <span className="truncate max-w-[200px]">{m.team_name}</span>
-                      {isMe && <span className="text-[10px] text-emerald-700 font-semibold shrink-0">(ti)</span>}
+                      {isMe && <span className="text-[10px] text-blue-700 font-semibold shrink-0">(ti)</span>}
                       <Eye className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                     </button>
                   </td>

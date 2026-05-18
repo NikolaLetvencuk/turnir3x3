@@ -25,12 +25,12 @@ export default async function LeaguesPage() {
       ) : (
         <div className="space-y-2">
           {leagues.map((l: any) => (
-            <Link key={l.id} href={`/fantasy/leagues/${l.id}`} className="card flex items-center justify-between hover:border-emerald-300">
+            <Link key={l.id} href={`/fantasy/leagues/${l.id}`} className="card flex items-center justify-between hover:border-blue-300">
               <div>
                 <div className="font-medium">{l.name}</div>
                 <div className="text-xs text-zinc-500">Kod: <span className="font-mono">{l.invite_code}</span></div>
               </div>
-              <span className="text-emerald-700 text-sm">Otvori →</span>
+              <span className="text-blue-700 text-sm">Otvori →</span>
             </Link>
           ))}
         </div>

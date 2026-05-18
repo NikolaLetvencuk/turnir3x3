@@ -69,23 +69,23 @@ export function DrawStatusBanner({ initial }: { initial: DrawState | null }) {
   return (
     <Link
       href="/draw"
-      className="block rounded-xl border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 transition p-3 sm:p-4"
+      className="block rounded-xl border-2 border-blue-300 bg-blue-50 hover:bg-blue-100 transition p-3 sm:p-4"
     >
       <div className="flex items-center gap-3">
-        {variant === "countdown" && <Clock className="w-6 h-6 text-emerald-700 shrink-0" />}
-        {variant === "running" && <Sparkles className="w-6 h-6 text-emerald-700 shrink-0 animate-pulse" />}
+        {variant === "countdown" && <Clock className="w-6 h-6 text-blue-700 shrink-0" />}
+        {variant === "running" && <Sparkles className="w-6 h-6 text-blue-700 shrink-0 animate-pulse" />}
         {variant === "awaiting-commit" && <AlertCircle className="w-6 h-6 text-amber-700 shrink-0" />}
         <div className="flex-1 min-w-0">
           {variant === "countdown" && (
             <>
-              <div className="text-sm font-semibold text-emerald-900">Žreb počinje za</div>
-              <div className="text-2xl sm:text-3xl font-bold tabular-nums text-emerald-700 font-mono">{fmt(secondsToStart)}</div>
+              <div className="text-sm font-semibold text-blue-900">Žreb počinje za</div>
+              <div className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-700 font-mono">{fmt(secondsToStart)}</div>
             </>
           )}
           {variant === "running" && (
             <>
-              <div className="text-sm font-semibold text-emerald-900">Žreb je u toku — uđi i prati!</div>
-              <div className="text-xs text-emerald-700 tabular-nums">do kraja {fmt(secondsToEnd)}</div>
+              <div className="text-sm font-semibold text-blue-900">Žreb je u toku — uđi i prati!</div>
+              <div className="text-xs text-blue-700 tabular-nums">do kraja {fmt(secondsToEnd)}</div>
             </>
           )}
           {variant === "awaiting-commit" && (
@@ -95,7 +95,7 @@ export function DrawStatusBanner({ initial }: { initial: DrawState | null }) {
             </>
           )}
         </div>
-        <span className="text-emerald-700 text-sm shrink-0">Otvori →</span>
+        <span className="text-blue-700 text-sm shrink-0">Otvori →</span>
       </div>
     </Link>
   );

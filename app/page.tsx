@@ -11,6 +11,72 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   const supabase = createClient();
+  const adminRO = createAdminClient();
+
+  // Lightweight check first: do we have groups (= draw committed)?
+  const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
+  const hasGroups = (groupCheck?.length ?? 0) > 0;
+
+  const { data: drawStateRow } = await adminRO
+    .from("draw_state")
+    .select("state, scheduled_at, per_pick_ms, result")
+    .eq("id", true)
+    .maybeSingle();
+
+  // Pre-draw view: only banner + team list
+  if (!hasGroups) {
+    const { data: teamsRows } = await supabase
+      .from("teams")
+      .select("id, name, short_name, primary_color, secondary_color")
+      .order("name");
+    const teams = (teamsRows ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null }>;
+
+    return (
+      <div className="space-y-6">
+        <LiveRefresh tag="home-predraw" />
+        <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
+        <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+          <h1 className="text-2xl font-bold">Turnir Kula</h1>
+          <p className="text-blue-50 mt-1 text-sm">Liparski put · prijave su otvorene</p>
+        </section>
+
+        <section>
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="font-semibold">Prijavljene ekipe</h2>
+            <span className="text-xs text-zinc-500 tabular-nums">{teams.length}</span>
+          </div>
+          {teams.length === 0 ? (
+            <div className="card text-sm text-zinc-500 text-center py-8">
+              Još nema prijavljenih ekipa.
+            </div>
+          ) : (
+            <ul className="card divide-y divide-zinc-100 !p-0">
+              {teams.map((t) => (
+                <li key={t.id}>
+                  <Link
+                    href={`/teams/${t.id}`}
+                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50"
+                  >
+                    <TeamCrest
+                      name={t.name}
+                      shortName={t.short_name}
+                      primaryColor={t.primary_color}
+                      secondaryColor={t.secondary_color}
+                      size={32}
+                    />
+                    <span className="font-medium truncate flex-1 min-w-0">{t.name}</span>
+                    {t.short_name && <span className="text-xs text-zinc-400 font-mono shrink-0">{t.short_name}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    );
+  }
+
+  // Post-draw view: full homepage
   const [liveRes, upcomingRes, recentRes, groups, scorers] = await Promise.all([
     supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "live").order("started_at", { ascending: false }),
     supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "scheduled").order("kickoff_at").limit(5),
@@ -22,17 +88,14 @@ export default async function HomePage() {
   const upcoming = (upcomingRes.data ?? []) as any[];
   const recent = (recentRes.data ?? []) as any[];
 
-  const adminRO = createAdminClient();
-  const { data: drawStateRow } = await adminRO.from("draw_state").select("state, scheduled_at, per_pick_ms, result").eq("id", true).maybeSingle();
-
   return (
     <div className="space-y-6">
       <LiveRefresh tag="home" />
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
-      <section className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+      <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <h1 className="text-2xl font-bold">Turnir Kula</h1>
-        <p className="text-emerald-50 mt-1 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
-        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">
+        <p className="text-blue-50 mt-1 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
+        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">
           Sastavi svoj fantasy tim →
         </Link>
       </section>
@@ -89,7 +152,7 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-          <Link href="/standings" className="text-sm text-emerald-700 mt-2 inline-block">Sve tabele →</Link>
+          <Link href="/standings" className="text-sm text-blue-700 mt-2 inline-block">Sve tabele →</Link>
         </section>
       )}
 
