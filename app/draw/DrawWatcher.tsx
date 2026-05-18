@@ -1,29 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sparkles, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { DrawAnimation } from "@/components/admin/DrawAnimation";
 import { TeamCrest } from "@/components/TeamCrest";
 import { useToast } from "@/components/ui/Toast";
 import { commitScheduledDraw, cancelScheduledDraw, triggerDrawIfDue } from "@/app/admin/actions";
 import type { DrawResult } from "@/lib/draw";
-
-// Heavy: Three.js bundle (~200 KB gzip) only loads on /draw when the animation
-// actually runs. SSR disabled because three needs window/canvas.
-const DrawAnimation3D = dynamic(() => import("@/components/admin/DrawAnimation3D"), {
-  ssr: false,
-  loading: () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950 text-white">
-      <div className="text-center">
-        <div className="text-blue-300 text-xs uppercase tracking-[0.3em] mb-2 animate-pulse">Učitavanje…</div>
-        <div className="text-white/70 text-sm">Pripremamo 3D scenu</div>
-      </div>
-    </div>
-  ),
-});
 
 type DrawState = {
   state: "idle" | "scheduled" | "running" | "committed";
@@ -182,7 +168,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
 
   // Animation running (or about to start)
   return (
-    <DrawAnimation3D
+    <DrawAnimation
       result={state.result}
       startedAtMs={scheduledMs ?? now}
       perPickMs={state.per_pick_ms}
