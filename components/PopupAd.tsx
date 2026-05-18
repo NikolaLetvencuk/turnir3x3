@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 const IMAGE_PATH = "/ads/popup.png";
+const DISMISS_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 export function PopupAd({ enabled, version }: { enabled: boolean; version: string }) {
   const [open, setOpen] = useState(false);
@@ -11,10 +12,13 @@ export function PopupAd({ enabled, version }: { enabled: boolean; version: strin
   useEffect(() => {
     if (!enabled) return;
     if (typeof window === "undefined") return;
-    // Per-version dismissal: when admin toggles or updates the ad,
-    // updated_at changes and previously-dismissed users see it again.
+    // Per-version key: when admin toggles/updates the ad, updated_at changes
+    // and the dismiss marker no longer matches — previously-dismissed visitors
+    // see it again immediately. Within the same version, dismissal expires
+    // after DISMISS_TTL_MS so returning visitors see the ad once per day.
     const key = `popup-ad-dismissed-${version}`;
-    if (window.localStorage.getItem(key) === "1") return;
+    const dismissedAt = Number.parseInt(window.localStorage.getItem(key) || "0", 10);
+    if (dismissedAt && Date.now() - dismissedAt < DISMISS_TTL_MS) return;
     const t = setTimeout(() => setOpen(true), 600);
     return () => clearTimeout(t);
   }, [enabled, version]);
@@ -22,7 +26,7 @@ export function PopupAd({ enabled, version }: { enabled: boolean; version: strin
   function close() {
     setOpen(false);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(`popup-ad-dismissed-${version}`, "1");
+      window.localStorage.setItem(`popup-ad-dismissed-${version}`, Date.now().toString());
     }
   }
 
