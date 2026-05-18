@@ -111,25 +111,29 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     return <Countdown scheduledMs={scheduledMs!} now={now} result={state.result} />;
   }
 
-  // Animation done — show final groups + admin commit prompt
+  // Animation done — show final groups; same "completed" message for everyone.
+  // Admin gets extra commit/cancel controls below.
   if (animationDone) {
     return (
       <div className="space-y-4">
-        <div className="card bg-amber-50 border-amber-200 text-center">
-          <div className="font-semibold text-amber-900">Žreb je odgledan</div>
-          {isAdmin ? (
-            <>
-              <p className="text-sm text-amber-800 mt-1">Pregledaj raspored i klikni „Potvrdi“ da snimiš.</p>
-              <div className="mt-3 flex gap-2 justify-center flex-wrap">
-                <button onClick={onCommit} disabled={committing} className="btn-primary">{committing ? "Snimam…" : "Potvrdi i sačuvaj"}</button>
-                <button onClick={onCancel} disabled={committing} className="btn-secondary">Otkaži</button>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-amber-800 mt-1">Čekamo da admin potvrdi rezultat…</p>
-          )}
+        <div className="card text-center bg-emerald-50 border-emerald-200">
+          <div className="text-emerald-700 font-semibold">Žreb je završen</div>
+          <p className="text-sm text-emerald-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
+          <div className="flex gap-2 justify-center mt-3 flex-wrap">
+            <Link href="/standings" className="btn-primary">Tabele →</Link>
+            <Link href="/matches" className="btn-secondary">Mečevi</Link>
+          </div>
         </div>
         <FinalGroups result={state.result} />
+        {isAdmin && (
+          <div className="card border-dashed border-zinc-300">
+            <div className="text-xs text-zinc-500 mb-2">Admin kontrole (potrebno da bi se podaci stvarno snimili u bazi)</div>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={onCommit} disabled={committing} className="btn-primary">{committing ? "Snimam…" : "Potvrdi i snimi u bazu"}</button>
+              <button onClick={onCancel} disabled={committing} className="btn-secondary">Otkaži ovaj žreb</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

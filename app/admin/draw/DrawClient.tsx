@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TeamCrest } from "@/components/TeamCrest";
-import { DrawAnimation } from "@/components/admin/DrawAnimation";
 import { useToast } from "@/components/ui/Toast";
 import { composeDraw, computeDraw, type DrawResult, type DrawTeam } from "@/lib/draw";
 import { commitDraw, scheduleDraw, cancelScheduledDraw } from "../actions";
@@ -66,24 +65,18 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
     if (hasExisting) {
       if (!confirm("Postojeća kola, grupe i mečevi će biti obrisani. Nastaviti?")) return;
     }
-    if (mode === "auto") {
-      const r = tryCompute();
-      if (!r) return;
-      setResult(r);
-      setPhase("animating");
-    } else {
-      const r = tryComposeManual();
-      if (!r) return;
-      setResult(r);
-      setPhase("preview"); // No animation for manual — admin already sees the groups
-    }
+    const r = mode === "auto" ? tryCompute() : tryComposeManual();
+    if (!r) return;
+    setResult(r);
+    // Skip local animation; admin schedules/starts live draw and watches via /draw with everyone.
+    setPhase("preview");
   }
 
   function reroll() {
     const r = mode === "auto" ? tryCompute() : tryComposeManual();
     if (!r) return;
     setResult(r);
-    setPhase(mode === "auto" ? "animating" : "preview");
+    setPhase("preview");
   }
 
   async function commit() {
@@ -148,15 +141,6 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
     setAssignment({});
   }
 
-  if (phase === "animating" && result) {
-    return (
-      <DrawAnimation
-        result={result}
-        onSkip={() => setPhase("preview")}
-        onDone={() => setPhase("preview")}
-      />
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -214,11 +198,11 @@ export function DrawClient({ teams, hasExisting }: { teams: DrawTeam[]; hasExist
               )}
               {mode === "auto" ? (
                 <button onClick={startDraw} disabled={teams.length < groupCount * 2} className="btn-primary">
-                  Pokreni žreb
+                  Generiši rezultat
                 </button>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={startDraw} disabled={!manualValid} className="btn-primary">Generiši kola</button>
+                  <button onClick={startDraw} disabled={!manualValid} className="btn-primary">Generiši rezultat</button>
                   <button onClick={autoFillManual} className="btn-secondary">Popuni automatski</button>
                   <button onClick={clearManual} className="btn-secondary">Očisti</button>
                 </div>

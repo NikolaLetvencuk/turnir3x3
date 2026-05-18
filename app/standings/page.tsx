@@ -1,18 +1,29 @@
 import Link from "next/link";
 import { TeamCrest } from "@/components/TeamCrest";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getGroupStandings } from "@/lib/standings";
+import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 import { StandingsRealtime } from "./StandingsRealtime";
 
 export const revalidate = 0;
 
 export default async function StandingsPage() {
   const groups = await getGroupStandings();
+  const adminRO = createAdminClient();
+  const { data: drawStateRow } = groups.length === 0
+    ? await adminRO.from("draw_state").select("state, scheduled_at, per_pick_ms, result").eq("id", true).maybeSingle()
+    : { data: null };
   return (
     <>
       <StandingsRealtime />
       <div className="space-y-6">
         <h1 className="text-xl font-semibold">Tabele po grupama</h1>
-        {groups.length === 0 && <p className="text-sm text-zinc-500">Grupe nisu još kreirane.</p>}
+        {groups.length === 0 && (
+          <div className="space-y-3">
+            <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
+            <p className="text-sm text-zinc-500">{(drawStateRow as any)?.state && (drawStateRow as any).state !== "idle" && (drawStateRow as any).state !== "committed" ? "Čeka se da admin potvrdi rezultat žreba." : "Žreb još nije održan."}</p>
+          </div>
+        )}
         {groups.map((g) => (
           <section key={g.group_id} className="card">
             <h2 className="font-medium mb-2">{g.group_name}</h2>

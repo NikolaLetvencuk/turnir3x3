@@ -60,9 +60,6 @@ export function DrawAnimation({
     onSkip?.();
   }
 
-  const remainingMs = Math.max(0, SHUFFLE_MS + allPicks.length * perPickMs - elapsed);
-  const remainingS = Math.ceil(remainingMs / 1000);
-
   return (
     <div className="fixed inset-0 z-50 bg-zinc-900/95 text-white p-4 overflow-auto">
       <div className="max-w-4xl mx-auto">
@@ -70,14 +67,9 @@ export function DrawAnimation({
           <h2 className="text-xl font-bold">
             {stage === "done" ? "Žreb završen" : "Žreb u toku…"}
           </h2>
-          <div className="flex items-center gap-2">
-            {stage !== "done" && (
-              <span className="text-xs text-white/70 tabular-nums">{remainingS}s</span>
-            )}
-            {allowSkip && stage !== "done" && (
-              <button onClick={skipNow} className="bg-white/10 hover:bg-white/20 rounded-md px-3 py-1.5 text-sm">Preskoči</button>
-            )}
-          </div>
+          {allowSkip && stage !== "done" && (
+            <button onClick={skipNow} className="bg-white/10 hover:bg-white/20 rounded-md px-3 py-1.5 text-sm">Preskoči</button>
+          )}
         </div>
 
         {stage === "shuffle" && (

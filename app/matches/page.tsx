@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 
 export const revalidate = 0;
 
@@ -23,6 +25,13 @@ export default async function MatchesPage({ searchParams }: { searchParams: { ro
     const key = (m as any).round?.name ?? "—";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(m);
+  }
+
+  let drawStateRow: any = null;
+  if ((matchesRes.data ?? []).length === 0) {
+    const adminRO = createAdminClient();
+    const { data } = await adminRO.from("draw_state").select("state, scheduled_at, per_pick_ms, result").eq("id", true).maybeSingle();
+    drawStateRow = data;
   }
 
   return (
@@ -51,7 +60,13 @@ export default async function MatchesPage({ searchParams }: { searchParams: { ro
           <div className="space-y-2">{list.map((m) => <MatchCard key={m.id} match={m} />)}</div>
         </section>
       ))}
-      {matches.length === 0 && <p className="text-sm text-zinc-500">Nema mečeva za prikaz.</p>}
+      {(matchesRes.data ?? []).length === 0 && (
+        <div className="space-y-3">
+          <DrawStatusBanner initial={drawStateRow} />
+          <p className="text-sm text-zinc-500">{drawStateRow?.state && drawStateRow.state !== "idle" && drawStateRow.state !== "committed" ? "Čeka se da admin potvrdi rezultat žreba." : "Žreb još nije održan."}</p>
+        </div>
+      )}
+      {(matchesRes.data ?? []).length > 0 && matches.length === 0 && <p className="text-sm text-zinc-500">Nema mečeva za izabrani filter.</p>}
     </div>
   );
 }
