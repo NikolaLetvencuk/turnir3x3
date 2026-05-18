@@ -9,6 +9,16 @@ export const MIN_PRICE = 4.0;
 
 export type RoundLite = { id: string; name: string; status: string; display_order: number };
 
+export type FixtureLite = {
+  match_id: string;
+  opponent_name: string;
+  opponent_short_name: string | null;
+  opponent_primary: string | null;
+  opponent_secondary: string | null;
+  is_home: boolean;
+  kickoff_at: string | null;
+};
+
 export type PlayerForPicker = {
   id: string;
   name: string;
@@ -20,6 +30,7 @@ export type PlayerForPicker = {
   last_round_points: number | null;
   total_points: number;
   ownership_pct: number;
+  next_fixtures: FixtureLite[];
 };
 
 export type LeagueRanking = {

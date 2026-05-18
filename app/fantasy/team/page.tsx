@@ -11,7 +11,7 @@ export default async function TeamPage() {
   if (!profile) redirect("/auth/login?next=/fantasy/team");
   const supabase = createClient();
 
-  const [overview, picker, draftRes, lockedSnapRes, budget] = await Promise.all([
+  const [overview, picker, draftRes, lockedSnapRes, budgetInfo] = await Promise.all([
     getFantasyOverview(profile.id),
     getPlayersForPicker(),
     supabase.from("fantasy_teams").select("*").eq("user_id", profile.id).maybeSingle(),
@@ -29,7 +29,8 @@ export default async function TeamPage() {
       draft={(draftRes.data as any) ?? null}
       lockedForUpcoming={lockedForUpcoming}
       players={picker}
-      budget={budget}
+      budget={budgetInfo.budget}
+      bank={budgetInfo.bank}
     />
   );
 }

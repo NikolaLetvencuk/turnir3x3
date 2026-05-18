@@ -10,19 +10,24 @@ export type { RoundLite, PlayerForPicker, LeagueRanking, FantasyOverview };
  * User's budget for the upcoming round = sum of CURRENT (latest) prices of the players
  * in their most recent locked snapshot. If no snapshot yet, defaults to 30.
  */
-export async function getUserBudget(user_id: string): Promise<number> {
+/**
+ * Budget = team value (sum of latest player prices) + leftover bank from last lock.
+ * For users without any snapshot, return DEFAULT_BUDGET (30).
+ */
+export async function getUserBudget(user_id: string): Promise<{ budget: number; bank: number; team_value: number }> {
   const admin = createAdminClient();
   const { data: snaps } = await admin
     .from("fantasy_team_snapshots")
-    .select("player1_id, player2_id, player3_id, round:rounds(display_order)")
+    .select("player1_id, player2_id, player3_id, bank, round:rounds(display_order)")
     .eq("user_id", user_id);
   const list = ((snaps ?? []) as any[])
     .map((s) => ({ ...s, order: s.round?.display_order ?? 0 }))
     .sort((a, b) => b.order - a.order);
-  if (list.length === 0) return DEFAULT_BUDGET;
+  if (list.length === 0) return { budget: DEFAULT_BUDGET, bank: 0, team_value: 0 };
   const latest = list[0];
   const ids = [latest.player1_id, latest.player2_id, latest.player3_id].filter(Boolean) as string[];
-  if (ids.length === 0) return DEFAULT_BUDGET;
+  const bank = Number(latest.bank ?? 0);
+  if (ids.length === 0) return { budget: DEFAULT_BUDGET, bank, team_value: 0 };
 
   const { data: prices } = await admin
     .from("player_prices")
@@ -34,7 +39,9 @@ export async function getUserBudget(user_id: string): Promise<number> {
     const cur = latestPrice.get(p.player_id);
     if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
   }
-  return ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
+  const team_value = ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
+  const budget = Math.round((team_value + bank) * 100) / 100;
+  return { budget, bank, team_value };
 }
 
 /**
@@ -121,19 +128,55 @@ export async function getFantasyOverview(user_id: string): Promise<FantasyOvervi
 
 export async function getPlayersForPicker(): Promise<PlayerForPicker[]> {
   const supabase = createClient();
-  const [playersRes, teamsRes, priceRes, fppRes, fppAllRes, ftRes, roundsRes] = await Promise.all([
+  const [playersRes, teamsRes, priceRes, fppRes, fppAllRes, ftRes, roundsRes, upcomingRes] = await Promise.all([
     supabase.from("players").select("id, name, team_id, photo_url").order("name"),
-    supabase.from("teams").select("id, name, primary_color"),
+    supabase.from("teams").select("id, name, short_name, primary_color, secondary_color"),
     supabase.from("player_prices").select("player_id, price, round_id, round:rounds(display_order)"),
     supabase.from("fantasy_player_points").select("player_id, round_id, total_points, round:rounds(display_order, status)"),
     supabase.from("fantasy_player_points").select("player_id, total_points"),
     supabase.from("fantasy_teams").select("player1_id, player2_id, player3_id"),
     supabase.from("rounds").select("id, status, display_order").order("display_order"),
+    supabase
+      .from("matches")
+      .select("id, home_team_id, away_team_id, kickoff_at, phase, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color)")
+      .eq("phase", "scheduled")
+      .order("kickoff_at", { ascending: true, nullsFirst: false }),
   ]);
 
   const players = (playersRes.data ?? []) as Array<{ id: string; name: string; team_id: string | null; photo_url: string | null }>;
-  const teams = (teamsRes.data ?? []) as Array<{ id: string; name: string; primary_color: string | null }>;
+  const teams = (teamsRes.data ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null }>;
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  // Next 3 scheduled fixtures per team
+  const upcomingByTeam = new Map<string, Array<{ match_id: string; opponent_name: string; opponent_short_name: string | null; opponent_primary: string | null; opponent_secondary: string | null; is_home: boolean; kickoff_at: string | null }>>();
+  for (const m of ((upcomingRes.data ?? []) as any[])) {
+    if (m.home_team_id && m.away_team) {
+      const arr = upcomingByTeam.get(m.home_team_id) ?? [];
+      if (arr.length < 3) arr.push({
+        match_id: m.id,
+        opponent_name: m.away_team.name,
+        opponent_short_name: m.away_team.short_name,
+        opponent_primary: m.away_team.primary_color,
+        opponent_secondary: m.away_team.secondary_color,
+        is_home: true,
+        kickoff_at: m.kickoff_at,
+      });
+      upcomingByTeam.set(m.home_team_id, arr);
+    }
+    if (m.away_team_id && m.home_team) {
+      const arr = upcomingByTeam.get(m.away_team_id) ?? [];
+      if (arr.length < 3) arr.push({
+        match_id: m.id,
+        opponent_name: m.home_team.name,
+        opponent_short_name: m.home_team.short_name,
+        opponent_primary: m.home_team.primary_color,
+        opponent_secondary: m.home_team.secondary_color,
+        is_home: false,
+        kickoff_at: m.kickoff_at,
+      });
+      upcomingByTeam.set(m.away_team_id, arr);
+    }
+  }
 
   const priceMap = new Map<string, { price: number; order: number }>();
   for (const p of ((priceRes.data ?? []) as any[])) {
@@ -178,6 +221,7 @@ export async function getPlayersForPicker(): Promise<PlayerForPicker[]> {
       last_round_points: lastFinishedRound ? lastRoundPointsMap.get(p.id) ?? 0 : null,
       total_points: totalPointsMap.get(p.id) ?? 0,
       ownership_pct: totalTeams > 0 ? Math.round((ownedMap.get(p.id) ?? 0) / totalTeams * 100) : 0,
+      next_fixtures: p.team_id ? upcomingByTeam.get(p.team_id) ?? [] : [],
     };
   });
 }

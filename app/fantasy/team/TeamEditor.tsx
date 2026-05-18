@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Lock, LockOpen, X, Search } from "lucide-react";
+import { Lock, LockOpen, X, Search, Plus, Check } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { TeamCrest } from "@/components/TeamCrest";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { useToast } from "@/components/ui/Toast";
 import { saveDraft, lockTeamForUpcomingRound, setTeamName } from "./actions";
@@ -67,12 +68,14 @@ export function TeamEditor({
   lockedForUpcoming,
   players,
   budget,
+  bank,
 }: {
   overview: FantasyOverview;
   draft: Draft;
   lockedForUpcoming: Locked;
   players: PlayerForPicker[];
   budget: number;
+  bank: number;
 }) {
   const run = useActionRunner();
   const { push } = useToast();
@@ -94,9 +97,10 @@ export function TeamEditor({
   const selectedIds = selected.filter(Boolean);
   const slotPlayers = selected.map((id) => (id ? playerMap.get(id) ?? null : null));
   const totalCost = selectedIds.reduce((acc, id) => acc + (playerMap.get(id)?.price ?? BASE_PRICE), 0);
-  const remaining = budget - totalCost;
+  const remaining = Math.round((budget - totalCost) * 100) / 100;
   const isComplete = selectedIds.length === 3;
-  const overBudget = totalCost > budget + 0.001;
+  // 0.05 tolerance matches 1-decimal display so 9.9 in bank covers a 9.9 player.
+  const overBudget = totalCost > budget + 0.05;
   const canLock = isComplete && !overBudget && !!overview.next_round;
 
   const filteredPlayers = useMemo(() => {
@@ -271,9 +275,12 @@ export function TeamEditor({
           <div className="text-right">
             <div className="text-xs text-zinc-600">Budžet</div>
             <div className={`font-bold tabular-nums text-lg ${overBudget ? "text-red-600" : remaining < 1 ? "text-amber-600" : "text-zinc-900"}`}>
-              {totalCost.toFixed(1)} <span className="text-zinc-400 text-sm">/ {budget.toFixed(1)}</span>
+              {totalCost.toFixed(1)} <span className="text-zinc-400 text-sm">/ {budget.toFixed(1)}M</span>
             </div>
-            <div className="text-xs text-zinc-500">preostalo {remaining.toFixed(1)}</div>
+            <div className="text-xs text-zinc-500">
+              preostalo <span className="tabular-nums font-medium">{remaining.toFixed(1)}M</span>
+              {bank > 0 && <span className="text-zinc-400"> · ranija banka {bank.toFixed(1)}M</span>}
+            </div>
           </div>
         </div>
         <div className="relative mt-3 flex gap-2">
@@ -296,38 +303,87 @@ export function TeamEditor({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <ul className="divide-y divide-zinc-100">
+        <div className="space-y-2">
           {filteredPlayers.map((p) => {
             const isSel = selectedIds.includes(p.id);
-            const wouldExceed = !isSel && totalCost + p.price > budget + 0.001 && selectedIds.length < 3;
+            const wouldExceed = !isSel && totalCost + p.price > budget + 0.05 && selectedIds.length < 3;
             return (
-              <li key={p.id} className="py-2 flex items-center gap-2">
-                <button onClick={() => setDetailPlayer(p)} className="shrink-0">
-                  <PlayerAvatar name={p.name} photoUrl={p.photo_url} teamPrimary={p.team_primary} size={36} />
-                </button>
-                <button onClick={() => setDetailPlayer(p)} className="flex-1 min-w-0 text-left">
-                  <div className="font-medium text-sm truncate">{p.name}</div>
-                  <div className="text-xs text-zinc-500 truncate">{p.team_name ?? "—"}</div>
-                </button>
-                <div className="text-right text-xs text-zinc-500 hidden xs:block sm:block">
-                  <div className="tabular-nums">{p.last_round_points ?? "—"} pt</div>
-                  <div className="text-[10px]">{p.ownership_pct}% timova</div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="tabular-nums font-semibold">{p.price.toFixed(1)}</div>
-                  <button
-                    onClick={() => pickPlayer(p)}
-                    disabled={!isSel && wouldExceed}
-                    className={`text-xs mt-0.5 ${isSel ? "text-red-600 hover:underline" : "text-emerald-700 hover:underline disabled:text-zinc-400 disabled:no-underline"}`}
-                  >
-                    {isSel ? "Ukloni" : wouldExceed ? "Skupo" : "Dodaj"}
+              <div
+                key={p.id}
+                className={`relative rounded-lg border transition ${isSel ? "border-emerald-400 bg-emerald-50/40" : "border-zinc-200 bg-white"}`}
+              >
+                <div className="flex items-center gap-3 p-2.5">
+                  <button onClick={() => setDetailPlayer(p)} className="shrink-0">
+                    <PlayerAvatar name={p.name} photoUrl={p.photo_url} teamPrimary={p.team_primary} size={44} />
                   </button>
+                  <button onClick={() => setDetailPlayer(p)} className="flex-1 min-w-0 text-left">
+                    <div className="font-semibold text-sm truncate">{p.name}</div>
+                    <div className="text-xs text-zinc-500 truncate inline-flex items-center gap-1">
+                      {p.team_id && (
+                        <TeamCrest
+                          name={p.team_name ?? ""}
+                          shortName={null}
+                          primaryColor={p.team_primary}
+                          secondaryColor={null}
+                          size={14}
+                        />
+                      )}
+                      <span className="truncate">{p.team_name ?? "—"}</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5 flex gap-2">
+                      <span><b className="text-zinc-700 tabular-nums">{p.last_round_points ?? 0}</b> pt</span>
+                      <span className="text-zinc-300">·</span>
+                      <span><b className="text-zinc-700 tabular-nums">{p.ownership_pct}%</b> timova</span>
+                    </div>
+                  </button>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div className="bg-zinc-900 text-white rounded-md px-2 py-1 text-xs font-bold tabular-nums">
+                      {p.price.toFixed(1)}M
+                    </div>
+                    <button
+                      onClick={() => pickPlayer(p)}
+                      disabled={!isSel && wouldExceed}
+                      className={
+                        isSel
+                          ? "inline-flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-md px-2 py-1 text-xs font-medium"
+                          : wouldExceed
+                          ? "inline-flex items-center gap-1 bg-zinc-100 text-zinc-400 rounded-md px-2 py-1 text-xs font-medium cursor-not-allowed"
+                          : "inline-flex items-center gap-1 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md px-2 py-1 text-xs font-medium"
+                      }
+                    >
+                      {isSel ? <><Check className="w-3 h-3" />Izabran</> : wouldExceed ? "Skupo" : <><Plus className="w-3 h-3" />Dodaj</>}
+                    </button>
+                  </div>
                 </div>
-              </li>
+                {p.next_fixtures && p.next_fixtures.length > 0 && (
+                  <div className="px-2.5 pb-2 flex items-center gap-1.5 flex-wrap text-[10px]">
+                    <span className="text-zinc-400 uppercase tracking-wider">sledeće:</span>
+                    {p.next_fixtures.slice(0, 3).map((f) => (
+                      <span
+                        key={f.match_id}
+                        className="inline-flex items-center gap-1 bg-zinc-100 rounded-md px-1.5 py-0.5"
+                        title={f.kickoff_at ?? ""}
+                      >
+                        <span className="text-zinc-400">{f.is_home ? "vs" : "@"}</span>
+                        <TeamCrest
+                          name={f.opponent_name}
+                          shortName={f.opponent_short_name}
+                          primaryColor={f.opponent_primary}
+                          secondaryColor={f.opponent_secondary}
+                          size={12}
+                        />
+                        <span className="font-medium text-zinc-700 truncate max-w-[80px]">
+                          {f.opponent_short_name || f.opponent_name}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
-          {filteredPlayers.length === 0 && <li className="py-4 text-center text-sm text-zinc-500">Nema igrača.</li>}
-        </ul>
+          {filteredPlayers.length === 0 && <p className="py-4 text-center text-sm text-zinc-500">Nema igrača.</p>}
+        </div>
       </div>
 
       {/* Player detail modal */}

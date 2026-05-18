@@ -52,7 +52,8 @@ export async function setTeamName(formData: FormData): Promise<ActionResult> {
 }
 
 // Validate the 3 picks against the user's dynamic budget (team-value-based).
-async function validateBudget(admin: ReturnType<typeof createAdminClient>, user_id: string, ids: [string, string, string]): Promise<{ ok: true } | { ok: false; error: string }> {
+async function computeTeamCost(admin: ReturnType<typeof createAdminClient>, ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
   const { data: prices } = await admin
     .from("player_prices")
     .select("player_id, price, round_id, round:rounds(display_order)")
@@ -63,12 +64,17 @@ async function validateBudget(admin: ReturnType<typeof createAdminClient>, user_
     const cur = latestPrice.get(p.player_id);
     if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
   }
-  const total = ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
-  const budget = await getUserBudget(user_id);
-  if (total > budget + 0.001) {
-    return { ok: false, error: `Prekoračen budžet (${total.toFixed(2)} / ${budget.toFixed(2)})` };
+  return ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
+}
+
+async function validateBudget(admin: ReturnType<typeof createAdminClient>, user_id: string, ids: [string, string, string]): Promise<{ ok: true; total: number; budget: number; bank: number } | { ok: false; error: string }> {
+  const total = await computeTeamCost(admin, ids);
+  const { budget, bank } = await getUserBudget(user_id);
+  // 0.05 tolerance matches the 1-decimal display precision.
+  if (total > budget + 0.05) {
+    return { ok: false, error: `Prekoračen budžet (${total.toFixed(1)} / ${budget.toFixed(1)})` };
   }
-  return { ok: true };
+  return { ok: true, total, budget, bank };
 }
 
 /**
@@ -145,9 +151,10 @@ export async function lockTeamForUpcomingRound(): Promise<ActionResult<{ round_n
     return { ok: false, error: "Izaberi 3 igrača pre lock-a" };
   }
 
-  // Budget check
+  // Budget check + capture bank (leftover after buying team)
   const budget = await validateBudget(admin, user.id, [d.player1_id, d.player2_id, d.player3_id]);
   if (!budget.ok) return budget;
+  const leftover = Math.max(0, Math.round((budget.budget - budget.total) * 100) / 100);
 
   const { error } = await admin
     .from("fantasy_team_snapshots")
@@ -160,6 +167,7 @@ export async function lockTeamForUpcomingRound(): Promise<ActionResult<{ round_n
         player3_id: d.player3_id,
         transfers_used: 0,
         transfer_penalty: 0,
+        bank: leftover,
       },
       { onConflict: "user_id,round_id" },
     );

@@ -167,6 +167,7 @@ export type Database = {
       }
       fantasy_team_snapshots: {
         Row: {
+          bank: number
           created_at: string
           id: string
           player1_id: string | null
@@ -178,6 +179,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bank?: number
           created_at?: string
           id?: string
           player1_id?: string | null
@@ -189,6 +191,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bank?: number
           created_at?: string
           id?: string
           player1_id?: string | null
