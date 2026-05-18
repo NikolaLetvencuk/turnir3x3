@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-const IMAGE_PATH = "/ads/popup.jpg";
+const IMAGE_PATH = "/ads/popup.png";
 
 export function PopupAd({ enabled, version }: { enabled: boolean; version: string }) {
   const [open, setOpen] = useState(false);

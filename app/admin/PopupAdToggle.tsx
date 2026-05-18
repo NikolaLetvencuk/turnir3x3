@@ -27,7 +27,7 @@ export function PopupAdToggle({ initialEnabled }: { initialEnabled: boolean }) {
       <div className="min-w-0">
         <div className="font-medium">Popup reklama</div>
         <p className="text-xs text-zinc-500">
-          Slika: <code className="font-mono">/public/ads/popup.jpg</code>. Kad uključiš, prikazuje se posetiocima na početnoj — svaki vidi jednom dok ne klikne X.
+          Slika: <code className="font-mono">/public/ads/popup.png</code>. Kad uključiš, prikazuje se posetiocima na početnoj — svaki vidi jednom dok ne klikne X.
         </p>
       </div>
       <button
