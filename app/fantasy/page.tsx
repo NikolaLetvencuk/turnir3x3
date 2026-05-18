@@ -47,7 +47,8 @@ export default async function FantasyLandingPage() {
           )}
         </div>
         <div className="mt-4 flex gap-2 flex-wrap">
-          <Link href="/fantasy/team" className="bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">Moj tim</Link>
+          <Link href="/fantasy/team" className="bg-white text-emerald-700 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
+          <Link href="/fantasy/team/live" className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Pregled tima u tekućem kolu</Link>
           <Link href="/fantasy/team/history" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Istorija</Link>
         </div>
       </section>
@@ -91,10 +92,12 @@ export default async function FantasyLandingPage() {
       <section className="card">
         <h2 className="font-semibold mb-2">Pravila bodovanja</h2>
         <ul className="text-sm space-y-1 text-zinc-700">
-          <li>⚽ Gol — <b>+3</b></li>
+          <li>⚽ Gol — <b>+4</b></li>
           <li>🅰️ Asistencija — <b>+2</b></li>
-          <li>✅ Pobeda tima igrača — <b>+1</b></li>
-          <li>🧤 Čista mreža (tim primio 0) — <b>+1</b></li>
+          <li>✅ Pobeda — <b>+3</b></li>
+          <li>➖ Nerešeno — <b>+1</b></li>
+          <li>❌ Poraz — <b>−1</b></li>
+          <li>🧤 Čista mreža — <b>+3</b></li>
           <li>🟨 Žuti karton — <b>−1</b></li>
           <li>🟥 Crveni karton — <b>−2</b></li>
           <li>🥅 Autogol — <b>−1</b></li>

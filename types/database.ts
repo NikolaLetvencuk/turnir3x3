@@ -71,6 +71,7 @@ export type Database = {
           draws: number
           goals: number
           id: string
+          losses: number
           own_goals: number
           player_id: string
           red_cards: number
@@ -85,6 +86,7 @@ export type Database = {
           draws?: number
           goals?: number
           id?: string
+          losses?: number
           own_goals?: number
           player_id: string
           red_cards?: number
@@ -99,6 +101,7 @@ export type Database = {
           draws?: number
           goals?: number
           id?: string
+          losses?: number
           own_goals?: number
           player_id?: string
           red_cards?: number

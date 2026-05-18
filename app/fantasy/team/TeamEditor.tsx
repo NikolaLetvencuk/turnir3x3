@@ -37,26 +37,44 @@ function PlayerCard({ player, onRemove }: { player: PlayerForPicker | null; onRe
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute top-1 right-1 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white/90 border border-zinc-200 text-zinc-500 hover:text-red-600 hover:border-red-300"
+          className="absolute top-1 right-1 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white/90 border border-zinc-200 text-zinc-500 hover:text-red-600 hover:border-red-300 z-10"
           aria-label="Ukloni"
         >
           <X className="w-3 h-3" />
         </button>
       )}
-      <div className="absolute top-1 left-1 text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 font-bold tabular-nums">
+      <div className="absolute top-1 left-1 text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 font-bold tabular-nums z-10">
         {player.price.toFixed(1)}
       </div>
-      <div className="flex-1 flex items-center">
-        <PlayerAvatar name={player.name} photoUrl={player.photo_url} teamPrimary={player.team_primary} size={64} />
-      </div>
-      <div className="w-full">
-        <div className="text-xs font-semibold leading-tight line-clamp-2">{player.name}</div>
-        <div className="text-[10px] text-zinc-500 truncate mt-0.5">{player.team_name ?? "—"}</div>
-        {player.last_round_points !== null && (
-          <div className="text-[10px] text-zinc-400 mt-0.5">
-            <span className="tabular-nums font-medium">{player.last_round_points}</span> pt
+      <div className="w-full flex-1 flex items-center justify-center min-h-0 mt-3">
+        {player.photo_url ? (
+          <img
+            src={player.photo_url}
+            alt={player.name}
+            className="w-full aspect-square object-cover rounded-md bg-zinc-100"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="w-full aspect-square rounded-md inline-flex items-center justify-center font-bold select-none text-2xl"
+            style={{
+              background: player.team_primary ?? "#52525b",
+              color: "#ffffff",
+            }}
+          >
+            {player.name.split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?"}
           </div>
         )}
+      </div>
+      <div className="w-full mt-1">
+        <div className="text-xs font-semibold leading-tight line-clamp-2">{player.name}</div>
+        <div className="text-[10px] text-zinc-500 truncate mt-0.5">{player.team_name ?? "—"}</div>
+        <div className="text-[10px] text-zinc-400 mt-0.5 flex justify-center gap-2">
+          {player.last_round_points !== null && (
+            <span><b className="text-zinc-700 tabular-nums">{player.last_round_points}</b> pt</span>
+          )}
+          <span><b className="text-zinc-700 tabular-nums">{player.total_points}</b> ukupno</span>
+        </div>
       </div>
     </div>
   );
@@ -86,6 +104,8 @@ export function TeamEditor({
   const [pendingName, setPendingName] = useState("");
   const [namePending, setNamePending] = useState(false);
   const [search, setSearch] = useState("");
+  const [teamFilter, setTeamFilter] = useState<string>("");
+  const [sortKey, setSortKey] = useState<"price_desc" | "price_asc" | "last_desc" | "total_desc" | "own_desc">("price_desc");
   const [detailPlayer, setDetailPlayer] = useState<PlayerForPicker | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -103,10 +123,32 @@ export function TeamEditor({
   const overBudget = totalCost > budget + 0.05;
   const canLock = isComplete && !overBudget && !!overview.next_round;
 
+  const teamOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of players) {
+      if (p.team_id && p.team_name) map.set(p.team_id, p.team_name);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [players]);
+
   const filteredPlayers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return players.filter((p) => !q || p.name.toLowerCase().includes(q) || (p.team_name?.toLowerCase().includes(q) ?? false));
-  }, [players, search]);
+    let list = players.filter((p) => {
+      if (q && !p.name.toLowerCase().includes(q) && !(p.team_name?.toLowerCase().includes(q) ?? false)) return false;
+      if (teamFilter && p.team_id !== teamFilter) return false;
+      return true;
+    });
+    list = [...list].sort((a, b) => {
+      switch (sortKey) {
+        case "price_asc": return a.price - b.price || a.name.localeCompare(b.name);
+        case "price_desc": return b.price - a.price || a.name.localeCompare(b.name);
+        case "last_desc": return (b.last_round_points ?? 0) - (a.last_round_points ?? 0) || b.price - a.price;
+        case "total_desc": return b.total_points - a.total_points || b.price - a.price;
+        case "own_desc": return b.ownership_pct - a.ownership_pct || b.price - a.price;
+      }
+    });
+    return list;
+  }, [players, search, teamFilter, sortKey]);
 
   function pickPlayer(p: PlayerForPicker) {
     if (selectedIds.includes(p.id)) {
@@ -293,15 +335,40 @@ export function TeamEditor({
 
       {/* Picker */}
       <div className="card">
-        <div className="flex items-center gap-2 mb-3">
-          <Search className="w-4 h-4 text-zinc-500" />
-          <input
-            type="text"
-            className="input"
-            placeholder="Pretraži igrače…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Search className="w-4 h-4 text-zinc-500 shrink-0" />
+            <input
+              type="text"
+              className="input"
+              placeholder="Pretraži igrače…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className="input !py-1 !w-auto text-xs">
+              <option value="">Svi timovi</option>
+              {teamOptions.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+            <select value={sortKey} onChange={(e) => setSortKey(e.target.value as any)} className="input !py-1 !w-auto text-xs">
+              <option value="price_desc">Cena ↓</option>
+              <option value="price_asc">Cena ↑</option>
+              <option value="last_desc">Prošlo kolo ↓</option>
+              <option value="total_desc">Ukupno bodova ↓</option>
+              <option value="own_desc">Vlasništvo % ↓</option>
+            </select>
+            {(search || teamFilter) && (
+              <button
+                onClick={() => { setSearch(""); setTeamFilter(""); }}
+                className="text-xs text-zinc-500 hover:text-zinc-700 inline-flex items-center gap-1 px-2"
+              >
+                <X className="w-3 h-3" /> Reset filter
+              </button>
+            )}
+          </div>
         </div>
         <div className="space-y-2">
           {filteredPlayers.map((p) => {
@@ -330,8 +397,10 @@ export function TeamEditor({
                       )}
                       <span className="truncate">{p.team_name ?? "—"}</span>
                     </div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5 flex gap-2">
-                      <span><b className="text-zinc-700 tabular-nums">{p.last_round_points ?? 0}</b> pt</span>
+                    <div className="text-[11px] text-zinc-500 mt-0.5 flex flex-wrap gap-x-2 gap-y-0">
+                      <span><b className="text-zinc-700 tabular-nums">{p.total_points}</b> ukupno</span>
+                      <span className="text-zinc-300">·</span>
+                      <span><b className="text-zinc-700 tabular-nums">{p.last_round_points ?? 0}</b> prošlo</span>
                       <span className="text-zinc-300">·</span>
                       <span><b className="text-zinc-700 tabular-nums">{p.ownership_pct}%</b> timova</span>
                     </div>

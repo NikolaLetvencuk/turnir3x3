@@ -47,14 +47,32 @@ export async function getUserBudget(user_id: string): Promise<{ budget: number; 
 /**
  * For a given user, compute their fantasy overview: totals, last round, ranks across leagues.
  */
+// Assign 1-based ranks where ties share the same rank ("1, 1, 3" pattern).
+export function rankWithTies<T extends { total: number }>(items: T[]): Array<T & { rank: number }> {
+  const sorted = [...items].sort((a, b) => b.total - a.total);
+  const out: Array<T & { rank: number }> = [];
+  let prevTotal: number | null = null;
+  let prevRank = 0;
+  sorted.forEach((x, i) => {
+    let rank: number;
+    if (prevTotal === null || x.total !== prevTotal) {
+      rank = i + 1;
+      prevRank = rank;
+      prevTotal = x.total;
+    } else {
+      rank = prevRank;
+    }
+    out.push({ ...x, rank });
+  });
+  return out;
+}
+
 export async function getFantasyOverview(user_id: string): Promise<FantasyOverview> {
-  // Service role bypasses RLS — avoids any policy race after a fresh league create/join.
-  // We've already authenticated user_id in the page; no policy needed here.
   const supabase = createAdminClient();
   const [roundsRes, allFRPRes, allLeagueMembersRes, allLeaguesRes] = await Promise.all([
-    supabase.from("rounds").select("id, name, status, display_order").order("display_order"),
+    supabase.from("rounds").select("id, name, status, display_order, locked_at").order("display_order"),
     supabase.from("fantasy_round_points").select("user_id, round_id, total_points"),
-    supabase.from("fantasy_league_members").select("league_id, user_id"),
+    supabase.from("fantasy_league_members").select("league_id, user_id, joined_at"),
     supabase.from("fantasy_leagues").select("id, name, invite_code"),
   ]);
 
@@ -82,34 +100,53 @@ export async function getFantasyOverview(user_id: string): Promise<FantasyOvervi
   const allUsers = new Set([...totalsByUser.keys()]);
   const { data: snapUsers } = await supabase.from("fantasy_team_snapshots").select("user_id");
   for (const u of (snapUsers ?? []) as Array<{ user_id: string }>) allUsers.add(u.user_id);
-  const ranking = Array.from(allUsers)
-    .map((u) => ({ user_id: u, total: totalsByUser.get(u) ?? 0 }))
-    .sort((a, b) => b.total - a.total);
-  const myOverallRank = ranking.findIndex((r) => r.user_id === user_id);
+  const ranking = rankWithTies(
+    Array.from(allUsers).map((u) => ({ user_id: u, total: totalsByUser.get(u) ?? 0 })),
+  );
+  const myRow = ranking.find((r) => r.user_id === user_id);
+  const myOverallRank = myRow ? myRow.rank : -1;
 
-  const allLeagueMembers = (allLeagueMembersRes.data ?? []) as Array<{ league_id: string; user_id: string }>;
+  const allLeagueMembers = (allLeagueMembersRes.data ?? []) as Array<{ league_id: string; user_id: string; joined_at: string }>;
   const myLeagueIds = new Set(allLeagueMembers.filter((m) => m.user_id === user_id).map((m) => m.league_id));
   const myLeagues = ((allLeaguesRes.data ?? []) as Array<{ id: string; name: string; invite_code: string }>)
     .filter((l) => myLeagueIds.has(l.id));
-  const membersByLeague = new Map<string, string[]>();
+  const membersByLeague = new Map<string, Array<{ user_id: string; joined_at: string }>>();
   for (const m of allLeagueMembers) {
     const arr = membersByLeague.get(m.league_id) ?? [];
-    arr.push(m.user_id);
+    arr.push({ user_id: m.user_id, joined_at: m.joined_at });
     membersByLeague.set(m.league_id, arr);
   }
+  // For league points, count only rounds whose lock time is AFTER the member joined.
+  const roundLockedAt = new Map<string, string | null>(rounds.map((r: any) => [r.id, r.locked_at]));
+  function leagueTotalForMember(uid: string, joined_at: string): number {
+    let sum = 0;
+    for (const f of allFRP) {
+      if (f.user_id !== uid) continue;
+      const locked = roundLockedAt.get(f.round_id);
+      if (!locked) continue; // round never started → no points anyway
+      if (new Date(locked).getTime() > new Date(joined_at).getTime()) {
+        sum += f.total_points ?? 0;
+      }
+    }
+    return sum;
+  }
   const leagues: LeagueRanking[] = myLeagues.map((l) => {
-    const memberIds = membersByLeague.get(l.id) ?? [];
-    const sorted = memberIds
-      .map((uid) => ({ uid, total: totalsByUser.get(uid) ?? 0 }))
-      .sort((a, b) => b.total - a.total);
-    const idx = sorted.findIndex((x) => x.uid === user_id);
+    const members = membersByLeague.get(l.id) ?? [];
+    const ranked = rankWithTies(
+      members.map((m) => ({
+        user_id: m.user_id,
+        joined_at: m.joined_at,
+        total: leagueTotalForMember(m.user_id, m.joined_at),
+      })),
+    );
+    const me = ranked.find((r) => r.user_id === user_id);
     return {
       league_id: l.id,
       league_name: l.name,
       invite_code: l.invite_code,
-      member_count: memberIds.length,
-      my_rank: idx + 1,
-      my_total: myTotal,
+      member_count: members.length,
+      my_rank: me ? me.rank : members.length + 1,
+      my_total: me?.total ?? 0,
     };
   });
 
@@ -117,7 +154,7 @@ export async function getFantasyOverview(user_id: string): Promise<FantasyOvervi
     total_points: myTotal,
     last_round_points: lastRoundPoints,
     last_round_name: lastRoundName,
-    overall_rank: myOverallRank === -1 ? null : myOverallRank + 1,
+    overall_rank: myOverallRank === -1 ? null : myOverallRank,
     overall_total: ranking.length,
     leagues,
     next_round: nextRound,

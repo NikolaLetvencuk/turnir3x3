@@ -10,6 +10,7 @@ export type MemberRow = {
   team_name: string;
   total: number;
   last_round: number | null;
+  rank: number;
 };
 
 export function LeagueDetail({
@@ -61,11 +62,11 @@ export function LeagueDetail({
             </tr>
           </thead>
           <tbody>
-            {members.map((m, i) => {
+            {members.map((m) => {
               const isMe = m.user_id === currentUserId;
               return (
                 <tr key={m.user_id} className={`border-t border-zinc-100 ${isMe ? "bg-emerald-50/40" : ""}`}>
-                  <td className="py-2 px-3 text-zinc-500">{i + 1}.</td>
+                  <td className="py-2 px-3 text-zinc-500">{m.rank}.</td>
                   <td className="py-2">
                     <button onClick={() => setViewing(m)} className="inline-flex items-center gap-1.5 font-medium hover:text-emerald-700 max-w-full">
                       <span className="truncate max-w-[200px]">{m.team_name}</span>
