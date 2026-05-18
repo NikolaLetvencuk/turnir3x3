@@ -6,6 +6,8 @@ import { getGroupStandings, getTopScorers } from "@/lib/standings";
 import { TeamCrest } from "@/components/TeamCrest";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { DrawStatusBanner } from "@/components/DrawStatusBanner";
+import { PopupAd } from "@/components/PopupAd";
+import { getPopupAdSetting } from "@/lib/settings";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -18,11 +20,10 @@ export default async function HomePage() {
   const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
   const hasGroups = (groupCheck?.length ?? 0) > 0;
 
-  const { data: drawStateRow } = await adminRO
-    .from("draw_state")
-    .select("state, scheduled_at, per_pick_ms, result")
-    .eq("id", true)
-    .maybeSingle();
+  const [{ data: drawStateRow }, popup] = await Promise.all([
+    adminRO.from("draw_state").select("state, scheduled_at, per_pick_ms, result").eq("id", true).maybeSingle(),
+    getPopupAdSetting(),
+  ]);
 
   // Pre-draw view: only banner + team list
   if (!hasGroups) {
@@ -35,6 +36,7 @@ export default async function HomePage() {
     return (
       <div className="space-y-6">
         <LiveRefresh tag="home-predraw" />
+        <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
         <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
           <h1 className="text-2xl font-bold">Turnir Kula</h1>
@@ -92,6 +94,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-6">
       <LiveRefresh tag="home" />
+      <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
       <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <h1 className="text-2xl font-bold">Turnir Kula</h1>

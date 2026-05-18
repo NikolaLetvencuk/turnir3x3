@@ -676,3 +676,19 @@ export async function recalcRound(formData: FormData): Promise<ActionResult> {
     return { ok: true };
   }) as Promise<ActionResult>;
 }
+
+// SITE SETTINGS: popup ad toggle
+export async function setPopupAdEnabled(enabled: boolean): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    const { error } = await admin.from("app_settings").upsert({
+      key: "popup_ad_enabled",
+      value: enabled,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/");
+    revalidatePath("/admin");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}

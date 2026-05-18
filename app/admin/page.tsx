@@ -1,16 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPopupAdSetting } from "@/lib/settings";
+import { PopupAdToggle } from "./PopupAdToggle";
 
 export const revalidate = 0;
 
 export default async function AdminDashboard() {
   const supabase = createClient();
-  const [{ count: teamsCount }, { count: playersCount }, { count: roundsCount }, { count: matchesCount }, { data: liveMatches }, { data: roundsRaw }] = await Promise.all([
+  const [{ count: teamsCount }, { count: playersCount }, { count: roundsCount }, { count: matchesCount }, { data: liveMatches }, { data: roundsRaw }, popup] = await Promise.all([
     supabase.from("teams").select("*", { head: true, count: "exact" }),
     supabase.from("players").select("*", { head: true, count: "exact" }),
     supabase.from("rounds").select("*", { head: true, count: "exact" }),
     supabase.from("matches").select("*", { head: true, count: "exact" }),
     supabase.from("matches").select("id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name), home_score, away_score").eq("status", "live"),
     supabase.from("rounds").select("*").order("display_order"),
+    getPopupAdSetting(),
   ]);
   const rounds = (roundsRaw ?? []) as Array<{ id: string; name: string; status: string }>;
   const activeRound = rounds.find((r) => r.status === "active");
@@ -35,6 +38,10 @@ export default async function AdminDashboard() {
       <div className="card">
         <h2 className="font-medium mb-2">Aktivno kolo</h2>
         {activeRound ? <p className="text-sm">{activeRound.name} — <span className="badge-live"><span className="live-dot" />aktivno</span></p> : <p className="text-sm text-zinc-500">Nema aktivnog kola.</p>}
+      </div>
+      <div className="card">
+        <h2 className="font-medium mb-2">Sajt</h2>
+        <PopupAdToggle initialEnabled={popup.enabled} />
       </div>
       <div className="card">
         <h2 className="font-medium mb-2">Mečevi uživo</h2>
