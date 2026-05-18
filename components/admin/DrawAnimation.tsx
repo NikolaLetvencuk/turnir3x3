@@ -12,9 +12,22 @@ const FINALE_MS = 5000;
 const DEFAULT_PER_PICK_MS = 5000;
 
 // Per-pick sub-phase offsets (ms from start of pick)
-const PICK_LIFT_MS = 800;
+const PICK_LIFT_MS = 1600;
 const PICK_REVEAL_MS = 2200;
 const PICK_FLY_MS = 1200;
+
+// Mystery-crest color palettes — cycled deterministically during the lift phase so
+// the viewer sees a black crest flicker through colors before the real team is revealed.
+const MYSTERY_PALETTES: Array<[string, string]> = [
+  ["#dc2626", "#0f172a"],
+  ["#2563eb", "#f8fafc"],
+  ["#16a34a", "#f8fafc"],
+  ["#facc15", "#0f172a"],
+  ["#7c3aed", "#f8fafc"],
+  ["#ea580c", "#0f172a"],
+  ["#0ea5e9", "#0f172a"],
+  ["#ec4899", "#f8fafc"],
+];
 
 type Pick = { groupIdx: number; positionInGroup: number; team: DrawTeam; pickIdx: number };
 
@@ -33,19 +46,18 @@ export function DrawAnimation({
   startedAtMs?: number;
   allowSkip?: boolean;
 }) {
-  // Suspenseful pick order: shuffle deterministically by team UUID so viewers can't
-  // predict which group the next-drawn team will go to. The order is identical for
-  // all clients because all UUIDs are the same on every device.
+  // Groups fill in order: pick 1 → Group A, pick 2 → B, pick 3 → C, ... wrapping rows.
+  // Suspense lives in *which team* is being pulled, handled by the mystery crest below.
   const allPicks: Pick[] = useMemo(() => {
-    const raw: Pick[] = [];
-    result.groups.forEach((g, gi) => {
-      g.teams.forEach((team, pos) => {
-        raw.push({ groupIdx: gi, positionInGroup: pos, team, pickIdx: 0 });
+    const out: Pick[] = [];
+    const maxLen = Math.max(0, ...result.groups.map((g) => g.teams.length));
+    let i = 0;
+    for (let pos = 0; pos < maxLen; pos++) {
+      result.groups.forEach((g, gi) => {
+        if (g.teams[pos]) out.push({ groupIdx: gi, positionInGroup: pos, team: g.teams[pos], pickIdx: i++ });
       });
-    });
-    raw.sort((a, b) => a.team.id.localeCompare(b.team.id));
-    raw.forEach((p, i) => (p.pickIdx = i));
-    return raw;
+    }
+    return out;
   }, [result]);
 
   const [now, setNow] = useState<number>(() => Date.now());
@@ -118,6 +130,7 @@ export function DrawAnimation({
               groups={result.groups}
               currentPick={currentPick}
               subPhase={subPhase}
+              pickSub={pickSub}
               settledCount={settledCount}
               totalPicks={allPicks.length}
               allPicks={allPicks}
@@ -230,6 +243,7 @@ function PicksStage({
   groups,
   currentPick,
   subPhase,
+  pickSub,
   settledCount,
   totalPicks,
   allPicks,
@@ -237,6 +251,7 @@ function PicksStage({
   groups: DrawResult["groups"];
   currentPick: Pick;
   subPhase: "lift" | "reveal" | "fly" | "settle";
+  pickSub: number;
   settledCount: number;
   totalPicks: number;
   allPicks: Pick[];
@@ -263,7 +278,7 @@ function PicksStage({
 
       <div className="relative h-[14rem] sm:h-[18rem] mb-6 flex items-center justify-center">
         <AnimatePresence mode="wait">
-          <SpotlightCard key={currentPick.pickIdx} pick={currentPick} subPhase={subPhase} />
+          <SpotlightCard key={currentPick.pickIdx} pick={currentPick} subPhase={subPhase} pickSub={pickSub} />
         </AnimatePresence>
       </div>
 
@@ -307,14 +322,23 @@ function PicksStage({
   );
 }
 
-function SpotlightCard({ pick, subPhase }: { pick: Pick; subPhase: "lift" | "reveal" | "fly" | "settle" }) {
+function SpotlightCard({
+  pick,
+  subPhase,
+  pickSub,
+}: {
+  pick: Pick;
+  subPhase: "lift" | "reveal" | "fly" | "settle";
+  pickSub: number;
+}) {
   const groupLabel = "ABCDEFGH"[pick.groupIdx] ?? "?";
+  const isLift = subPhase === "lift";
   return (
     <motion.div
       initial={{ scale: 0.4, opacity: 0, y: 20 }}
       animate={
         subPhase === "lift"
-          ? { scale: 0.6, opacity: 0.7, y: 0 }
+          ? { scale: 0.85, opacity: 1, y: 0 }
           : subPhase === "reveal"
           ? { scale: 1, opacity: 1, y: 0 }
           : subPhase === "fly"
@@ -330,26 +354,30 @@ function SpotlightCard({ pick, subPhase }: { pick: Pick; subPhase: "lift" | "rev
         transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        animate={subPhase === "lift" ? { rotate: [-3, 3, -3] } : undefined}
+        animate={isLift ? { rotate: [-3, 3, -3] } : undefined}
         transition={{ duration: 0.5, repeat: Infinity }}
         className="relative z-10"
       >
-        <TeamCrest
-          name={pick.team.name}
-          shortName={pick.team.short_name}
-          primaryColor={pick.team.primary_color}
-          secondaryColor={pick.team.secondary_color}
-          size={120}
-        />
+        {isLift ? (
+          <MysteryCrest size={120} subElapsedMs={pickSub} />
+        ) : (
+          <TeamCrest
+            name={pick.team.name}
+            shortName={pick.team.short_name}
+            primaryColor={pick.team.primary_color}
+            secondaryColor={pick.team.secondary_color}
+            size={120}
+          />
+        )}
       </motion.div>
       <motion.div
         initial={{ y: 10, opacity: 0 }}
-        animate={subPhase === "reveal" ? { y: 0, opacity: 1 } : { y: 0, opacity: subPhase === "lift" ? 0 : 0.6 }}
+        animate={subPhase === "reveal" ? { y: 0, opacity: 1 } : { y: 0, opacity: isLift ? 0 : 0.6 }}
         transition={{ duration: 0.4, delay: subPhase === "reveal" ? 0.2 : 0 }}
         className="relative z-10 mt-4 text-center px-2"
       >
         <div className="text-white text-2xl sm:text-3xl font-black tracking-tight">
-          {pick.team.name}
+          {isLift ? " " : pick.team.name}
         </div>
         <motion.div
           initial={{ scale: 0 }}
@@ -362,6 +390,57 @@ function SpotlightCard({ pick, subPhase }: { pick: Pick; subPhase: "lift" | "rev
         </motion.div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/* ============================ MYSTERY CREST ============================ */
+
+/**
+ * Suspense placeholder shown during the "lift" sub-phase.
+ *   0..400 ms        → solid black shield with "?"
+ *   400..1300 ms     → rapid color flicker through MYSTERY_PALETTES (every 90 ms)
+ *   1300..PICK_LIFT  → flicker decelerates then locks back to black before the reveal
+ * The cycle is driven by `subElapsedMs` so it stays in sync across clients.
+ */
+function MysteryCrest({ size, subElapsedMs }: { size: number; subElapsedMs: number }) {
+  const t = subElapsedMs;
+  let primary = "#0a0a0a";
+  let secondary = "#1f2937";
+  let showQuestion = true;
+  if (t >= 400 && t < 1300) {
+    const step = Math.floor((t - 400) / 90);
+    const palette = MYSTERY_PALETTES[step % MYSTERY_PALETTES.length];
+    primary = palette[0];
+    secondary = palette[1];
+    showQuestion = false;
+  } else if (t >= 1300 && t < 1500) {
+    const step = Math.floor((t - 1300) / 140);
+    const palette = MYSTERY_PALETTES[step % MYSTERY_PALETTES.length];
+    primary = palette[0];
+    secondary = palette[1];
+    showQuestion = false;
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        background: `linear-gradient(135deg, ${primary} 0%, ${primary} 50%, ${secondary} 50%, ${secondary} 100%)`,
+        clipPath: "polygon(50% 0%, 100% 18%, 100% 65%, 50% 100%, 0% 65%, 0% 18%)",
+        boxShadow: "0 0 40px rgba(37,99,235,0.45)",
+        transition: "background 60ms linear",
+      }}
+      className="relative flex items-center justify-center"
+    >
+      {showQuestion && (
+        <span
+          className="font-black text-white/70 select-none"
+          style={{ fontSize: size * 0.5, lineHeight: 1 }}
+        >
+          ?
+        </span>
+      )}
+    </div>
   );
 }
 

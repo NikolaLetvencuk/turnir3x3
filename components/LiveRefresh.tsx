@@ -26,6 +26,7 @@ export function LiveRefresh({ tag = "default" }: { tag?: string }) {
       .channel(`live-refresh-${tag}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, schedule)
       .on("postgres_changes", { event: "*", schema: "public", table: "match_events" }, schedule)
+      .on("postgres_changes", { event: "*", schema: "public", table: "draw_state" }, schedule)
       .subscribe();
     return () => {
       if (timer.current) clearTimeout(timer.current);

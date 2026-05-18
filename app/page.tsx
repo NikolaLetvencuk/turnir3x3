@@ -8,6 +8,7 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 
 export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const supabase = createClient();
