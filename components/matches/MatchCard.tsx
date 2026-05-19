@@ -15,6 +15,8 @@ type Match = {
   phase?: string | null;
   home_score: number;
   away_score: number;
+  home_pen?: number | null;
+  away_pen?: number | null;
   kickoff_at: string | null;
   home_team: Team | null;
   away_team: Team | null;
@@ -22,8 +24,9 @@ type Match = {
 
 export function MatchCard({ match }: { match: Match }) {
   const phase = match.phase ?? match.status;
-  const isLive = phase === "first_half" || phase === "halftime" || phase === "second_half" || match.status === "live";
+  const isLive = phase === "first_half" || phase === "halftime" || phase === "second_half" || phase === "extra_time" || phase === "penalties" || match.status === "live";
   const isFinished = phase === "finished" || match.status === "finished";
+  const hasPens = match.home_pen != null && match.away_pen != null;
   return (
     <Link
       href={`/matches/${match.id}`}
@@ -42,8 +45,17 @@ export function MatchCard({ match }: { match: Match }) {
           </span>
           <span className="font-medium truncate">{match.home_team?.name ?? "?"}</span>
         </div>
-        <span className="font-bold tabular-nums text-base sm:text-lg shrink-0">
-          {isLive || isFinished ? `${match.home_score} : ${match.away_score}` : "—"}
+        <span className="font-bold tabular-nums text-base sm:text-lg shrink-0 text-center leading-tight">
+          {isLive || isFinished ? (
+            <>
+              {match.home_score} : {match.away_score}
+              {hasPens && (
+                <span className="block text-[10px] font-normal text-zinc-500 mt-0.5">
+                  pen {match.home_pen}-{match.away_pen}
+                </span>
+              )}
+            </>
+          ) : "—"}
         </span>
         <div className="flex items-center gap-2 min-w-0 justify-end">
           <span className="font-medium truncate text-right">{match.away_team?.name ?? "?"}</span>

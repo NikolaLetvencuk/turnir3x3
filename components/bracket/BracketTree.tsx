@@ -30,6 +30,14 @@ export type BracketMatchView = {
   away_team: TeamLite | null;
 };
 
+function prettyBracketPosition(pos: string | null): string {
+  if (!pos) return "";
+  if (pos === "F") return "Finale";
+  if (pos === "TP") return "3. mesto";
+  // SF_1 / QF_2 / R16_3 → "SF 1" etc.
+  return pos.replace("_", " ");
+}
+
 function Slot({ team, placeholder, manual, onClick }: { team: TeamLite | null; placeholder: string | null; manual: boolean; onClick?: () => void }) {
   if (team) {
     return (
@@ -83,7 +91,7 @@ export function BracketTree({
               return (
                 <div key={m.id} className="card !p-2">
                   <div className="text-[10px] text-zinc-500 mb-1 flex justify-between">
-                    <span>{m.bracket_position}</span>
+                    <span>{prettyBracketPosition(m.bracket_position)}</span>
                     {m.phase === "finished" && <span>FT</span>}
                     {m.phase === "first_half" || m.phase === "halftime" || m.phase === "second_half" ? <span className="text-red-600">UŽIVO</span> : null}
                   </div>

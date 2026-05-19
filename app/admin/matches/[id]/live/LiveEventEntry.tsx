@@ -15,6 +15,9 @@ import {
   endFirstHalf,
   startSecondHalf,
   finishMatch,
+  startExtraTime,
+  endExtraTime,
+  finishPenalties,
 } from "../../../actions";
 import type { Database } from "@/types/database";
 
@@ -31,7 +34,6 @@ const eventIcon = (t: string) => t === "goal" ? "⚽" : t === "own_goal" ? "⚽A
 function FinishMatchButtons({ match, run }: { match: Match; run: ReturnType<typeof useActionRunner> }) {
   const isKnockout = match.round?.stage === "knockout";
   const tied = match.home_score === match.away_score;
-  const [pickingWinner, setPickingWinner] = useState(false);
 
   async function finishWithWinner(winnerId: string | null) {
     const fd = new FormData();
@@ -40,21 +42,17 @@ function FinishMatchButtons({ match, run }: { match: Match; run: ReturnType<type
     await run(finishMatch, fd, { successMessage: "Završeno" });
   }
 
+  async function onStartExtraTime() {
+    const fd = new FormData();
+    fd.set("id", match.id);
+    await run(startExtraTime, fd, { successMessage: "Produžeci pokrenuti" });
+  }
+
+  // End-of-regulation in tied knockout → offer to start extra time
   if (isKnockout && tied) {
-    if (pickingWinner) {
-      return (
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm text-zinc-600">Pobednik:</span>
-          <button onClick={() => finishWithWinner(match.home_team_id)} className="btn-primary">{match.home_team?.name}</button>
-          <button onClick={() => finishWithWinner(match.away_team_id)} className="btn-primary">{match.away_team?.name}</button>
-          <button onClick={() => setPickingWinner(false)} className="btn-secondary">Otkaži</button>
-        </div>
-      );
-    }
     return (
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => setPickingWinner(true)} className="btn-secondary">Penali</button>
-        <button onClick={() => setPickingWinner(true)} className="btn-secondary">Produžeci</button>
+        <button onClick={onStartExtraTime} className="btn-primary">Idi na produžetke (2×5 min)</button>
       </div>
     );
   }
@@ -64,6 +62,68 @@ function FinishMatchButtons({ match, run }: { match: Match; run: ReturnType<type
       if (!confirm("Završi meč?")) return;
       finishWithWinner(null);
     }} className="btn-danger">Završi meč</button>
+  );
+}
+
+function ExtraTimeFinishButton({ match, run }: { match: Match; run: ReturnType<typeof useActionRunner> }) {
+  const tied = match.home_score === match.away_score;
+  async function onEnd() {
+    const fd = new FormData();
+    fd.set("id", match.id);
+    await run(endExtraTime, fd, { successMessage: tied ? "Idemo na penale" : "Završeno u produžecima" });
+  }
+  return (
+    <button onClick={onEnd} className="btn-primary">
+      Završi produžetke {tied ? "→ penali" : "(meč je rešen)"}
+    </button>
+  );
+}
+
+function PenaltyEntry({ match, run }: { match: Match; run: ReturnType<typeof useActionRunner> }) {
+  const [homePen, setHomePen] = useState<number>(match.home_pen ?? 0);
+  const [awayPen, setAwayPen] = useState<number>(match.away_pen ?? 0);
+  async function onFinish() {
+    if (homePen === awayPen) {
+      alert("Penal-šut mora imati pobednika.");
+      return;
+    }
+    const fd = new FormData();
+    fd.set("id", match.id);
+    fd.set("home_pen", String(homePen));
+    fd.set("away_pen", String(awayPen));
+    await run(finishPenalties, fd, { successMessage: "Meč završen" });
+  }
+  return (
+    <div className="card border-amber-300 bg-amber-50 space-y-3">
+      <div className="text-sm font-medium text-amber-900">Penali — unesi rezultat šutiranja:</div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-xs text-zinc-600">{match.home_team?.name}</span>
+          <input
+            type="number"
+            min={0}
+            max={20}
+            value={homePen}
+            onChange={(e) => setHomePen(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+            className="input text-center text-xl font-bold tabular-nums"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs text-zinc-600">{match.away_team?.name}</span>
+          <input
+            type="number"
+            min={0}
+            max={20}
+            value={awayPen}
+            onChange={(e) => setAwayPen(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+            className="input text-center text-xl font-bold tabular-nums"
+          />
+        </label>
+      </div>
+      <button onClick={onFinish} disabled={homePen === awayPen} className="btn-primary w-full">
+        Završi meč (penali {homePen}-{awayPen})
+      </button>
+    </div>
   );
 }
 
@@ -169,10 +229,18 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
             <button onClick={() => setPhase(startSecondHalf, "Drugo poluvreme")} className="btn-primary">Pokreni drugo poluvreme</button>
           )}
           {m.phase === "second_half" && <FinishMatchButtons match={m} run={run} />}
+          {m.phase === "extra_time" && <ExtraTimeFinishButton match={m} run={run} />}
           {m.phase === "finished" && (
-            <span className="text-sm text-zinc-500">Meč je završen.</span>
+            <span className="text-sm text-zinc-500">
+              Meč je završen{m.home_pen != null && m.away_pen != null ? ` (penali ${m.home_pen}-${m.away_pen})` : ""}.
+            </span>
           )}
         </div>
+        {m.phase === "penalties" && (
+          <div className="mt-3">
+            <PenaltyEntry match={m} run={run} />
+          </div>
+        )}
       </div>
 
       {canLogEvents && (

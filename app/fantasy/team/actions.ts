@@ -116,7 +116,38 @@ export async function saveDraft(formData: FormData): Promise<ActionResult> {
   } else {
     return { ok: false, error: "Prvo postavi ime tima" };
   }
+
+  // Auto-lock the saved draft for the upcoming round so the team carries forward
+  // automatically. The lock_round() SQL fallback already propagates the previous
+  // snapshot to subsequent rounds — combining the two means the user only needs
+  // to edit the draft to have their team apply to every future round.
+  const { data: nextRound } = await admin
+    .from("rounds")
+    .select("id")
+    .eq("status", "upcoming")
+    .order("display_order")
+    .limit(1)
+    .maybeSingle();
+  const nr = nextRound as any;
+  if (nr) {
+    const leftover = Math.max(0, Math.round((budget.budget - budget.total) * 100) / 100);
+    await admin
+      .from("fantasy_team_snapshots")
+      .upsert(
+        {
+          user_id: user.id,
+          round_id: nr.id,
+          player1_id, player2_id, player3_id,
+          transfers_used: 0,
+          transfer_penalty: 0,
+          bank: leftover,
+        },
+        { onConflict: "user_id,round_id" },
+      );
+  }
+
   revalidatePath("/fantasy/team");
+  revalidatePath("/fantasy");
   return { ok: true };
 }
 

@@ -476,14 +476,17 @@ export type Database = {
       }
       matches: {
         Row: {
+          away_pen: number | null
           away_placeholder: string | null
           away_score: number
           away_team_id: string | null
           away_team_id_manual: string | null
           bracket_position: string | null
           created_at: string
+          extra_time_started_at: string | null
           finished_at: string | null
           group_id: string | null
+          home_pen: number | null
           home_placeholder: string | null
           home_score: number
           home_team_id: string | null
@@ -498,14 +501,17 @@ export type Database = {
           status: string
         }
         Insert: {
+          away_pen?: number | null
           away_placeholder?: string | null
           away_score?: number
           away_team_id?: string | null
           away_team_id_manual?: string | null
           bracket_position?: string | null
           created_at?: string
+          extra_time_started_at?: string | null
           finished_at?: string | null
           group_id?: string | null
+          home_pen?: number | null
           home_placeholder?: string | null
           home_score?: number
           home_team_id?: string | null
@@ -520,14 +526,17 @@ export type Database = {
           status?: string
         }
         Update: {
+          away_pen?: number | null
           away_placeholder?: string | null
           away_score?: number
           away_team_id?: string | null
           away_team_id_manual?: string | null
           bracket_position?: string | null
           created_at?: string
+          extra_time_started_at?: string | null
           finished_at?: string | null
           group_id?: string | null
+          home_pen?: number | null
           home_placeholder?: string | null
           home_score?: number
           home_team_id?: string | null

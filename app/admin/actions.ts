@@ -355,6 +355,96 @@ export async function startSecondHalf(formData: FormData): Promise<ActionResult>
   }) as Promise<ActionResult>;
 }
 
+export async function startExtraTime(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const id = formData.get("id") as string;
+    const admin = createAdminClient();
+    const { error } = await admin.from("matches")
+      .update({ phase: "extra_time", extra_time_started_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/admin/matches/${id}/live`);
+    revalidatePath(`/matches/${id}`);
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// End ET. If still tied, move to penalty shootout. Otherwise finish with goal-based winner.
+export async function endExtraTime(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const id = formData.get("id") as string;
+    const admin = createAdminClient();
+    const { data: m } = await admin
+      .from("matches")
+      .select("home_score, away_score, home_team_id, away_team_id, round:rounds(stage)")
+      .eq("id", id)
+      .maybeSingle();
+    if (!m) return { ok: false, error: "Meč ne postoji" };
+    const mm = m as any;
+    const tied = mm.home_score === mm.away_score;
+    if (tied) {
+      const { error } = await admin.from("matches").update({ phase: "penalties" }).eq("id", id);
+      if (error) return { ok: false, error: error.message };
+    } else {
+      const winnerId = mm.home_score > mm.away_score ? mm.home_team_id : mm.away_team_id;
+      const { error } = await admin.from("matches")
+        .update({ phase: "finished", finished_at: new Date().toISOString(), knockout_winner_id: winnerId })
+        .eq("id", id);
+      if (error) return { ok: false, error: error.message };
+      const { resolveAllPlaceholders } = await import("@/lib/resolveBracket");
+      await resolveAllPlaceholders();
+      revalidatePath("/bracket");
+      revalidatePath("/admin/bracket");
+    }
+    revalidatePath(`/admin/matches/${id}/live`);
+    revalidatePath(`/matches/${id}`);
+    revalidatePath("/standings");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// Save penalty shootout result and finish match. Best-of-3 means whichever
+// side has more pen kicks scored after both have taken at least 3 wins —
+// admin enters the final tally so we don't model kick-by-kick.
+export async function finishPenalties(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const id = formData.get("id") as string;
+    const homePen = Number(formData.get("home_pen"));
+    const awayPen = Number(formData.get("away_pen"));
+    if (!Number.isFinite(homePen) || !Number.isFinite(awayPen) || homePen < 0 || awayPen < 0) {
+      return { ok: false, error: "Neispravan broj penala" };
+    }
+    if (homePen === awayPen) return { ok: false, error: "Penal-šut mora imati pobednika" };
+    const admin = createAdminClient();
+    const { data: m } = await admin
+      .from("matches")
+      .select("home_team_id, away_team_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!m) return { ok: false, error: "Meč ne postoji" };
+    const mm = m as any;
+    const winnerId = homePen > awayPen ? mm.home_team_id : mm.away_team_id;
+    const { error } = await admin.from("matches")
+      .update({
+        phase: "finished",
+        finished_at: new Date().toISOString(),
+        home_pen: homePen,
+        away_pen: awayPen,
+        knockout_winner_id: winnerId,
+      })
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    const { resolveAllPlaceholders } = await import("@/lib/resolveBracket");
+    await resolveAllPlaceholders();
+    revalidatePath(`/admin/matches/${id}/live`);
+    revalidatePath(`/matches/${id}`);
+    revalidatePath("/bracket");
+    revalidatePath("/admin/bracket");
+    revalidatePath("/standings");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 export async function finishMatch(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
     const id = formData.get("id") as string;

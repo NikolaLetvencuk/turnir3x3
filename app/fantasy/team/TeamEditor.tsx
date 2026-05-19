@@ -7,7 +7,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { TeamCrest } from "@/components/TeamCrest";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { useToast } from "@/components/ui/Toast";
-import { saveDraft, lockTeamForUpcomingRound, setTeamName } from "./actions";
+import { saveDraft, setTeamName } from "./actions";
 import { BASE_PRICE, type FantasyOverview, type PlayerForPicker } from "@/lib/fantasy-shared";
 
 type Draft = {
@@ -105,7 +105,7 @@ export function TeamEditor({
   const [namePending, setNamePending] = useState(false);
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("");
-  const [sortKey, setSortKey] = useState<"price_desc" | "price_asc" | "last_desc" | "total_desc" | "own_desc">("price_desc");
+  const [sortKey, setSortKey] = useState<"price_desc" | "price_asc" | "last_desc" | "total_desc">("price_desc");
   const [detailPlayer, setDetailPlayer] = useState<PlayerForPicker | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -144,7 +144,6 @@ export function TeamEditor({
         case "price_desc": return b.price - a.price || a.name.localeCompare(b.name);
         case "last_desc": return (b.last_round_points ?? 0) - (a.last_round_points ?? 0) || b.price - a.price;
         case "total_desc": return b.total_points - a.total_points || b.price - a.price;
-        case "own_desc": return b.ownership_pct - a.ownership_pct || b.price - a.price;
       }
     });
     return list;
@@ -196,16 +195,6 @@ export function TeamEditor({
     const ok = await run(setTeamName as any, fd, { successMessage: "Ime tima postavljeno" });
     setNamePending(false);
     if (ok) setPendingName("");
-  }
-
-  async function onLock() {
-    const ok = await persistDraft(true);
-    if (!ok) return;
-    setPending(true);
-    const res = await lockTeamForUpcomingRound();
-    setPending(false);
-    if (!res.ok) { push(res.error, "error"); return; }
-    push(`Tim zaključan za ${res.data?.round_name ?? "naredno kolo"}`, "success");
   }
 
   const lockedIds = lockedForUpcoming
@@ -272,33 +261,29 @@ export function TeamEditor({
         )}
       </div>
 
-      {/* Lock status */}
+      {/* Lock status — saved draft auto-locks for the upcoming round and carries
+          forward until the user edits again. */}
       {overview.next_round ? (
-        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-blue-200 bg-blue-50" : lockedForUpcoming ? "border-amber-200 bg-amber-50" : "border-zinc-200"}`}>
+        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-blue-200 bg-blue-50" : "border-zinc-200"}`}>
           {matchesLocked ? <Lock className="w-5 h-5 text-blue-600 shrink-0" /> : <LockOpen className="w-5 h-5 text-zinc-500 shrink-0" />}
           <div className="flex-1 text-sm">
             <div className="font-medium">{overview.next_round.name}</div>
             <div className="text-xs text-zinc-600">
-              {matchesLocked ? "Tim zaključan ✓" : lockedForUpcoming ? "Postoji lock ali ne odgovara trenutnom draftu — re-lock da bi se sačuvao" : "Tim NIJE zaključan — pri startu kola koristi se prošli tim (ili 0 ako je prvo kolo)"}
+              {matchesLocked
+                ? "Tim spreman ✓ Važiće za sva naredna kola dok ga ne promeniš."
+                : "Sačuvaj 3 igrača u okviru budžeta — tim će automatski važiti za naredna kola dok ga ne promeniš."}
             </div>
           </div>
-          <button
-            onClick={onLock}
-            disabled={!canLock || pending}
-            className={matchesLocked ? "btn-secondary !py-1.5 !px-3 text-sm" : "btn-primary !py-1.5 !px-3 text-sm"}
-          >
-            {matchesLocked ? "Re-lock" : "Lock"}
-          </button>
         </div>
       ) : (
-        <div className="card text-sm text-zinc-600">Nema predstojećeg kola za zaključavanje.</div>
+        <div className="card text-sm text-zinc-600">Nema predstojećeg kola.</div>
       )}
 
       {/* Pitch view */}
-      <div className="card relative bg-gradient-to-b from-blue-100 via-blue-50 to-white border-blue-200">
+      <div className="card !p-3 sm:!p-4 relative bg-gradient-to-b from-blue-100 via-blue-50 to-white border-blue-200">
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-blue-300/40" />
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-blue-300/40" />
-        <div className="relative grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="relative grid grid-cols-3 gap-1.5 sm:gap-3">
           {slotPlayers.map((p, idx) => (
             <PlayerCard
               key={idx}
@@ -321,20 +306,22 @@ export function TeamEditor({
             </div>
             <div className="text-xs text-zinc-500">
               preostalo <span className="tabular-nums font-medium">{remaining.toFixed(1)}M</span>
-              {bank > 0 && <span className="text-zinc-400"> · ranija banka {bank.toFixed(1)}M</span>}
             </div>
           </div>
         </div>
-        <div className="relative mt-3 flex gap-2">
-          <button onClick={() => persistDraft(false)} disabled={pending || !isComplete || overBudget} className="btn-secondary flex-1">Sačuvaj draft</button>
-          <button onClick={onLock} disabled={pending || !canLock} className="btn-primary flex-1">
-            {matchesLocked ? "Tim već zaključan" : "Lock za naredno kolo"}
+        <div className="relative mt-3">
+          <button
+            onClick={() => persistDraft(false)}
+            disabled={pending || !isComplete || overBudget}
+            className="btn-primary w-full"
+          >
+            {matchesLocked ? "Tim sačuvan ✓ — sačuvaj ponovo da primeniš izmene" : "Sačuvaj tim"}
           </button>
         </div>
       </div>
 
       {/* Picker */}
-      <div className="card">
+      <div className="card !p-3 sm:!p-4">
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-zinc-500 shrink-0" />
@@ -346,19 +333,18 @@ export function TeamEditor({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className="input !py-1 !w-auto text-xs">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className="input !py-1.5 text-xs sm:!w-auto">
               <option value="">Svi timovi</option>
               {teamOptions.map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
             </select>
-            <select value={sortKey} onChange={(e) => setSortKey(e.target.value as any)} className="input !py-1 !w-auto text-xs">
+            <select value={sortKey} onChange={(e) => setSortKey(e.target.value as any)} className="input !py-1.5 text-xs sm:!w-auto">
               <option value="price_desc">Cena ↓</option>
               <option value="price_asc">Cena ↑</option>
               <option value="last_desc">Prošlo kolo ↓</option>
               <option value="total_desc">Ukupno bodova ↓</option>
-              <option value="own_desc">Vlasništvo % ↓</option>
             </select>
             {(search || teamFilter) && (
               <button
@@ -401,8 +387,6 @@ export function TeamEditor({
                       <span><b className="text-zinc-700 tabular-nums">{p.total_points}</b> ukupno</span>
                       <span className="text-zinc-300">·</span>
                       <span><b className="text-zinc-700 tabular-nums">{p.last_round_points ?? 0}</b> prošlo</span>
-                      <span className="text-zinc-300">·</span>
-                      <span><b className="text-zinc-700 tabular-nums">{p.ownership_pct}%</b> timova</span>
                     </div>
                   </button>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -475,10 +459,9 @@ function PlayerDetailModal({ player, onClose }: { player: PlayerForPicker; onClo
           </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none" aria-label="Zatvori">×</button>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center mb-3">
+        <div className="grid grid-cols-2 gap-2 text-center mb-3">
           <div className="card !p-2"><div className="text-[10px] text-zinc-500">Cena</div><div className="font-bold tabular-nums">{player.price.toFixed(1)}</div></div>
           <div className="card !p-2"><div className="text-[10px] text-zinc-500">Ukupno pt</div><div className="font-bold tabular-nums">{player.total_points}</div></div>
-          <div className="card !p-2"><div className="text-[10px] text-zinc-500">Vlasništvo</div><div className="font-bold tabular-nums">{player.ownership_pct}%</div></div>
         </div>
         {player.last_round_points !== null && (
           <div className="card !p-2 mb-3 text-sm">

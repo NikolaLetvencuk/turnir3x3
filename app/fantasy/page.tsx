@@ -120,8 +120,8 @@ export default async function FantasyLandingPage() {
         <ol className="text-sm space-y-1 text-zinc-700 list-decimal list-inside">
           <li>Postavi <b>ime tima</b> (jednom, ne menja se).</li>
           <li>Sastavi tim od 3 igrača u okviru svog <b>budžeta</b>.</li>
-          <li>Klikni <b>Lock</b> za naredno kolo. Možeš da menjaš pre nego što kolo počne.</li>
-          <li>Ako ne lock-uješ, koristi se tim iz prethodnog kola (ili 0 ako je prvo kolo).</li>
+          <li>Klikni <b>Sačuvaj tim</b> — tim važi za sva naredna kola dok ga ne promeniš.</li>
+          <li>Ako ne dirneš tim, isti tim ostaje aktivan u svakom narednom kolu.</li>
         </ol>
       </section>
     </div>

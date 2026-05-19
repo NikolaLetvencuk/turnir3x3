@@ -101,16 +101,19 @@ export function generateBracket(cfg: BracketConfig): BracketMatch[] {
     roundIndex++;
   }
 
-  // Third place playoff between losers of semifinals (round_index = roundIndex - 2)
+  // Third place playoff between losers of semifinals — shares the same round as
+  // the final so both matches appear together in the bracket view.
   if (includeThirdPlace) {
     const sfRoundIdx = roundIndex - 2;
     if (sfRoundIdx >= 0) {
       const sfMatches = matches.filter((m) => m.round_index === sfRoundIdx);
-      if (sfMatches.length === 2) {
+      const finalIdx = roundIndex - 1;
+      const finalName = roundNames[finalIdx];
+      if (sfMatches.length === 2 && finalName) {
         matches.push({
           bracket_position: "TP",
-          round_index: roundIndex - 1, // same as final
-          round_name: "Meč za 3. mesto",
+          round_index: finalIdx,
+          round_name: finalName,
           home: `L_${sfMatches[0].bracket_position}`,
           away: `L_${sfMatches[1].bracket_position}`,
         });
