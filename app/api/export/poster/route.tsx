@@ -374,10 +374,10 @@ function ResultRow({ match }: { match: MatchEntry }) {
               <div
                 style={{
                   display: "flex",
-                  fontSize: 18,
-                  color: C.textFaint,
-                  letterSpacing: 4,
-                  fontWeight: 700,
+                  fontSize: 28,
+                  color: C.text,
+                  fontWeight: 800,
+                  letterSpacing: 2,
                 }}
               >
                 {kickoff.weekday}
@@ -387,9 +387,10 @@ function ResultRow({ match }: { match: MatchEntry }) {
               style={{
                 display: "flex",
                 fontSize: 28,
+                color: C.text,
                 fontWeight: 800,
-                marginTop: 4,
                 letterSpacing: 2,
+                marginTop: 4,
               }}
             >
               {kickoff.date}
@@ -397,11 +398,11 @@ function ResultRow({ match }: { match: MatchEntry }) {
             <div
               style={{
                 display: "flex",
-                fontSize: 44,
-                fontWeight: 900,
-                letterSpacing: -1,
-                marginTop: 6,
-                color: C.accent,
+                fontSize: 28,
+                color: C.text,
+                fontWeight: 800,
+                letterSpacing: 2,
+                marginTop: 4,
               }}
             >
               {kickoff.time}
