@@ -401,7 +401,7 @@ function GroupTable({ group, compact }: { group: GroupBlock; compact: boolean })
       style={{
         display: "flex",
         flexDirection: "column",
-        flex: 1,
+        width: "100%",
         background: C.cardBg,
         border: `1px solid ${C.cardBorder}`,
         borderRadius: 20,
