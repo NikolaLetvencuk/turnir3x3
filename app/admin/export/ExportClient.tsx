@@ -36,9 +36,11 @@ export type ExportMatch = {
   away_team: TeamLite | null;
 };
 
-// Instagram Story / Reel: 1080 × 1920 (9:16)
-const IG_WIDTH = 1080;
-const IG_HEIGHT = 1920;
+type Format = "story" | "post";
+const FORMATS: Record<Format, { width: number; height: number; label: string }> = {
+  story: { width: 1080, height: 1920, label: "Stori 9:16" },
+  post: { width: 1080, height: 1350, label: "Objava 4:5" },
+};
 const PREVIEW_SCALE = 0.22;
 
 type PosterKind = "results" | "standings" | "scorers";
@@ -82,55 +84,76 @@ export function ExportClient({
     });
   }
 
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const standingsRef = useRef<HTMLDivElement>(null);
-  const scorersRef = useRef<HTMLDivElement>(null);
+  // Off-screen capture targets — one ref per (kind × format).
+  const refs: Record<PosterKind, Record<Format, React.RefObject<HTMLDivElement>>> = {
+    results: { story: useRef<HTMLDivElement>(null), post: useRef<HTMLDivElement>(null) },
+    standings: { story: useRef<HTMLDivElement>(null), post: useRef<HTMLDivElement>(null) },
+    scorers: { story: useRef<HTMLDivElement>(null), post: useRef<HTMLDivElement>(null) },
+  };
 
-  async function downloadFrom(
-    el: HTMLDivElement | null,
-    kind: PosterKind,
-    format: "png" | "pdf",
-  ) {
+  async function downloadPng(kind: PosterKind, format: Format) {
+    const el = refs[kind][format].current;
     if (!el) return;
-    const tag = `${kind}-${format}`;
+    const tag = `${kind}-${format}-png`;
     setDownloading(tag);
     try {
-      // Make sure web fonts are ready before capture so layout doesn't shift.
       if (typeof document !== "undefined" && (document as any).fonts?.ready) {
         await (document as any).fonts.ready;
       }
       const html2canvas = (await import("html2canvas")).default;
+      const { width, height } = FORMATS[format];
       const canvas = await html2canvas(el, {
         backgroundColor: null,
-        scale: format === "pdf" ? 1.5 : 1,
+        scale: 1,
         useCORS: true,
         logging: false,
-        width: IG_WIDTH,
-        height: IG_HEIGHT,
-        windowWidth: IG_WIDTH,
-        windowHeight: IG_HEIGHT,
+        width, height,
+        windowWidth: width, windowHeight: height,
       });
-      const baseName = `turnir-kula-${kind}-${round?.name ?? "export"}`
-        .replace(/\s+/g, "-")
-        .toLowerCase();
-      if (format === "png") {
-        const link = document.createElement("a");
-        link.download = `${baseName}.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      } else {
-        const { jsPDF } = await import("jspdf");
-        const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgRatio = canvas.height / canvas.width;
-        const drawW = pageW - 16;
-        const drawH = drawW * imgRatio;
-        const x = (pageW - drawW) / 2;
-        const y = Math.min(8, (pageH - drawH) / 2);
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", x, y, drawW, drawH);
-        pdf.save(`${baseName}.pdf`);
+      const baseName = `turnir-kula-${kind}-${format}-${round?.name ?? "export"}`
+        .replace(/\s+/g, "-").toLowerCase();
+      const link = document.createElement("a");
+      link.download = `${baseName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function downloadPdf(kind: PosterKind) {
+    // PDF uses the story (9:16) variant, fit onto A4 portrait.
+    const el = refs[kind].story.current;
+    if (!el) return;
+    const tag = `${kind}-pdf`;
+    setDownloading(tag);
+    try {
+      if (typeof document !== "undefined" && (document as any).fonts?.ready) {
+        await (document as any).fonts.ready;
       }
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      const { width, height } = FORMATS.story;
+      const canvas = await html2canvas(el, {
+        backgroundColor: null,
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        width, height,
+        windowWidth: width, windowHeight: height,
+      });
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgRatio = canvas.height / canvas.width;
+      const drawW = pageW - 16;
+      const drawH = drawW * imgRatio;
+      const x = (pageW - drawW) / 2;
+      const y = Math.max(0, (pageH - drawH) / 2);
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", x, y, drawW, Math.min(drawH, pageH));
+      pdf.save(`turnir-kula-${kind}-${round?.name ?? "export"}.pdf`.replace(/\s+/g, "-").toLowerCase());
     } finally {
       setDownloading(null);
     }
@@ -141,19 +164,16 @@ export function ExportClient({
     subtitle: round?.stage === "knockout" ? "Eliminacije" : "Grupna faza",
     matches: exportMatches,
   };
-  const standingsProps = { standings };
-  const scorersProps = { scorers };
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">Export</h1>
         <p className="text-sm text-zinc-500">
-          Tri zasebna postera u Instagram Story / Reel formatu (1080×1920, 9:16). Sve renderuje browser.
+          Tri zasebna postera (Rezultati / Tabele / Strelci). Po posteru postoje tri downloada: Stori (1080×1920 / 9:16), Objava (1080×1350 / 4:5), PDF.
         </p>
       </div>
 
-      {/* Filters */}
       <div className="card space-y-3">
         <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Rezultati&quot;</div>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -192,11 +212,7 @@ export function ExportClient({
               {roundMatches.map((m) => (
                 <li key={m.id}>
                   <label className="flex items-center gap-2 text-sm hover:bg-white rounded px-2 py-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedMatchIds.has(m.id)}
-                      onChange={() => toggleMatch(m.id)}
-                    />
+                    <input type="checkbox" checked={selectedMatchIds.has(m.id)} onChange={() => toggleMatch(m.id)} />
                     <span className="flex-1 truncate">{m.home_team?.name ?? "?"} vs {m.away_team?.name ?? "?"}</span>
                     <span className="text-xs text-zinc-500 tabular-nums">
                       {m.status === "finished" || m.status === "live" ? formatScore(m) : "—"}
@@ -209,18 +225,18 @@ export function ExportClient({
         )}
       </div>
 
-      {/* Three poster cards (each with its own preview + buttons) */}
       <div className="grid lg:grid-cols-3 gap-4">
         <PosterCard
           title="Rezultati"
           subtitle={`${exportMatches.length} mečeva`}
           disabled={exportMatches.length === 0}
           downloading={downloading}
-          downloadTag="results"
-          onDownload={(fmt) => downloadFrom(resultsRef.current, "results", fmt)}
+          kind="results"
+          onDownloadPng={(fmt) => downloadPng("results", fmt)}
+          onDownloadPdf={() => downloadPdf("results")}
         >
-          <ScaledPreview>
-            <ResultsPoster {...resultsProps} />
+          <ScaledPreview format="story">
+            <ResultsPoster format="story" {...resultsProps} />
           </ScaledPreview>
         </PosterCard>
 
@@ -229,11 +245,12 @@ export function ExportClient({
           subtitle={`${standings.length} grupa`}
           disabled={standings.length === 0}
           downloading={downloading}
-          downloadTag="standings"
-          onDownload={(fmt) => downloadFrom(standingsRef.current, "standings", fmt)}
+          kind="standings"
+          onDownloadPng={(fmt) => downloadPng("standings", fmt)}
+          onDownloadPdf={() => downloadPdf("standings")}
         >
-          <ScaledPreview>
-            <StandingsPoster {...standingsProps} />
+          <ScaledPreview format="story">
+            <StandingsPoster format="story" standings={standings} />
           </ScaledPreview>
         </PosterCard>
 
@@ -242,30 +259,28 @@ export function ExportClient({
           subtitle={`Top ${Math.min(10, scorers.length)}`}
           disabled={scorers.length === 0}
           downloading={downloading}
-          downloadTag="scorers"
-          onDownload={(fmt) => downloadFrom(scorersRef.current, "scorers", fmt)}
+          kind="scorers"
+          onDownloadPng={(fmt) => downloadPng("scorers", fmt)}
+          onDownloadPdf={() => downloadPdf("scorers")}
         >
-          <ScaledPreview>
-            <ScorersPoster {...scorersProps} />
+          <ScaledPreview format="story">
+            <ScorersPoster format="story" scorers={scorers} />
           </ScaledPreview>
         </PosterCard>
       </div>
 
-      {/* Off-screen capture targets — rendered at native 1080×1920 with no transforms
+      {/* Off-screen capture targets — 3 posters × 2 formats. No CSS transforms in ancestry,
           so html2canvas measures positions correctly. */}
       <div
         aria-hidden="true"
-        style={{
-          position: "fixed",
-          top: 0,
-          left: -100000,
-          width: IG_WIDTH * 3,
-          pointerEvents: "none",
-        }}
+        style={{ position: "fixed", top: 0, left: -100000, pointerEvents: "none" }}
       >
-        <ResultsPoster ref={resultsRef} {...resultsProps} />
-        <StandingsPoster ref={standingsRef} {...standingsProps} />
-        <ScorersPoster ref={scorersRef} {...scorersProps} />
+        <ResultsPoster ref={refs.results.story} format="story" {...resultsProps} />
+        <ResultsPoster ref={refs.results.post} format="post" {...resultsProps} />
+        <StandingsPoster ref={refs.standings.story} format="story" standings={standings} />
+        <StandingsPoster ref={refs.standings.post} format="post" standings={standings} />
+        <ScorersPoster ref={refs.scorers.story} format="story" scorers={scorers} />
+        <ScorersPoster ref={refs.scorers.post} format="post" scorers={scorers} />
       </div>
     </div>
   );
@@ -279,21 +294,32 @@ function formatScore(m: ExportMatch): string {
   return base;
 }
 
+// Single-line auto-shrink: pick a font size that lets `name` fit in `maxWidth` at ~0.55em
+// per character. Bottoms out at `min`, never breaks the word across lines.
+function fitFontSize(name: string, maxWidth: number, base: number, min: number = 22): number {
+  if (!name) return base;
+  const charW = 0.55;
+  const fitted = Math.floor(maxWidth / (name.length * charW));
+  return Math.max(min, Math.min(base, fitted));
+}
+
 function PosterCard({
   title,
   subtitle,
   disabled,
   downloading,
-  downloadTag,
-  onDownload,
+  kind,
+  onDownloadPng,
+  onDownloadPdf,
   children,
 }: {
   title: string;
   subtitle: string;
   disabled: boolean;
   downloading: string | null;
-  downloadTag: PosterKind;
-  onDownload: (fmt: "png" | "pdf") => void;
+  kind: PosterKind;
+  onDownloadPng: (fmt: Format) => void;
+  onDownloadPdf: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -303,32 +329,40 @@ function PosterCard({
         <span className="text-xs text-zinc-500">{subtitle}</span>
       </div>
       {children}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
         <button
-          onClick={() => onDownload("png")}
+          onClick={() => onDownloadPng("story")}
           disabled={disabled || !!downloading}
-          className="btn-primary !py-2 text-xs sm:text-sm"
+          className="btn-primary !py-2 text-xs"
         >
-          {downloading === `${downloadTag}-png` ? "..." : "PNG"}
+          {downloading === `${kind}-story-png` ? "..." : "Stori"}
         </button>
         <button
-          onClick={() => onDownload("pdf")}
+          onClick={() => onDownloadPng("post")}
           disabled={disabled || !!downloading}
-          className="btn-secondary !py-2 text-xs sm:text-sm"
+          className="btn-primary !py-2 text-xs"
         >
-          {downloading === `${downloadTag}-pdf` ? "..." : "PDF"}
+          {downloading === `${kind}-post-png` ? "..." : "Objava"}
+        </button>
+        <button
+          onClick={onDownloadPdf}
+          disabled={disabled || !!downloading}
+          className="btn-secondary !py-2 text-xs"
+        >
+          {downloading === `${kind}-pdf` ? "..." : "PDF"}
         </button>
       </div>
     </div>
   );
 }
 
-function ScaledPreview({ children }: { children: React.ReactNode }) {
+function ScaledPreview({ children, format }: { children: React.ReactNode; format: Format }) {
+  const { width, height } = FORMATS[format];
   return (
     <div
       style={{
-        width: IG_WIDTH * PREVIEW_SCALE,
-        height: IG_HEIGHT * PREVIEW_SCALE,
+        width: width * PREVIEW_SCALE,
+        height: height * PREVIEW_SCALE,
         overflow: "hidden",
       }}
       className="mx-auto rounded-lg border border-zinc-200 shadow-sm"
@@ -337,8 +371,8 @@ function ScaledPreview({ children }: { children: React.ReactNode }) {
         style={{
           transform: `scale(${PREVIEW_SCALE})`,
           transformOrigin: "top left",
-          width: IG_WIDTH,
-          height: IG_HEIGHT,
+          width,
+          height,
         }}
       >
         {children}
@@ -352,24 +386,33 @@ function ScaledPreview({ children }: { children: React.ReactNode }) {
 function PosterFrame({
   heading,
   subheading,
+  format,
   children,
 }: {
   heading: string;
   subheading: string;
+  format: Format;
   children: React.ReactNode;
 }) {
+  const { width, height } = FORMATS[format];
+  const isStory = format === "story";
+  const padding = isStory ? "120px 80px 100px" : "80px 70px 70px";
+  const headingSize = isStory ? 120 : 96;
+  const subheadingSize = isStory ? 28 : 24;
+  const brandMargin = isStory ? 56 : 36;
+
   return (
     <div
       style={{
-        width: IG_WIDTH,
-        height: IG_HEIGHT,
+        width,
+        height,
         background:
           "radial-gradient(circle at 15% 0%, #2563eb 0%, transparent 45%), " +
           "radial-gradient(circle at 90% 100%, #60a5fa 0%, transparent 35%), " +
           "linear-gradient(180deg, #060c24 0%, #0c1a3e 100%)",
         color: "#ffffff",
         fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        padding: "120px 80px 100px",
+        padding,
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
@@ -377,22 +420,22 @@ function PosterFrame({
         overflow: "hidden",
       }}
     >
-      {/* Brand row */}
-      <div style={{ textAlign: "center", marginBottom: 56 }}>
+      <div style={{ textAlign: "center", marginBottom: brandMargin }}>
         <div
           style={{
-            fontSize: 28,
+            fontSize: subheadingSize,
             letterSpacing: 14,
             opacity: 0.75,
             textTransform: "uppercase",
             fontWeight: 600,
+            lineHeight: 1,
           }}
         >
           {subheading}
         </div>
         <div
           style={{
-            fontSize: 120,
+            fontSize: headingSize,
             fontWeight: 900,
             marginTop: 18,
             lineHeight: 1,
@@ -403,7 +446,7 @@ function PosterFrame({
         </div>
         <div
           style={{
-            margin: "32px auto 0",
+            margin: "26px auto 0",
             width: 120,
             height: 6,
             background: "#60a5fa",
@@ -412,27 +455,20 @@ function PosterFrame({
         />
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: 24,
-          minHeight: 0,
-        }}
-      >
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: isStory ? 20 : 14, minHeight: 0 }}>
         {children}
       </div>
 
       <div
         style={{
-          marginTop: 32,
+          marginTop: isStory ? 32 : 18,
           textAlign: "center",
-          fontSize: 26,
+          fontSize: isStory ? 26 : 20,
           opacity: 0.6,
           letterSpacing: 6,
           textTransform: "uppercase",
           fontWeight: 600,
+          lineHeight: 1,
         }}
       >
         TURNIR KULA · @turnir3x3
@@ -443,19 +479,20 @@ function PosterFrame({
 
 /* ============================ RESULTS POSTER ============================ */
 
-const ResultsPoster = forwardRef<HTMLDivElement, { title: string; subtitle: string; matches: ExportMatch[] }>(
-  function ResultsPoster({ title, subtitle, matches }, ref) {
+type ResultsPosterProps = { title: string; subtitle: string; matches: ExportMatch[]; format: Format };
+const ResultsPoster = forwardRef<HTMLDivElement, ResultsPosterProps>(
+  function ResultsPoster({ title, subtitle, matches, format }, ref) {
     return (
       <div ref={ref}>
-        <PosterFrame heading={title.toUpperCase()} subheading={subtitle}>
+        <PosterFrame heading={title.toUpperCase()} subheading={subtitle} format={format}>
           {matches.length === 0 ? (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4, fontSize: 36 }}>
               Nijedan meč nije izabran.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20, justifyContent: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: format === "story" ? 20 : 14, justifyContent: "center" }}>
               {matches.map((m) => (
-                <ResultRow key={m.id} match={m} />
+                <ResultRow key={m.id} match={m} format={format} />
               ))}
             </div>
           )}
@@ -465,46 +502,92 @@ const ResultsPoster = forwardRef<HTMLDivElement, { title: string; subtitle: stri
   },
 );
 
-function ResultRow({ match }: { match: ExportMatch }) {
+function ResultRow({ match, format }: { match: ExportMatch; format: Format }) {
+  const isStory = format === "story";
   const isFinished = match.status === "finished" || match.status === "live";
   const hasPens = match.home_pen != null && match.away_pen != null;
   const homeWin = isFinished && (match.home_score > match.away_score || (hasPens && (match.home_pen ?? 0) > (match.away_pen ?? 0)));
   const awayWin = isFinished && (match.away_score > match.home_score || (hasPens && (match.away_pen ?? 0) > (match.home_pen ?? 0)));
+
+  const crestSize = isStory ? 80 : 64;
+  const scoreSize = isStory ? 64 : 50;
+  const scoreWidth = isStory ? 220 : 180;
+  const baseNameSize = isStory ? 36 : 30;
+  // Per-side available width = (1080 - 160 frame - 72 card - 48 gap - scoreWidth) / 2 − crest − gap
+  const sideAvailable = (1080 - 160 - 72 - 48 - scoreWidth) / 2 - crestSize - 20;
+
+  const homeName = match.home_team?.name ?? "?";
+  const awayName = match.away_team?.name ?? "?";
+  const homeFontSize = fitFontSize(homeName, sideAvailable, baseNameSize);
+  const awayFontSize = fitFontSize(awayName, sideAvailable, baseNameSize);
+
   return (
     <div
       style={{
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.14)",
-        borderRadius: 24,
-        padding: "26px 36px",
+        borderRadius: 22,
+        padding: isStory ? "22px 32px" : "16px 26px",
         display: "flex",
         alignItems: "center",
-        gap: 24,
+        gap: 20,
       }}
     >
-      <TeamSide team={match.home_team} align="left" dim={isFinished && !homeWin && !(match.home_score === match.away_score && !hasPens)} />
-      <div style={{ textAlign: "center", flexShrink: 0, minWidth: 260 }}>
-        <div style={{ fontSize: 68, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: -1 }}>
+      <TeamSide
+        team={match.home_team}
+        align="left"
+        dim={isFinished && !homeWin && !(match.home_score === match.away_score && !hasPens)}
+        crestSize={crestSize}
+        fontSize={homeFontSize}
+      />
+      <div style={{ textAlign: "center", flexShrink: 0, width: scoreWidth }}>
+        <div
+          style={{
+            fontSize: scoreSize,
+            fontWeight: 900,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
+            letterSpacing: -1,
+          }}
+        >
           {isFinished ? `${match.home_score} : ${match.away_score}` : "vs"}
         </div>
         {hasPens && (
-          <div style={{ fontSize: 22, opacity: 0.85, marginTop: 10, fontWeight: 700 }}>
+          <div style={{ fontSize: isStory ? 20 : 17, opacity: 0.85, marginTop: 8, fontWeight: 700, lineHeight: 1 }}>
             penali {match.home_pen}-{match.away_pen}
           </div>
         )}
       </div>
-      <TeamSide team={match.away_team} align="right" dim={isFinished && !awayWin && !(match.home_score === match.away_score && !hasPens)} />
+      <TeamSide
+        team={match.away_team}
+        align="right"
+        dim={isFinished && !awayWin && !(match.home_score === match.away_score && !hasPens)}
+        crestSize={crestSize}
+        fontSize={awayFontSize}
+      />
     </div>
   );
 }
 
-function TeamSide({ team, align, dim }: { team: TeamLite | null; align: "left" | "right"; dim: boolean }) {
+function TeamSide({
+  team,
+  align,
+  dim,
+  crestSize,
+  fontSize,
+}: {
+  team: TeamLite | null;
+  align: "left" | "right";
+  dim: boolean;
+  crestSize: number;
+  fontSize: number;
+}) {
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 22,
+        gap: 18,
         flexDirection: align === "right" ? "row-reverse" : "row",
         opacity: dim ? 0.55 : 1,
         flex: 1,
@@ -512,17 +595,19 @@ function TeamSide({ team, align, dim }: { team: TeamLite | null; align: "left" |
       }}
     >
       <div style={{ flexShrink: 0 }}>
-        <CrestSvg team={team} size={92} />
+        <CrestSvg team={team} size={crestSize} />
       </div>
       <div
         style={{
-          fontSize: 40,
+          fontSize,
           fontWeight: 800,
           textAlign: align,
-          lineHeight: 1.1,
+          lineHeight: 1,
           flex: 1,
           minWidth: 0,
-          wordBreak: "break-word",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
       >
         {team?.name ?? "?"}
@@ -533,12 +618,13 @@ function TeamSide({ team, align, dim }: { team: TeamLite | null; align: "left" |
 
 /* ============================ STANDINGS POSTER ============================ */
 
-const StandingsPoster = forwardRef<HTMLDivElement, { standings: GroupStandings[] }>(
-  function StandingsPoster({ standings }, ref) {
+type StandingsPosterProps = { standings: GroupStandings[]; format: Format };
+const StandingsPoster = forwardRef<HTMLDivElement, StandingsPosterProps>(
+  function StandingsPoster({ standings, format }, ref) {
     const useTwoCols = standings.length >= 3;
     return (
       <div ref={ref}>
-        <PosterFrame heading="TABELE" subheading="Grupna faza">
+        <PosterFrame heading="TABELE" subheading="Grupna faza" format={format}>
           {standings.length === 0 ? (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4, fontSize: 36 }}>
               Nema podataka.
@@ -548,12 +634,12 @@ const StandingsPoster = forwardRef<HTMLDivElement, { standings: GroupStandings[]
               style={{
                 display: "grid",
                 gridTemplateColumns: useTwoCols ? "1fr 1fr" : "1fr",
-                gap: 24,
+                gap: format === "story" ? 24 : 18,
                 alignContent: "start",
               }}
             >
               {standings.map((g) => (
-                <GroupTable key={g.group_id} group={g} compact={useTwoCols} />
+                <GroupTable key={g.group_id} group={g} compact={useTwoCols} format={format} />
               ))}
             </div>
           )}
@@ -563,25 +649,31 @@ const StandingsPoster = forwardRef<HTMLDivElement, { standings: GroupStandings[]
   },
 );
 
-function GroupTable({ group, compact }: { group: GroupStandings; compact: boolean }) {
-  const cellFontSize = compact ? 28 : 38;
-  const headerFontSize = compact ? 18 : 22;
-  const crestSize = compact ? 36 : 52;
+function GroupTable({ group, compact, format }: { group: GroupStandings; compact: boolean; format: Format }) {
+  const isStory = format === "story";
+  const cellFontSize = compact ? (isStory ? 26 : 22) : (isStory ? 34 : 30);
+  const pointsFontSize = cellFontSize + 4;
+  const headerFontSize = compact ? 16 : (isStory ? 20 : 18);
+  const crestSize = compact ? 32 : (isStory ? 46 : 40);
+  const rowHeight = Math.max(crestSize + 12, cellFontSize + 16);
+  const padding = compact ? (isStory ? 24 : 18) : (isStory ? 36 : 28);
+
   return (
     <div
       style={{
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.14)",
-        borderRadius: 24,
-        padding: compact ? 28 : 40,
+        borderRadius: 22,
+        padding,
       }}
     >
       <div
         style={{
-          fontSize: compact ? 36 : 52,
+          fontSize: compact ? (isStory ? 32 : 28) : (isStory ? 46 : 38),
           fontWeight: 900,
-          marginBottom: 18,
+          marginBottom: 16,
           letterSpacing: -1,
+          lineHeight: 1,
         }}
       >
         {group.group_name}
@@ -589,11 +681,11 @@ function GroupTable({ group, compact }: { group: GroupStandings; compact: boolea
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ opacity: 0.55, fontSize: headerFontSize, textTransform: "uppercase", letterSpacing: 2 }}>
-            <th style={{ textAlign: "left", padding: "4px 4px", width: 50 }}>#</th>
+            <th style={{ textAlign: "left", padding: "4px 4px", width: 44 }}>#</th>
             <th style={{ textAlign: "left", padding: "4px 8px" }}>Tim</th>
-            <th style={{ textAlign: "right", padding: "4px 8px", width: 70 }}>O</th>
-            <th style={{ textAlign: "right", padding: "4px 8px", width: 90 }}>GR</th>
-            <th style={{ textAlign: "right", padding: "4px 8px", width: 100 }}>Bod</th>
+            <th style={{ textAlign: "right", padding: "4px 8px", width: 60 }}>O</th>
+            <th style={{ textAlign: "right", padding: "4px 8px", width: 80 }}>GR</th>
+            <th style={{ textAlign: "right", padding: "4px 8px", width: 80 }}>Bod</th>
           </tr>
         </thead>
         <tbody>
@@ -602,23 +694,46 @@ function GroupTable({ group, compact }: { group: GroupStandings; compact: boolea
             return (
               <tr
                 key={r.team_id}
-                style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.08)" }}
+                style={{
+                  borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.08)",
+                  height: rowHeight,
+                }}
               >
-                <td style={{ padding: "16px 4px", fontSize: cellFontSize, opacity: top2 ? 1 : 0.55, fontWeight: 800 }}>
+                <td style={{ padding: "0 4px", fontSize: cellFontSize, opacity: top2 ? 1 : 0.55, fontWeight: 800, lineHeight: 1, verticalAlign: "middle" }}>
                   {i + 1}
                 </td>
-                <td style={{ padding: "16px 8px", fontSize: cellFontSize }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <CrestSvg
-                      team={{ name: r.team_name, short_name: r.short_name, primary_color: r.primary_color, secondary_color: r.secondary_color }}
-                      size={crestSize}
-                    />
-                    <span style={{ fontWeight: 700 }}>{r.team_name}</span>
+                <td style={{ padding: "0 8px", verticalAlign: "middle" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+                      <CrestSvg
+                        team={{ name: r.team_name, short_name: r.short_name, primary_color: r.primary_color, secondary_color: r.secondary_color }}
+                        size={crestSize}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        fontSize: cellFontSize,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        minWidth: 0,
+                      }}
+                    >
+                      {r.team_name}
+                    </div>
                   </div>
                 </td>
-                <td style={{ padding: "16px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75 }}>{r.played}</td>
-                <td style={{ padding: "16px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75 }}>{formatGD(r.goal_diff)}</td>
-                <td style={{ padding: "16px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize + 4, fontWeight: 900 }}>{r.points}</td>
+                <td style={{ padding: "0 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75, lineHeight: 1, verticalAlign: "middle" }}>
+                  {r.played}
+                </td>
+                <td style={{ padding: "0 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75, lineHeight: 1, verticalAlign: "middle" }}>
+                  {formatGD(r.goal_diff)}
+                </td>
+                <td style={{ padding: "0 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: pointsFontSize, fontWeight: 900, lineHeight: 1, verticalAlign: "middle" }}>
+                  {r.points}
+                </td>
               </tr>
             );
           })}
@@ -635,19 +750,22 @@ function formatGD(gd: number): string {
 
 /* ============================ SCORERS POSTER ============================ */
 
-const ScorersPoster = forwardRef<HTMLDivElement, { scorers: TopScorerRow[] }>(
-  function ScorersPoster({ scorers }, ref) {
+type ScorersPosterProps = { scorers: TopScorerRow[]; format: Format };
+const ScorersPoster = forwardRef<HTMLDivElement, ScorersPosterProps>(
+  function ScorersPoster({ scorers, format }, ref) {
+    const isStory = format === "story";
+    const max = isStory ? 10 : 8;
     return (
       <div ref={ref}>
-        <PosterFrame heading="STRELCI" subheading="Najbolji">
+        <PosterFrame heading="STRELCI" subheading="Najbolji" format={format}>
           {scorers.length === 0 ? (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4, fontSize: 36 }}>
               Još nema strelaca.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {scorers.slice(0, 10).map((s, i) => (
-                <ScorerRow key={s.player_id} scorer={s} rank={i + 1} />
+            <div style={{ display: "flex", flexDirection: "column", gap: isStory ? 14 : 10 }}>
+              {scorers.slice(0, max).map((s, i) => (
+                <ScorerRow key={s.player_id} scorer={s} rank={i + 1} format={format} />
               ))}
             </div>
           )}
@@ -657,36 +775,46 @@ const ScorersPoster = forwardRef<HTMLDivElement, { scorers: TopScorerRow[] }>(
   },
 );
 
-function ScorerRow({ scorer, rank }: { scorer: TopScorerRow; rank: number }) {
+function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: number; format: Format }) {
+  const isStory = format === "story";
   const top3 = rank <= 3;
   const rankBg = rank === 1 ? "#facc15" : rank === 2 ? "#cbd5e1" : rank === 3 ? "#f59e0b" : "rgba(255,255,255,0.12)";
   const rankColor = rank <= 3 ? "#0c1432" : "#ffffff";
+
+  const rankBoxSize = isStory ? 72 : 60;
+  const rankFontSize = isStory ? 34 : 28;
+  const nameFontSize = isStory ? 38 : 32;
+  const teamFontSize = isStory ? 22 : 19;
+  const goalsFontSize = isStory ? 58 : 48;
+
+  // Width for name area: total - sidePadding*2 - card padding*2 - rank chip - goals area - gaps
+  const nameAvailable = 1080 - (isStory ? 160 : 140) - (isStory ? 56 : 48) - rankBoxSize - 140 - 56;
+  const fittedNameFs = fitFontSize(scorer.player_name, nameAvailable, nameFontSize, 22);
+
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 28,
+        gap: isStory ? 24 : 18,
         background: top3 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
         border: top3 ? "2px solid rgba(250,204,21,0.6)" : "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 22,
-        padding: "20px 28px",
+        borderRadius: 20,
+        padding: isStory ? "16px 24px" : "12px 20px",
       }}
     >
       <div
         style={{
           background: rankBg,
           color: rankColor,
-          width: 80,
-          height: 80,
-          borderRadius: 16,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: 900,
-          fontSize: 36,
+          width: rankBoxSize,
+          height: rankBoxSize,
+          borderRadius: 14,
           flexShrink: 0,
-          lineHeight: 1,
+          textAlign: "center",
+          lineHeight: `${rankBoxSize}px`,
+          fontWeight: 900,
+          fontSize: rankFontSize,
         }}
       >
         {rank}
@@ -694,19 +822,45 @@ function ScorerRow({ scorer, rank }: { scorer: TopScorerRow; rank: number }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 42,
+            fontSize: fittedNameFs,
             fontWeight: 800,
             lineHeight: 1.1,
-            wordBreak: "break-word",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {scorer.player_name}
         </div>
-        <div style={{ fontSize: 26, opacity: 0.65, marginTop: 6 }}>{scorer.team_name ?? "—"}</div>
+        <div
+          style={{
+            fontSize: teamFontSize,
+            opacity: 0.65,
+            marginTop: 6,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {scorer.team_name ?? "—"}
+        </div>
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div style={{ fontSize: 64, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{scorer.goals}</div>
-        <div style={{ fontSize: 18, opacity: 0.6, marginTop: 6, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600 }}>
+        <div style={{ fontSize: goalsFontSize, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+          {scorer.goals}
+        </div>
+        <div
+          style={{
+            fontSize: isStory ? 16 : 14,
+            opacity: 0.6,
+            marginTop: 6,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            fontWeight: 600,
+            lineHeight: 1,
+          }}
+        >
           golova
         </div>
       </div>
