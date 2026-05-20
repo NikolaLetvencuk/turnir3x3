@@ -428,7 +428,8 @@ function PosterFrame({
             opacity: 0.75,
             textTransform: "uppercase",
             fontWeight: 600,
-            lineHeight: 1,
+            lineHeight: 1.3,
+            paddingTop: 4,
           }}
         >
           {subheading}
@@ -437,9 +438,10 @@ function PosterFrame({
           style={{
             fontSize: headingSize,
             fontWeight: 900,
-            marginTop: 18,
-            lineHeight: 1,
+            marginTop: 14,
+            lineHeight: 1.15,
             letterSpacing: -3,
+            paddingTop: 6,
           }}
         >
           {heading}
@@ -468,7 +470,9 @@ function PosterFrame({
           letterSpacing: 6,
           textTransform: "uppercase",
           fontWeight: 600,
-          lineHeight: 1,
+          lineHeight: 1.3,
+          paddingTop: 4,
+          paddingBottom: 4,
         }}
       >
         TURNIR KULA · @turnir3x3
@@ -546,14 +550,15 @@ function ResultRow({ match, format }: { match: ExportMatch; format: Format }) {
             fontSize: scoreSize,
             fontWeight: 900,
             fontVariantNumeric: "tabular-nums",
-            lineHeight: 1,
+            lineHeight: 1.2,
             letterSpacing: -1,
+            paddingTop: 4,
           }}
         >
           {isFinished ? `${match.home_score} : ${match.away_score}` : "vs"}
         </div>
         {hasPens && (
-          <div style={{ fontSize: isStory ? 20 : 17, opacity: 0.85, marginTop: 8, fontWeight: 700, lineHeight: 1 }}>
+          <div style={{ fontSize: isStory ? 20 : 17, opacity: 0.85, marginTop: 8, fontWeight: 700, lineHeight: 1.3 }}>
             penali {match.home_pen}-{match.away_pen}
           </div>
         )}
@@ -602,7 +607,9 @@ function TeamSide({
           fontSize,
           fontWeight: 800,
           textAlign: align,
-          lineHeight: 1,
+          lineHeight: 1.25,
+          paddingTop: 4,
+          paddingBottom: 4,
           flex: 1,
           minWidth: 0,
           whiteSpace: "nowrap",
@@ -655,7 +662,7 @@ function GroupTable({ group, compact, format }: { group: GroupStandings; compact
   const pointsFontSize = cellFontSize + 4;
   const headerFontSize = compact ? 16 : (isStory ? 20 : 18);
   const crestSize = compact ? 32 : (isStory ? 46 : 40);
-  const rowHeight = Math.max(crestSize + 12, cellFontSize + 16);
+  const rowHeight = Math.max(crestSize + 28, cellFontSize * 1.4 + 20);
   const padding = compact ? (isStory ? 24 : 18) : (isStory ? 36 : 28);
 
   return (
@@ -673,7 +680,8 @@ function GroupTable({ group, compact, format }: { group: GroupStandings; compact
           fontWeight: 900,
           marginBottom: 16,
           letterSpacing: -1,
-          lineHeight: 1,
+          lineHeight: 1.2,
+          paddingTop: 4,
         }}
       >
         {group.group_name}
@@ -699,10 +707,10 @@ function GroupTable({ group, compact, format }: { group: GroupStandings; compact
                   height: rowHeight,
                 }}
               >
-                <td style={{ padding: "0 4px", fontSize: cellFontSize, opacity: top2 ? 1 : 0.55, fontWeight: 800, lineHeight: 1, verticalAlign: "middle" }}>
+                <td style={{ padding: "10px 4px", fontSize: cellFontSize, opacity: top2 ? 1 : 0.55, fontWeight: 800, lineHeight: 1.2, verticalAlign: "middle" }}>
                   {i + 1}
                 </td>
-                <td style={{ padding: "0 8px", verticalAlign: "middle" }}>
+                <td style={{ padding: "10px 8px", verticalAlign: "middle" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
                       <CrestSvg
@@ -714,24 +722,26 @@ function GroupTable({ group, compact, format }: { group: GroupStandings; compact
                       style={{
                         fontSize: cellFontSize,
                         fontWeight: 700,
-                        lineHeight: 1,
+                        lineHeight: 1.25,
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         minWidth: 0,
+                        paddingTop: 4,
+                        paddingBottom: 4,
                       }}
                     >
                       {r.team_name}
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: "0 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75, lineHeight: 1, verticalAlign: "middle" }}>
+                <td style={{ padding: "10px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75, lineHeight: 1.2, verticalAlign: "middle" }}>
                   {r.played}
                 </td>
-                <td style={{ padding: "0 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75, lineHeight: 1, verticalAlign: "middle" }}>
+                <td style={{ padding: "10px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: cellFontSize, opacity: 0.75, lineHeight: 1.2, verticalAlign: "middle" }}>
                   {formatGD(r.goal_diff)}
                 </td>
-                <td style={{ padding: "0 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: pointsFontSize, fontWeight: 900, lineHeight: 1, verticalAlign: "middle" }}>
+                <td style={{ padding: "10px 8px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: pointsFontSize, fontWeight: 900, lineHeight: 1.2, verticalAlign: "middle" }}>
                   {r.points}
                 </td>
               </tr>
@@ -811,10 +821,13 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
           height: rankBoxSize,
           borderRadius: 14,
           flexShrink: 0,
-          textAlign: "center",
-          lineHeight: `${rankBoxSize}px`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           fontWeight: 900,
           fontSize: rankFontSize,
+          lineHeight: 1.2,
+          paddingBottom: 2,
         }}
       >
         {rank}
@@ -824,7 +837,9 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
           style={{
             fontSize: fittedNameFs,
             fontWeight: 800,
-            lineHeight: 1.1,
+            lineHeight: 1.25,
+            paddingTop: 4,
+            paddingBottom: 4,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -836,8 +851,10 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
           style={{
             fontSize: teamFontSize,
             opacity: 0.65,
-            marginTop: 6,
-            lineHeight: 1,
+            marginTop: 4,
+            lineHeight: 1.3,
+            paddingTop: 2,
+            paddingBottom: 2,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -847,18 +864,28 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
         </div>
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div style={{ fontSize: goalsFontSize, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+        <div
+          style={{
+            fontSize: goalsFontSize,
+            fontWeight: 900,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1.2,
+            paddingTop: 4,
+          }}
+        >
           {scorer.goals}
         </div>
         <div
           style={{
             fontSize: isStory ? 16 : 14,
             opacity: 0.6,
-            marginTop: 6,
+            marginTop: 4,
             letterSpacing: 2,
             textTransform: "uppercase",
             fontWeight: 600,
-            lineHeight: 1,
+            lineHeight: 1.3,
+            paddingTop: 2,
+            paddingBottom: 2,
           }}
         >
           golova
