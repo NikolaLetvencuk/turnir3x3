@@ -369,10 +369,19 @@ function ResultRow({ match }: { match: MatchEntry }) {
             )}
           </>
         ) : kickoff ? (
-          <>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
             <div
               style={{
                 display: "flex",
+                width: "100%",
+                justifyContent: "center",
                 fontSize: 24,
                 color: C.text,
                 fontWeight: 800,
@@ -384,6 +393,8 @@ function ResultRow({ match }: { match: MatchEntry }) {
             <div
               style={{
                 display: "flex",
+                width: "100%",
+                justifyContent: "center",
                 fontSize: 44,
                 color: C.text,
                 fontWeight: 900,
@@ -393,7 +404,7 @@ function ResultRow({ match }: { match: MatchEntry }) {
             >
               {kickoff.time}
             </div>
-          </>
+          </div>
         ) : (
           <div style={{ display: "flex", fontSize: 50, fontWeight: 900, color: C.textDim }}>vs</div>
         )}
