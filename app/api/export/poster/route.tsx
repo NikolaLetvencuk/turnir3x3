@@ -235,27 +235,40 @@ function luminance(hex: string): number {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
-function formatKickoffShort(iso: string | null | undefined): { date: string; time: string } | null {
+const SR_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAJ", "JUN", "JUL", "AVG", "SEP", "OKT", "NOV", "DEC"];
+const SR_WEEKDAYS = ["NED", "PON", "UTO", "SRE", "ČET", "PET", "SUB"];
+const EN_WEEKDAY_TO_IDX: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
+function formatKickoffShort(
+  iso: string | null | undefined,
+): { weekday: string; date: string; time: string } | null {
   if (!iso) return null;
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return null;
-    const fmt = new Intl.DateTimeFormat("en-GB", {
+    const fmt = new Intl.DateTimeFormat("en-US", {
       timeZone: "Europe/Belgrade",
-      day: "2-digit",
-      month: "2-digit",
+      weekday: "short",
+      day: "numeric",
+      month: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     });
     const parts = fmt.formatToParts(d);
     const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    const enWeekday = get("weekday");
+    const monthNum = parseInt(get("month"), 10);
     const day = get("day");
-    const month = get("month");
     const hour = get("hour");
     const minute = get("minute");
     if (!day || !hour) return null;
-    return { date: `${day}.${month}.`, time: `${hour}:${minute}` };
+    const weekdayIdx = EN_WEEKDAY_TO_IDX[enWeekday];
+    const weekday = weekdayIdx != null ? SR_WEEKDAYS[weekdayIdx] : "";
+    const month = SR_MONTHS[(monthNum - 1) % 12] ?? "";
+    return { weekday, date: `${day}. ${month}`, time: `${hour}:${minute}` };
   } catch {
     return null;
   }
@@ -357,10 +370,40 @@ function ResultRow({ match }: { match: MatchEntry }) {
           </>
         ) : kickoff ? (
           <>
-            <div style={{ display: "flex", fontSize: 24, color: C.textDim, fontWeight: 700, letterSpacing: 1 }}>
+            {kickoff.weekday && (
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 18,
+                  color: C.textFaint,
+                  letterSpacing: 4,
+                  fontWeight: 700,
+                }}
+              >
+                {kickoff.weekday}
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                fontSize: 28,
+                fontWeight: 800,
+                marginTop: 4,
+                letterSpacing: 2,
+              }}
+            >
               {kickoff.date}
             </div>
-            <div style={{ display: "flex", fontSize: 46, fontWeight: 900, letterSpacing: -1, marginTop: 2 }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 44,
+                fontWeight: 900,
+                letterSpacing: -1,
+                marginTop: 6,
+                color: C.accent,
+              }}
+            >
               {kickoff.time}
             </div>
           </>
