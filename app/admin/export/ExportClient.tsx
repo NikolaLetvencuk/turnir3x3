@@ -97,6 +97,7 @@ export function ExportClient({
                 away_score: m.away_score,
                 home_pen: m.home_pen,
                 away_pen: m.away_pen,
+                kickoff_at: m.kickoff_at,
                 home_team: m.home_team,
                 away_team: m.away_team,
               })),

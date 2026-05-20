@@ -17,6 +17,7 @@ type MatchEntry = {
   away_score: number;
   home_pen?: number | null;
   away_pen?: number | null;
+  kickoff_at?: string | null;
   home_team: Team | null;
   away_team: Team | null;
 };
@@ -234,6 +235,32 @@ function luminance(hex: string): number {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
+function formatKickoffShort(iso: string | null | undefined): { date: string; time: string } | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    const fmt = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Belgrade",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const parts = fmt.formatToParts(d);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    const day = get("day");
+    const month = get("month");
+    const hour = get("hour");
+    const minute = get("minute");
+    if (!day || !hour) return null;
+    return { date: `${day}.${month}.`, time: `${hour}:${minute}` };
+  } catch {
+    return null;
+  }
+}
+
 function fitFontSize(name: string, maxWidth: number, base: number, min: number = 22): number {
   if (!name) return base;
   const charW = 0.56;
@@ -285,11 +312,12 @@ function ResultRow({ match }: { match: MatchEntry }) {
     (match.away_score > match.home_score ||
       (hasPens && (match.away_pen ?? 0) > (match.home_pen ?? 0)));
 
-  const sideAvailable = 290;
+  const sideAvailable = 280;
   const homeName = match.home_team?.name ?? "?";
   const awayName = match.away_team?.name ?? "?";
   const homeFs = fitFontSize(homeName, sideAvailable, 32);
   const awayFs = fitFontSize(awayName, sideAvailable, 32);
+  const kickoff = !isFinished ? formatKickoffShort(match.kickoff_at) : null;
 
   return (
     <div
@@ -315,14 +343,29 @@ function ResultRow({ match }: { match: MatchEntry }) {
           {homeName}
         </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 200 }}>
-        <div style={{ display: "flex", fontSize: 58, fontWeight: 900, letterSpacing: -1 }}>
-          {isFinished ? `${match.home_score} : ${match.away_score}` : "vs"}
-        </div>
-        {hasPens && (
-          <div style={{ display: "flex", fontSize: 20, color: C.textDim, marginTop: 6, fontWeight: 700 }}>
-            {`penali ${match.home_pen}-${match.away_pen}`}
-          </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 220 }}>
+        {isFinished ? (
+          <>
+            <div style={{ display: "flex", fontSize: 58, fontWeight: 900, letterSpacing: -1 }}>
+              {`${match.home_score} : ${match.away_score}`}
+            </div>
+            {hasPens && (
+              <div style={{ display: "flex", fontSize: 20, color: C.textDim, marginTop: 6, fontWeight: 700 }}>
+                {`penali ${match.home_pen}-${match.away_pen}`}
+              </div>
+            )}
+          </>
+        ) : kickoff ? (
+          <>
+            <div style={{ display: "flex", fontSize: 24, color: C.textDim, fontWeight: 700, letterSpacing: 1 }}>
+              {kickoff.date}
+            </div>
+            <div style={{ display: "flex", fontSize: 46, fontWeight: 900, letterSpacing: -1, marginTop: 2 }}>
+              {kickoff.time}
+            </div>
+          </>
+        ) : (
+          <div style={{ display: "flex", fontSize: 50, fontWeight: 900, color: C.textDim }}>vs</div>
         )}
       </div>
       <div
