@@ -136,9 +136,10 @@ export function ExportClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) {
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!response.ok || !contentType.startsWith("image/")) {
         const txt = await response.text();
-        alert("Greška pri generisanju: " + txt.slice(0, 200));
+        alert(`Greška pri generisanju (${response.status}, ${contentType}):\n${txt.slice(0, 400)}`);
         return;
       }
       const blob = await response.blob();
