@@ -373,7 +373,7 @@ function ResultRow({ match }: { match: MatchEntry }) {
             <div
               style={{
                 display: "flex",
-                fontSize: 28,
+                fontSize: 24,
                 color: C.text,
                 fontWeight: 800,
                 letterSpacing: 2,
@@ -384,11 +384,11 @@ function ResultRow({ match }: { match: MatchEntry }) {
             <div
               style={{
                 display: "flex",
-                fontSize: 28,
+                fontSize: 44,
                 color: C.text,
-                fontWeight: 800,
-                letterSpacing: 2,
-                marginTop: 18,
+                fontWeight: 900,
+                letterSpacing: 1,
+                marginTop: 6,
               }}
             >
               {kickoff.time}
