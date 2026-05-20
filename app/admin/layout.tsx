@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ["/admin/matches", "Mečevi"],
     ["/admin/bracket", "Eliminacije"],
     ["/admin/fantasy", "Fantasy"],
+    ["/admin/export", "Export"],
     ["/admin/danger-zone", "⚠ Reset"],
   ] as const;
 
