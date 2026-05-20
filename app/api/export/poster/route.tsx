@@ -370,19 +370,6 @@ function ResultRow({ match }: { match: MatchEntry }) {
           </>
         ) : kickoff ? (
           <>
-            {kickoff.weekday && (
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 28,
-                  color: C.text,
-                  fontWeight: 800,
-                  letterSpacing: 2,
-                }}
-              >
-                {kickoff.weekday}
-              </div>
-            )}
             <div
               style={{
                 display: "flex",
@@ -390,7 +377,6 @@ function ResultRow({ match }: { match: MatchEntry }) {
                 color: C.text,
                 fontWeight: 800,
                 letterSpacing: 2,
-                marginTop: 4,
               }}
             >
               {kickoff.date}
@@ -402,7 +388,7 @@ function ResultRow({ match }: { match: MatchEntry }) {
                 color: C.text,
                 fontWeight: 800,
                 letterSpacing: 2,
-                marginTop: 4,
+                marginTop: 18,
               }}
             >
               {kickoff.time}
