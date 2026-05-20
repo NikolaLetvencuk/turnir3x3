@@ -791,14 +791,13 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
   const rankBg = rank === 1 ? "#facc15" : rank === 2 ? "#cbd5e1" : rank === 3 ? "#f59e0b" : "rgba(255,255,255,0.12)";
   const rankColor = rank <= 3 ? "#0c1432" : "#ffffff";
 
-  const rankBoxSize = isStory ? 72 : 60;
-  const rankFontSize = isStory ? 34 : 28;
-  const nameFontSize = isStory ? 38 : 32;
-  const teamFontSize = isStory ? 22 : 19;
-  const goalsFontSize = isStory ? 58 : 48;
+  const rankBoxSize = isStory ? 64 : 56;
+  const rankFontSize = isStory ? 30 : 26;
+  const nameFontSize = isStory ? 34 : 30;
+  const teamFontSize = isStory ? 21 : 18;
+  const goalsFontSize = isStory ? 54 : 46;
 
-  // Width for name area: total - sidePadding*2 - card padding*2 - rank chip - goals area - gaps
-  const nameAvailable = 1080 - (isStory ? 160 : 140) - (isStory ? 56 : 48) - rankBoxSize - 140 - 56;
+  const nameAvailable = 1080 - (isStory ? 160 : 140) - (isStory ? 48 : 40) - rankBoxSize - 140 - 48;
   const fittedNameFs = fitFontSize(scorer.player_name, nameAvailable, nameFontSize, 22);
 
   return (
@@ -806,32 +805,17 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
       style={{
         display: "flex",
         alignItems: "center",
-        gap: isStory ? 24 : 18,
+        gap: isStory ? 22 : 16,
         background: top3 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
         border: top3 ? "2px solid rgba(250,204,21,0.6)" : "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 20,
-        padding: isStory ? "16px 24px" : "12px 20px",
+        borderRadius: 18,
+        padding: isStory ? "12px 22px" : "10px 18px",
       }}
     >
-      <div
-        style={{
-          background: rankBg,
-          color: rankColor,
-          width: rankBoxSize,
-          height: rankBoxSize,
-          borderRadius: 14,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: 900,
-          fontSize: rankFontSize,
-          lineHeight: 1.2,
-          paddingBottom: 2,
-        }}
-      >
-        {rank}
-      </div>
+      {/* SVG rank chip — html2canvas renders text via dominantBaseline so the digit
+          centers vertically deterministically (flex + line-height tricks tend to drift
+          by 2-4 px in the canvas output). */}
+      <RankChipSvg size={rankBoxSize} bg={rankBg} fg={rankColor} value={rank} fontSize={rankFontSize} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -850,8 +834,8 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
         <div
           style={{
             fontSize: teamFontSize,
-            opacity: 0.65,
-            marginTop: 4,
+            opacity: 0.82,
+            marginTop: 2,
             lineHeight: 1.3,
             paddingTop: 2,
             paddingBottom: 2,
@@ -877,9 +861,9 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
         </div>
         <div
           style={{
-            fontSize: isStory ? 16 : 14,
-            opacity: 0.6,
-            marginTop: 4,
+            fontSize: isStory ? 15 : 13,
+            opacity: 0.65,
+            marginTop: 2,
             letterSpacing: 2,
             textTransform: "uppercase",
             fontWeight: 600,
@@ -892,6 +876,44 @@ function ScorerRow({ scorer, rank, format }: { scorer: TopScorerRow; rank: numbe
         </div>
       </div>
     </div>
+  );
+}
+
+function RankChipSvg({
+  size,
+  bg,
+  fg,
+  value,
+  fontSize,
+}: {
+  size: number;
+  bg: string;
+  fg: string;
+  value: number;
+  fontSize: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      style={{ flexShrink: 0, display: "block" }}
+      aria-hidden
+    >
+      <rect width={size} height={size} rx={14} ry={14} fill={bg} />
+      <text
+        x={size / 2}
+        y={size / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={fontSize}
+        fontWeight={900}
+        fill={fg}
+        fontFamily="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif"
+      >
+        {value}
+      </text>
+    </svg>
   );
 }
 
