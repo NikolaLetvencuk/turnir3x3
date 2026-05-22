@@ -36,12 +36,9 @@ export type ExportMatch = {
 };
 
 type Format = "story" | "post";
-
 type PosterKind = "results" | "standings" | "scorers";
+type ResultsMode = "round" | "day";
 
-// Approximate row capacity per format — used to warn the admin if their
-// selection won't fit in a single image. Story is 1080×1920 (tall), post is
-// 1080×1350 (shorter).
 const RESULTS_MAX = { story: 8, post: 5 } as const;
 const STANDINGS_MAX = { story: 3, post: 2 } as const;
 
@@ -56,9 +53,25 @@ export function ExportClient({
   standings: GroupStandings[];
   scorers: TopScorerRow[];
 }) {
+  const roundsById = useMemo(() => new Map(rounds.map((r) => [r.id, r])), [rounds]);
+
+  // Distinct dates across ALL matches (not just one round)
+  const allDates = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of matches) {
+      const key = belgradeDateKey(m.kickoff_at);
+      if (key) set.add(key);
+    }
+    return Array.from(set).sort();
+  }, [matches]);
+
   const initialRoundId =
     rounds.find((r) => r.status === "finished")?.id ?? rounds[0]?.id ?? "";
+  const initialDay = allDates[0] ?? "";
+
+  const [resultsMode, setResultsMode] = useState<ResultsMode>("round");
   const [selectedRoundId, setSelectedRoundId] = useState<string>(initialRoundId);
+  const [selectedDay, setSelectedDay] = useState<string>(initialDay);
   const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(
     () => new Set(matches.filter((m) => m.round_id === initialRoundId).map((m) => m.id)),
   );
@@ -69,34 +82,89 @@ export function ExportClient({
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const round = rounds.find((r) => r.id === selectedRoundId) ?? null;
-  const roundMatches = useMemo(
-    () => matches.filter((m) => m.round_id === selectedRoundId),
-    [matches, selectedRoundId],
-  );
-  const exportMatches = roundMatches.filter((m) => selectedMatchIds.has(m.id));
+
+  // Pool of matches the user is currently filtering — depends on mode.
+  const candidateMatches = useMemo(() => {
+    if (resultsMode === "round") {
+      return matches.filter((m) => m.round_id === selectedRoundId);
+    }
+    return matches.filter((m) => belgradeDateKey(m.kickoff_at) === selectedDay);
+  }, [matches, resultsMode, selectedRoundId, selectedDay]);
+
+  // Sorted: in day mode by kickoff time; in round mode by kickoff then bracket position
+  const sortedCandidates = useMemo(() => {
+    return [...candidateMatches].sort((a, b) => {
+      const ak = a.kickoff_at ?? "";
+      const bk = b.kickoff_at ?? "";
+      if (ak && bk) return ak.localeCompare(bk);
+      if (ak) return -1;
+      if (bk) return 1;
+      return 0;
+    });
+  }, [candidateMatches]);
+
+  const exportMatches = sortedCandidates.filter((m) => selectedMatchIds.has(m.id));
   const exportStandings = standings.filter((g) => selectedGroupIds.has(g.group_id));
 
-  // Group matches by Belgrade-local date so admin can quickly slice by day.
-  const matchesByDate = useMemo(() => {
+  // Round-mode date pills
+  const roundMatchesByDate = useMemo(() => {
     const map = new Map<string, ExportMatch[]>();
-    const noDateKey = "__no_date__";
-    for (const m of roundMatches) {
-      const key = belgradeDateKey(m.kickoff_at) ?? noDateKey;
+    if (resultsMode !== "round") return map;
+    for (const m of candidateMatches) {
+      const key = belgradeDateKey(m.kickoff_at) ?? "__no_date__";
       const arr = map.get(key) ?? [];
       arr.push(m);
       map.set(key, arr);
     }
     return map;
-  }, [roundMatches]);
+  }, [resultsMode, candidateMatches]);
 
-  const sortedDateKeys = useMemo(
-    () => Array.from(matchesByDate.keys()).sort((a, b) => (a === "__no_date__" ? 1 : b === "__no_date__" ? -1 : a.localeCompare(b))),
-    [matchesByDate],
+  const sortedRoundDateKeys = useMemo(
+    () =>
+      Array.from(roundMatchesByDate.keys()).sort((a, b) =>
+        a === "__no_date__" ? 1 : b === "__no_date__" ? -1 : a.localeCompare(b),
+      ),
+    [roundMatchesByDate],
   );
 
+  // Day-mode: group candidates by round (so user sees from which round each match comes)
+  const dayMatchesByRound = useMemo(() => {
+    const map = new Map<string, ExportMatch[]>();
+    if (resultsMode !== "day") return map;
+    for (const m of candidateMatches) {
+      const arr = map.get(m.round_id) ?? [];
+      arr.push(m);
+      map.set(m.round_id, arr);
+    }
+    return map;
+  }, [resultsMode, candidateMatches]);
+
+  const sortedDayRoundIds = useMemo(() => {
+    return Array.from(dayMatchesByRound.keys()).sort((a, b) => {
+      const ra = roundsById.get(a)?.display_order ?? 999;
+      const rb = roundsById.get(b)?.display_order ?? 999;
+      return ra - rb;
+    });
+  }, [dayMatchesByRound, roundsById]);
+
+  // Mode change → reset selection to all candidates
+  function changeMode(mode: ResultsMode) {
+    setResultsMode(mode);
+    if (mode === "round") {
+      setSelectedMatchIds(new Set(matches.filter((m) => m.round_id === selectedRoundId).map((m) => m.id)));
+    } else {
+      setSelectedMatchIds(
+        new Set(matches.filter((m) => belgradeDateKey(m.kickoff_at) === selectedDay).map((m) => m.id)),
+      );
+    }
+  }
   function changeRound(id: string) {
     setSelectedRoundId(id);
     setSelectedMatchIds(new Set(matches.filter((m) => m.round_id === id).map((m) => m.id)));
+  }
+  function changeDay(day: string) {
+    setSelectedDay(day);
+    setSelectedMatchIds(new Set(matches.filter((m) => belgradeDateKey(m.kickoff_at) === day).map((m) => m.id)));
   }
   function toggleMatch(id: string) {
     setSelectedMatchIds((prev) => {
@@ -106,8 +174,8 @@ export function ExportClient({
       return next;
     });
   }
-  function selectOnlyDate(key: string) {
-    const ids = (matchesByDate.get(key) ?? []).map((m) => m.id);
+  function selectOnlyDateInRound(key: string) {
+    const ids = (roundMatchesByDate.get(key) ?? []).map((m) => m.id);
     setSelectedMatchIds(new Set(ids));
   }
   function toggleGroup(id: string) {
@@ -119,6 +187,19 @@ export function ExportClient({
     });
   }
 
+  // Title resolution: respects manual override → mode default
+  function effectiveTitle(): string {
+    if (resultsTitle) return resultsTitle;
+    if (resultsMode === "round") return round?.name ?? "Turnir Kula";
+    return selectedDay ? formatDateLabel(selectedDay).toUpperCase() : "Turnir Kula";
+  }
+  function effectiveSubtitle(): string {
+    if (resultsMode === "round") {
+      return round?.stage === "knockout" ? "Eliminacije" : "Grupna faza";
+    }
+    return "Mečevi dana";
+  }
+
   async function downloadPoster(kind: PosterKind, format: Format) {
     const tag = `${kind}-${format}`;
     setDownloading(tag);
@@ -128,8 +209,8 @@ export function ExportClient({
           ? {
               kind,
               format,
-              title: resultsTitle || round?.name || "Turnir Kula",
-              subtitle: round?.stage === "knockout" ? "Eliminacije" : "Grupna faza",
+              title: effectiveTitle(),
+              subtitle: effectiveSubtitle(),
               matches: exportMatches.map((m) => ({
                 id: m.id,
                 status: m.status,
@@ -186,14 +267,16 @@ export function ExportClient({
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const slug =
+      const baseSlug =
         kind === "results"
-          ? `results-${format}-${round?.name ?? "export"}`
+          ? resultsMode === "round"
+            ? `results-${format}-${round?.name ?? "export"}`
+            : `results-${format}-${selectedDay}`
           : kind === "standings"
           ? `standings-${format}-${exportStandings.length === standings.length ? "sve-grupe" : exportStandings.map((g) => g.group_name).join("-")}`
           : `scorers-${format}`;
       a.href = url;
-      a.download = `turnir-kula-${slug}.png`.replace(/\s+/g, "-").toLowerCase();
+      a.download = `turnir-kula-${baseSlug}.png`.replace(/\s+/g, "-").toLowerCase();
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -220,32 +303,75 @@ export function ExportClient({
       {/* Filters for Rezultati */}
       <div className="card space-y-3">
         <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Rezultati&quot;</div>
+
+        {/* Mode toggle */}
+        <div>
+          <div className="text-xs text-zinc-600 mb-1">Filtriraj po</div>
+          <div className="inline-flex rounded-md border border-zinc-300 overflow-hidden">
+            <button
+              onClick={() => changeMode("round")}
+              className={`px-3 py-1.5 text-sm ${resultsMode === "round" ? "bg-blue-600 text-white" : "bg-white text-zinc-700 hover:bg-zinc-50"}`}
+            >
+              Kolu
+            </button>
+            <button
+              onClick={() => changeMode("day")}
+              disabled={allDates.length === 0}
+              className={`px-3 py-1.5 text-sm border-l border-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed ${resultsMode === "day" ? "bg-blue-600 text-white" : "bg-white text-zinc-700 hover:bg-zinc-50"}`}
+            >
+              Danu
+            </button>
+          </div>
+          {allDates.length === 0 && (
+            <div className="text-[11px] text-zinc-500 italic mt-1">
+              Filter po danu je nedostupan dok nijedan meč nema postavljen termin početka.
+            </div>
+          )}
+        </div>
+
         <div className="grid sm:grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-xs text-zinc-600">Kolo</span>
-            <select className="input" value={selectedRoundId} onChange={(e) => changeRound(e.target.value)}>
-              {rounds.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} {r.status === "finished" ? "✓" : r.status === "active" ? "(uživo)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
+          {resultsMode === "round" ? (
+            <label className="block">
+              <span className="text-xs text-zinc-600">Kolo</span>
+              <select className="input" value={selectedRoundId} onChange={(e) => changeRound(e.target.value)}>
+                {rounds.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} {r.status === "finished" ? "✓" : r.status === "active" ? "(uživo)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label className="block">
+              <span className="text-xs text-zinc-600">Dan</span>
+              <select className="input" value={selectedDay} onChange={(e) => changeDay(e.target.value)}>
+                {allDates.map((d) => {
+                  const count = matches.filter((m) => belgradeDateKey(m.kickoff_at) === d).length;
+                  return (
+                    <option key={d} value={d}>
+                      {formatDateLabel(d)} ({count} mečeva)
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          )}
           <label className="block">
             <span className="text-xs text-zinc-600">Naslov (opciono)</span>
             <input
               className="input"
-              placeholder={round?.name ?? "Turnir Kula"}
+              placeholder={effectiveTitle()}
               value={resultsTitle}
               onChange={(e) => setResultsTitle(e.target.value)}
             />
           </label>
         </div>
 
-        {roundMatches.length > 0 && (
+        {/* Round mode: date pills inside the round */}
+        {resultsMode === "round" && candidateMatches.length > 0 && (
           <div>
-            <div className="text-xs text-zinc-600 mb-1">Brzo filtriranje po danu</div>
-            {sortedDateKeys.length === 1 && sortedDateKeys[0] === "__no_date__" ? (
+            <div className="text-xs text-zinc-600 mb-1">Brzo filtriranje po danu (unutar kola)</div>
+            {sortedRoundDateKeys.length === 1 && sortedRoundDateKeys[0] === "__no_date__" ? (
               <div className="text-xs text-zinc-500 italic">
                 Mečevi u ovom kolu nemaju postavljene termine. Idi na <code>/admin/matches</code>
                 i unesi vreme početka da bi filter po danu radio.
@@ -253,18 +379,18 @@ export function ExportClient({
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 <button
-                  onClick={() => setSelectedMatchIds(new Set(roundMatches.map((m) => m.id)))}
+                  onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
                   className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
                 >
-                  Sve ({roundMatches.length})
+                  Sve ({candidateMatches.length})
                 </button>
-                {sortedDateKeys.map((k) => {
-                  const list = matchesByDate.get(k) ?? [];
+                {sortedRoundDateKeys.map((k) => {
+                  const list = roundMatchesByDate.get(k) ?? [];
                   const label = k === "__no_date__" ? "Bez termina" : formatDateLabel(k);
                   return (
                     <button
                       key={k}
-                      onClick={() => selectOnlyDate(k)}
+                      onClick={() => selectOnlyDateInRound(k)}
                       className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
                     >
                       {label} ({list.length})
@@ -276,41 +402,75 @@ export function ExportClient({
           </div>
         )}
 
-        {roundMatches.length > 0 && (
+        {/* Match list */}
+        {candidateMatches.length > 0 ? (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-600">Mečevi ({selectedMatchIds.size} / {roundMatches.length})</span>
+              <span className="text-xs text-zinc-600">
+                Mečevi ({selectedMatchIds.size} / {candidateMatches.length})
+              </span>
               <div className="text-xs flex gap-2">
-                <button onClick={() => setSelectedMatchIds(new Set(roundMatches.map((m) => m.id)))} className="text-blue-700 hover:underline">Sve</button>
+                <button
+                  onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
+                  className="text-blue-700 hover:underline"
+                >
+                  Sve
+                </button>
                 <span className="text-zinc-300">·</span>
-                <button onClick={() => setSelectedMatchIds(new Set())} className="text-blue-700 hover:underline">Nijedan</button>
+                <button onClick={() => setSelectedMatchIds(new Set())} className="text-blue-700 hover:underline">
+                  Nijedan
+                </button>
               </div>
             </div>
             <ul className="space-y-1 max-h-64 overflow-y-auto border border-zinc-200 rounded-md p-2 bg-zinc-50">
-              {sortedDateKeys.map((dateKey) => {
-                const list = matchesByDate.get(dateKey) ?? [];
-                const label = dateKey === "__no_date__" ? "Bez termina" : formatDateLabel(dateKey);
-                return (
-                  <li key={dateKey} className="space-y-0.5">
-                    {sortedDateKeys.length > 1 && (
-                      <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 pt-1">
-                        {label}
-                      </div>
-                    )}
-                    {list.map((m) => (
-                      <label key={m.id} className="flex items-center gap-2 text-sm hover:bg-white rounded px-2 py-1.5 cursor-pointer">
-                        <input type="checkbox" checked={selectedMatchIds.has(m.id)} onChange={() => toggleMatch(m.id)} />
-                        <span className="flex-1 truncate">{m.home_team?.name ?? "?"} vs {m.away_team?.name ?? "?"}</span>
-                        <span className="text-xs text-zinc-500 tabular-nums">
-                          {m.status === "finished" || m.status === "live" ? formatScore(m) : "—"}
-                        </span>
-                      </label>
-                    ))}
-                  </li>
-                );
-              })}
+              {resultsMode === "round"
+                ? sortedRoundDateKeys.map((dateKey) => {
+                    const list = roundMatchesByDate.get(dateKey) ?? [];
+                    const label = dateKey === "__no_date__" ? "Bez termina" : formatDateLabel(dateKey);
+                    return (
+                      <li key={dateKey} className="space-y-0.5">
+                        {sortedRoundDateKeys.length > 1 && (
+                          <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 pt-1">
+                            {label}
+                          </div>
+                        )}
+                        {list.map((m) => (
+                          <MatchCheckRow
+                            key={m.id}
+                            match={m}
+                            checked={selectedMatchIds.has(m.id)}
+                            onChange={() => toggleMatch(m.id)}
+                          />
+                        ))}
+                      </li>
+                    );
+                  })
+                : sortedDayRoundIds.map((roundId) => {
+                    const list = dayMatchesByRound.get(roundId) ?? [];
+                    const roundName = roundsById.get(roundId)?.name ?? "?";
+                    return (
+                      <li key={roundId} className="space-y-0.5">
+                        {sortedDayRoundIds.length > 1 && (
+                          <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 pt-1">
+                            {roundName}
+                          </div>
+                        )}
+                        {list.map((m) => (
+                          <MatchCheckRow
+                            key={m.id}
+                            match={m}
+                            checked={selectedMatchIds.has(m.id)}
+                            onChange={() => toggleMatch(m.id)}
+                            roundBadge={sortedDayRoundIds.length === 1 ? roundName : undefined}
+                          />
+                        ))}
+                      </li>
+                    );
+                  })}
             </ul>
           </div>
+        ) : (
+          <div className="text-xs text-zinc-500 italic">Nema mečeva za izabrani filter.</div>
         )}
 
         {resultsExceedStory && (
@@ -392,6 +552,35 @@ export function ExportClient({
         />
       </div>
     </div>
+  );
+}
+
+function MatchCheckRow({
+  match,
+  checked,
+  onChange,
+  roundBadge,
+}: {
+  match: ExportMatch;
+  checked: boolean;
+  onChange: () => void;
+  roundBadge?: string;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm hover:bg-white rounded px-2 py-1.5 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      <span className="flex-1 truncate">
+        {match.home_team?.name ?? "?"} vs {match.away_team?.name ?? "?"}
+        {roundBadge && (
+          <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-500 bg-zinc-200 rounded px-1.5 py-0.5">
+            {roundBadge}
+          </span>
+        )}
+      </span>
+      <span className="text-xs text-zinc-500 tabular-nums">
+        {match.status === "finished" || match.status === "live" ? formatScore(match) : "—"}
+      </span>
+    </label>
   );
 }
 
