@@ -414,7 +414,7 @@ export function TeamEditor({
                         className="inline-flex items-center gap-1 bg-zinc-100 rounded-md px-1 py-0.5"
                         title={f.kickoff_at ?? ""}
                       >
-                        <span className="text-zinc-400">{f.is_home ? "vs" : "@"}</span>
+                        <span className="text-zinc-400">vs</span>
                         <TeamCrest
                           name={f.opponent_name}
                           shortName={f.opponent_short_name}
