@@ -439,6 +439,9 @@ function StandingsPoster({
   height: number;
 }) {
   const useTwoCols = standings.length >= 3;
+  // All group cards render with exactly the same row count — pad shorter
+  // groups with placeholder rows so every card has the same height.
+  const maxRows = standings.reduce((acc, g) => Math.max(acc, g.rows.length), 0);
   return (
     <PosterFrame heading="TABELE" subheading="Grupna faza" width={width} height={height}>
       {standings.length === 0 ? (
@@ -451,16 +454,22 @@ function StandingsPoster({
             <div key={String(i)} style={{ display: "flex", gap: 20 }}>
               {row.map((g) => (
                 <div key={g.group_id} style={{ display: "flex", flex: 1 }}>
-                  <GroupTable group={g} compact />
+                  <GroupTable group={g} compact rowsToShow={maxRows} />
                 </div>
               ))}
+              {/* Odd group count: invisible placeholder so the lone card keeps half-width */}
+              {row.length === 1 && (
+                <div key="__pad" style={{ display: "flex", flex: 1, visibility: "hidden" }}>
+                  <GroupTable group={row[0]} compact rowsToShow={maxRows} />
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {standings.map((g) => (
-            <GroupTable key={g.group_id} group={g} compact={false} />
+            <GroupTable key={g.group_id} group={g} compact={false} rowsToShow={maxRows} />
           ))}
         </div>
       )}
@@ -474,22 +483,38 @@ function chunkEvery<T>(arr: T[], n: number): T[][] {
   return out;
 }
 
-function GroupTable({ group, compact }: { group: GroupBlock; compact: boolean }) {
+function GroupTable({ group, compact, rowsToShow }: { group: GroupBlock; compact: boolean; rowsToShow: number }) {
   const titleSize = compact ? 30 : 44;
   const rowFs = compact ? 24 : 32;
   const headerFs = compact ? 16 : 20;
   const crestSize = compact ? 36 : 48;
   const rowH = compact ? 56 : 70;
+  const padding = compact ? 22 : 32;
+  // Explicit total height = padding*2 + title + title-margin + header + headerPad +
+  // rowsToShow * rowH. Keeps every card pixel-identical even when row counts differ.
+  const totalHeight =
+    padding * 2 +
+    titleSize +
+    16 /* title marginBottom */ +
+    headerFs * 1.4 /* header line height */ +
+    12 /* header paddingBottom + border */ +
+    rowsToShow * rowH;
+
+  // Pad with placeholder rows so every card always renders the same number.
+  const padded: Array<GroupBlock["rows"][number] | null> = [...group.rows];
+  while (padded.length < rowsToShow) padded.push(null);
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         width: "100%",
+        height: totalHeight,
         background: C.cardBg,
         border: `1px solid ${C.cardBorder}`,
         borderRadius: 20,
-        padding: compact ? 22 : 32,
+        padding,
       }}
     >
       <div style={{ display: "flex", fontSize: titleSize, fontWeight: 900, letterSpacing: -1, marginBottom: 16 }}>
@@ -513,8 +538,26 @@ function GroupTable({ group, compact }: { group: GroupBlock; compact: boolean })
         <div style={{ display: "flex", width: 80, justifyContent: "flex-end" }}>GR</div>
         <div style={{ display: "flex", width: 90, justifyContent: "flex-end" }}>Bod</div>
       </div>
-      {group.rows.map((r, i) => {
+      {padded.map((r, i) => {
         const top2 = i < 2;
+        const isLast = i === padded.length - 1;
+        if (!r) {
+          // Placeholder row — same height as real ones, no content, faint divider.
+          return (
+            <div
+              key={`__pad-${i}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                height: rowH,
+                borderBottom: isLast ? "none" : `1px solid ${C.rowDivider}`,
+                opacity: 0,
+              }}
+            >
+              <div style={{ display: "flex" }}>·</div>
+            </div>
+          );
+        }
         return (
           <div
             key={r.team_id}
@@ -522,7 +565,7 @@ function GroupTable({ group, compact }: { group: GroupBlock; compact: boolean })
               display: "flex",
               alignItems: "center",
               height: rowH,
-              borderBottom: i === group.rows.length - 1 ? "none" : `1px solid ${C.rowDivider}`,
+              borderBottom: isLast ? "none" : `1px solid ${C.rowDivider}`,
             }}
           >
             <div style={{ display: "flex", width: 40, fontSize: rowFs, fontWeight: 800, opacity: top2 ? 1 : 0.55 }}>
