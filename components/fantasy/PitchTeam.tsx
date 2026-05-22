@@ -31,74 +31,54 @@ export type PitchPlayerSlot = {
 
 export function Jersey({
   primary,
-  secondary,
   shortName,
   size = 88,
 }: {
   primary: string;
-  secondary: string | null;
+  /** Kept for backward compatibility — not used in the simplified outline. */
+  secondary?: string | null;
   shortName?: string | null;
   size?: number;
 }) {
   const p = primary || "#1f2937";
-  const sleeve = secondary && secondary !== primary ? secondary : darken(p, 0.18);
   const textColor = luminance(p) > 0.6 ? "#0f172a" : "#ffffff";
-  const gradId = `jersey-hl-${p.replace("#", "")}-${size}`;
   return (
     <svg
       width={size}
-      height={Math.round(size * 1.1)}
-      viewBox="0 0 100 110"
+      height={size}
+      viewBox="0 0 100 100"
       aria-hidden
-      style={{ filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.35))" }}
+      style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.3))" }}
     >
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
-          <stop offset="40%" stopColor="rgba(255,255,255,0.04)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
-        </linearGradient>
-      </defs>
-      {/* Sleeves — wider, more shaped like a tee */}
+      {/* Single t-shirt outline: shoulders → sleeve tips → armpits → body → bottom */}
       <path
-        d="M4 22 L20 8 Q24 8 27 11 L32 18 L26 40 L14 42 Q10 42 8 38 Z"
-        fill={sleeve}
-        stroke="rgba(0,0,0,0.4)"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M96 22 L80 8 Q76 8 73 11 L68 18 L74 40 L86 42 Q90 42 92 38 Z"
-        fill={sleeve}
-        stroke="rgba(0,0,0,0.4)"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      {/* Body — torso with subtle waist taper */}
-      <path
-        d="M32 18 Q40 24 50 24 Q60 24 68 18 L74 40 L76 102 Q76 106 72 106 L28 106 Q24 106 24 102 L26 40 Z"
+        d="M 35 14
+           Q 30 14 28 18
+           L 8 26
+           L 14 40
+           L 26 38
+           L 26 92
+           Q 26 95 29 95
+           L 71 95
+           Q 74 95 74 92
+           L 74 38
+           L 86 40
+           L 92 26
+           L 72 18
+           Q 70 14 65 14
+           Q 50 26 35 14 Z"
         fill={p}
-        stroke="rgba(0,0,0,0.45)"
-        strokeWidth="1"
+        stroke="rgba(0,0,0,0.55)"
+        strokeWidth="1.6"
         strokeLinejoin="round"
-      />
-      {/* Highlight overlay */}
-      <path
-        d="M32 18 Q40 24 50 24 Q60 24 68 18 L74 40 L76 102 Q76 106 72 106 L28 106 Q24 106 24 102 L26 40 Z"
-        fill={`url(#${gradId})`}
-      />
-      {/* Collar — deeper V */}
-      <path
-        d="M40 18 Q42 18 44 20 L50 30 L56 20 Q58 18 60 18 L57 24 Q50 32 43 24 Z"
-        fill="rgba(0,0,0,0.5)"
       />
       {/* Crest/short name */}
       {shortName && (
         <text
           x="50"
-          y="72"
+          y="62"
           textAnchor="middle"
-          fontSize="22"
+          fontSize="20"
           fontWeight="900"
           fill={textColor}
           fontFamily="Inter, system-ui, sans-serif"
