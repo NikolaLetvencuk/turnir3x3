@@ -457,11 +457,10 @@ function StandingsPoster({
                   <GroupTable group={g} compact rowsToShow={maxRows} />
                 </div>
               ))}
-              {/* Odd group count: invisible placeholder so the lone card keeps half-width */}
+              {/* Odd group count: empty placeholder so the lone card keeps half-width.
+                  Satori doesn't honour visibility:hidden so we use a truly empty div. */}
               {row.length === 1 && (
-                <div key="__pad" style={{ display: "flex", flex: 1, visibility: "hidden" }}>
-                  <GroupTable group={row[0]} compact rowsToShow={maxRows} />
-                </div>
+                <div key="__pad" style={{ display: "flex", flex: 1 }} />
               )}
             </div>
           ))}

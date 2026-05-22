@@ -40,7 +40,9 @@ type PosterKind = "results" | "standings" | "scorers";
 type ResultsMode = "round" | "day";
 
 const RESULTS_MAX = { story: 8, post: 5 } as const;
-const STANDINGS_MAX = { story: 3, post: 2 } as const;
+// Hard cap per poster. If user picks more groups than this, downloadPoster
+// chunks the selection and produces multiple PNG files automatically.
+const STANDINGS_MAX = { story: 6, post: 4 } as const;
 
 export function ExportClient({
   rounds,
@@ -200,87 +202,106 @@ export function ExportClient({
     return "Mečevi dana";
   }
 
+  async function fetchAndDownloadPng(payload: any, filename: string): Promise<boolean> {
+    const response = await fetch("/api/export/poster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!response.ok || !contentType.startsWith("image/")) {
+      const txt = await response.text();
+      alert(`Greška pri generisanju (${response.status}, ${contentType}):\n${txt.slice(0, 400)}`);
+      return false;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename.replace(/\s+/g, "-").toLowerCase();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
   async function downloadPoster(kind: PosterKind, format: Format) {
     const tag = `${kind}-${format}`;
     setDownloading(tag);
     try {
-      const payload =
-        kind === "results"
-          ? {
-              kind,
-              format,
-              title: effectiveTitle(),
-              subtitle: effectiveSubtitle(),
-              matches: exportMatches.map((m) => ({
-                id: m.id,
-                status: m.status,
-                home_score: m.home_score,
-                away_score: m.away_score,
-                home_pen: m.home_pen,
-                away_pen: m.away_pen,
-                kickoff_at: m.kickoff_at,
-                home_team: m.home_team,
-                away_team: m.away_team,
-              })),
-            }
-          : kind === "standings"
-          ? {
-              kind,
-              format,
-              standings: exportStandings.map((g) => ({
-                group_id: g.group_id,
-                group_name: g.group_name,
-                rows: g.rows.map((r) => ({
-                  team_id: r.team_id,
-                  team_name: r.team_name,
-                  short_name: r.short_name,
-                  primary_color: r.primary_color,
-                  secondary_color: r.secondary_color,
-                  played: r.played,
-                  goal_diff: r.goal_diff,
-                  points: r.points,
-                })),
-              })),
-            }
-          : {
-              kind,
-              format,
-              scorers: scorers.map((s) => ({
-                player_id: s.player_id,
-                player_name: s.player_name,
-                team_name: s.team_name,
-                goals: s.goals,
-              })),
-            };
-
-      const response = await fetch("/api/export/poster", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const contentType = response.headers.get("content-type") ?? "";
-      if (!response.ok || !contentType.startsWith("image/")) {
-        const txt = await response.text();
-        alert(`Greška pri generisanju (${response.status}, ${contentType}):\n${txt.slice(0, 400)}`);
-        return;
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const baseSlug =
-        kind === "results"
-          ? resultsMode === "round"
+      if (kind === "results") {
+        const payload = {
+          kind,
+          format,
+          title: effectiveTitle(),
+          subtitle: effectiveSubtitle(),
+          matches: exportMatches.map((m) => ({
+            id: m.id,
+            status: m.status,
+            home_score: m.home_score,
+            away_score: m.away_score,
+            home_pen: m.home_pen,
+            away_pen: m.away_pen,
+            kickoff_at: m.kickoff_at,
+            home_team: m.home_team,
+            away_team: m.away_team,
+          })),
+        };
+        const slug =
+          resultsMode === "round"
             ? `results-${format}-${round?.name ?? "export"}`
-            : `results-${format}-${selectedDay}`
-          : kind === "standings"
-          ? `standings-${format}-${exportStandings.length === standings.length ? "sve-grupe" : exportStandings.map((g) => g.group_name).join("-")}`
-          : `scorers-${format}`;
-      a.href = url;
-      a.download = `turnir-kula-${baseSlug}.png`.replace(/\s+/g, "-").toLowerCase();
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+            : `results-${format}-${selectedDay}`;
+        await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
+      } else if (kind === "standings") {
+        // Chunk standings if user selected more groups than fit on one poster.
+        const max = STANDINGS_MAX[format];
+        const chunks: GroupStandings[][] = [];
+        for (let i = 0; i < exportStandings.length; i += max) {
+          chunks.push(exportStandings.slice(i, i + max));
+        }
+        const total = chunks.length;
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const payload = {
+            kind,
+            format,
+            standings: chunk.map((g) => ({
+              group_id: g.group_id,
+              group_name: g.group_name,
+              rows: g.rows.map((r) => ({
+                team_id: r.team_id,
+                team_name: r.team_name,
+                short_name: r.short_name,
+                primary_color: r.primary_color,
+                secondary_color: r.secondary_color,
+                played: r.played,
+                goal_diff: r.goal_diff,
+                points: r.points,
+              })),
+            })),
+          };
+          const groupNames = chunk.map((g) => g.group_name).join("-");
+          const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
+          const slug = `standings-${format}-${groupNames}${partSuffix}`;
+          const ok = await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
+          if (!ok) break;
+          // Brief delay so the browser doesn't merge download prompts.
+          if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
+        }
+      } else {
+        const payload = {
+          kind,
+          format,
+          scorers: scorers.map((s) => ({
+            player_id: s.player_id,
+            player_name: s.player_name,
+            team_name: s.team_name,
+            goals: s.goals,
+          })),
+        };
+        await fetchAndDownloadPng(payload, `turnir-kula-scorers-${format}.png`);
+      }
     } finally {
       setDownloading(null);
     }
@@ -508,12 +529,14 @@ export function ExportClient({
               ))}
             </div>
           </div>
-          {standingsExceedStory && (
-            <WarningBox>
-              Izabrano je <b>{exportStandings.length} grupa</b> — možda neće stati u jednu sliku.
-              Preporučujemo do <b>{STANDINGS_MAX.story} grupe</b> za Stori, ili napravi više postera
-              (svaka grupa zasebno).
-            </WarningBox>
+          {(standingsExceedStory || standingsExceedPost) && (
+            <InfoBox>
+              Izabrano je <b>{exportStandings.length} grupa</b>. Maksimalno staje{" "}
+              <b>{STANDINGS_MAX.story} za Stori</b> i <b>{STANDINGS_MAX.post} za Objavu</b>,
+              pa će se download automatski podeliti na više slika
+              (Stori: <b>{Math.ceil(exportStandings.length / STANDINGS_MAX.story)} fajla</b>,
+              Objava: <b>{Math.ceil(exportStandings.length / STANDINGS_MAX.post)} fajla</b>).
+            </InfoBox>
           )}
         </div>
       )}
@@ -537,8 +560,8 @@ export function ExportClient({
           downloading={downloading}
           kind="standings"
           onDownload={downloadPoster}
-          exceedPost={standingsExceedPost}
-          exceedStory={standingsExceedStory}
+          exceedPost={false}
+          exceedStory={false}
         />
         <DownloadCard
           title="Strelci"
@@ -621,6 +644,14 @@ function WarningBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="border border-amber-300 bg-amber-50 text-amber-900 text-xs rounded-md px-3 py-2">
       ⚠ {children}
+    </div>
+  );
+}
+
+function InfoBox({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="border border-blue-300 bg-blue-50 text-blue-900 text-xs rounded-md px-3 py-2">
+      ℹ {children}
     </div>
   );
 }
