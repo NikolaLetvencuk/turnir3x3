@@ -12,13 +12,14 @@ export default async function LiveTeamPage() {
   if (!profile) redirect("/auth/login?next=/fantasy/team/live");
 
   const admin = createAdminClient();
-  const [{ data: rounds }, { data: snaps }, { data: players }, { data: teams }, { data: ppRows }, { data: frpRows }] = await Promise.all([
+  const [{ data: rounds }, { data: snaps }, { data: players }, { data: teams }, { data: ppRows }, { data: frpRows }, { data: matchRows }] = await Promise.all([
     admin.from("rounds").select("id, name, status, display_order").order("display_order"),
     admin.from("fantasy_team_snapshots").select("round_id, player1_id, player2_id, player3_id, bank").eq("user_id", profile.id),
     admin.from("players").select("id, name, photo_url, team_id"),
-    admin.from("teams").select("id, name, primary_color"),
+    admin.from("teams").select("id, name, primary_color, secondary_color, short_name"),
     admin.from("fantasy_player_points").select("player_id, round_id, goals, assists, yellow_cards, red_cards, own_goals, wins, draws, losses, clean_sheets, total_points"),
     admin.from("fantasy_round_points").select("round_id, total_points").eq("user_id", profile.id),
+    admin.from("matches").select("round_id, home_team_id, away_team_id, status"),
   ]);
 
   const roundList = (rounds ?? []) as RoundLite[];
@@ -37,6 +38,29 @@ export default async function LiveTeamPage() {
   for (const r of ((frpRows ?? []) as Array<{ round_id: string; total_points: number }>)) frpMap.set(r.round_id, r.total_points);
 
   const snap = focusRound ? ((snaps ?? []) as any[]).find((s) => s.round_id === focusRound.id) : null;
+  // For each team, find their matches in the focused round → if all finished, player has played.
+  // If at least one match still pending/live, player still has games to play.
+  const matchesByTeamInRound = new Map<string, Array<{ status: string }>>();
+  for (const m of ((matchRows ?? []) as Array<{ round_id: string; home_team_id: string | null; away_team_id: string | null; status: string }>)) {
+    if (!focusRound || m.round_id !== focusRound.id) continue;
+    if (m.home_team_id) {
+      const arr = matchesByTeamInRound.get(m.home_team_id) ?? [];
+      arr.push({ status: m.status });
+      matchesByTeamInRound.set(m.home_team_id, arr);
+    }
+    if (m.away_team_id) {
+      const arr = matchesByTeamInRound.get(m.away_team_id) ?? [];
+      arr.push({ status: m.status });
+      matchesByTeamInRound.set(m.away_team_id, arr);
+    }
+  }
+  function yetToPlay(team_id: string | null | undefined): boolean {
+    if (!team_id) return false;
+    const ms = matchesByTeamInRound.get(team_id);
+    if (!ms || ms.length === 0) return false;
+    return ms.some((m) => m.status !== "finished");
+  }
+
   const slots: PlayerSlot[] = snap
     ? ([snap.player1_id, snap.player2_id, snap.player3_id] as (string | null)[]).map((pid) => {
         if (!pid) return null;
@@ -48,7 +72,9 @@ export default async function LiveTeamPage() {
           name: p?.name ?? "?",
           photo_url: p?.photo_url ?? null,
           team_name: team?.name ?? null,
+          team_short: team?.short_name ?? null,
           team_primary: team?.primary_color ?? null,
+          team_secondary: team?.secondary_color ?? null,
           breakdown: pp ? {
             goals: pp.goals, assists: pp.assists,
             wins: pp.wins, draws: pp.draws, losses: pp.losses ?? 0,
@@ -56,6 +82,7 @@ export default async function LiveTeamPage() {
             yellow_cards: pp.yellow_cards, red_cards: pp.red_cards, own_goals: pp.own_goals,
           } : null,
           points: pp?.total_points ?? 0,
+          yet_to_play: yetToPlay(p?.team_id),
         };
       })
     : [null, null, null];

@@ -96,6 +96,11 @@ export async function getFantasyOverview(user_id: string): Promise<FantasyOvervi
     lastRoundPoints = my?.total_points ?? 0;
     lastRoundName = lastFinished.name;
   }
+  let activeRoundPoints: number | null = null;
+  if (activeRound) {
+    const my = allFRP.find((f) => f.user_id === user_id && f.round_id === activeRound.id);
+    activeRoundPoints = my?.total_points ?? 0;
+  }
 
   const allUsers = new Set([...totalsByUser.keys()]);
   const { data: snapUsers } = await supabase.from("fantasy_team_snapshots").select("user_id");
@@ -159,6 +164,7 @@ export async function getFantasyOverview(user_id: string): Promise<FantasyOvervi
     leagues,
     next_round: nextRound,
     active_round: activeRound,
+    active_round_points: activeRoundPoints,
     last_finished_round: lastFinished,
   };
 }

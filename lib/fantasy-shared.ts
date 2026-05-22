@@ -51,5 +51,6 @@ export type FantasyOverview = {
   leagues: LeagueRanking[];
   next_round: RoundLite | null;
   active_round: RoundLite | null;
+  active_round_points: number | null;
   last_finished_round: RoundLite | null;
 };

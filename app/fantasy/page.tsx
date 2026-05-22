@@ -28,24 +28,50 @@ export default async function FantasyLandingPage() {
     <div className="space-y-4">
       <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <h1 className="text-2xl font-bold">Fantasy</h1>
-        <div className="mt-3 flex flex-wrap items-baseline gap-4">
-          <div>
-            <div className="text-xs text-blue-50/80">Ukupno</div>
-            <div className="text-3xl font-bold tabular-nums">{overview.total_points}</div>
-          </div>
-          <div>
-            <div className="text-xs text-blue-50/80">{overview.last_round_name ?? "Prošlo kolo"}</div>
-            <div className="text-2xl font-bold tabular-nums">
-              {overview.last_round_points === null ? <span className="text-blue-50/70 text-sm">još nije bilo</span> : overview.last_round_points}
+        {overview.active_round ? (
+          /* Live round in progress — emphasize this round's points */
+          <div className="mt-4">
+            <div className="text-xs text-blue-50/80 uppercase tracking-wide">
+              {overview.active_round.name} · uživo
+            </div>
+            <div className="text-5xl sm:text-6xl font-black tabular-nums mt-1 leading-none">
+              {overview.active_round_points ?? 0}
+            </div>
+            <div className="text-xs text-blue-50/80 mt-1">bodova u ovom kolu</div>
+            <div className="mt-4 flex items-baseline gap-4 flex-wrap">
+              <div>
+                <div className="text-xs text-blue-50/80">Ukupno</div>
+                <div className="text-2xl font-bold tabular-nums">{overview.total_points}</div>
+              </div>
+              {overview.overall_rank !== null && (
+                <div>
+                  <div className="text-xs text-blue-50/80">Pozicija ukupno</div>
+                  <div className="text-2xl font-bold">{overview.overall_rank}.<span className="text-blue-50/70 text-sm font-normal"> od {overview.overall_total}</span></div>
+                </div>
+              )}
             </div>
           </div>
-          {overview.overall_rank !== null && (
+        ) : (
+          /* No active round — show total + last round side by side */
+          <div className="mt-3 flex flex-wrap items-baseline gap-4">
             <div>
-              <div className="text-xs text-blue-50/80">Pozicija ukupno</div>
-              <div className="text-2xl font-bold">{overview.overall_rank}.<span className="text-blue-50/70 text-sm font-normal"> od {overview.overall_total}</span></div>
+              <div className="text-xs text-blue-50/80">Ukupno</div>
+              <div className="text-3xl font-bold tabular-nums">{overview.total_points}</div>
             </div>
-          )}
-        </div>
+            <div>
+              <div className="text-xs text-blue-50/80">{overview.last_round_name ?? "Prošlo kolo"}</div>
+              <div className="text-2xl font-bold tabular-nums">
+                {overview.last_round_points === null ? <span className="text-blue-50/70 text-sm">još nije bilo</span> : overview.last_round_points}
+              </div>
+            </div>
+            {overview.overall_rank !== null && (
+              <div>
+                <div className="text-xs text-blue-50/80">Pozicija ukupno</div>
+                <div className="text-2xl font-bold">{overview.overall_rank}.<span className="text-blue-50/70 text-sm font-normal"> od {overview.overall_total}</span></div>
+              </div>
+            )}
+          </div>
+        )}
         <div className="mt-4 flex gap-2 flex-wrap">
           <Link href="/fantasy/team" className="bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
           <Link href="/fantasy/team/live" className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Pregled tima u tekućem kolu</Link>
