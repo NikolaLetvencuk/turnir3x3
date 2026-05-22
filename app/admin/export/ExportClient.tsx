@@ -242,30 +242,37 @@ export function ExportClient({
           </label>
         </div>
 
-        {sortedDateKeys.length > 1 && (
+        {roundMatches.length > 0 && (
           <div>
             <div className="text-xs text-zinc-600 mb-1">Brzo filtriranje po danu</div>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setSelectedMatchIds(new Set(roundMatches.map((m) => m.id)))}
-                className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
-              >
-                Sve ({roundMatches.length})
-              </button>
-              {sortedDateKeys.map((k) => {
-                const list = matchesByDate.get(k) ?? [];
-                const label = k === "__no_date__" ? "Bez termina" : formatDateLabel(k);
-                return (
-                  <button
-                    key={k}
-                    onClick={() => selectOnlyDate(k)}
-                    className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
-                  >
-                    {label} ({list.length})
-                  </button>
-                );
-              })}
-            </div>
+            {sortedDateKeys.length === 1 && sortedDateKeys[0] === "__no_date__" ? (
+              <div className="text-xs text-zinc-500 italic">
+                Mečevi u ovom kolu nemaju postavljene termine. Idi na <code>/admin/matches</code>
+                i unesi vreme početka da bi filter po danu radio.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setSelectedMatchIds(new Set(roundMatches.map((m) => m.id)))}
+                  className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
+                >
+                  Sve ({roundMatches.length})
+                </button>
+                {sortedDateKeys.map((k) => {
+                  const list = matchesByDate.get(k) ?? [];
+                  const label = k === "__no_date__" ? "Bez termina" : formatDateLabel(k);
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => selectOnlyDate(k)}
+                      className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
+                    >
+                      {label} ({list.length})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
