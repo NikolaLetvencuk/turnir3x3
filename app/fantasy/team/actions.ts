@@ -68,7 +68,7 @@ async function computeTeamCost(admin: ReturnType<typeof createAdminClient>, ids:
   for (const p of ((prices ?? []) as any[])) {
     const order = p.round?.display_order ?? 0;
     const cur = latestPrice.get(p.player_id);
-    if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
+    if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: round1(Number(p.price)), order });
   }
   return round1(ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0));
 }

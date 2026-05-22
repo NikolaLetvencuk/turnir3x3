@@ -43,7 +43,7 @@ export async function getUserBudget(user_id: string): Promise<{ budget: number; 
   for (const p of ((prices ?? []) as any[])) {
     const order = p.round?.display_order ?? 0;
     const cur = latestPrice.get(p.player_id);
-    if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
+    if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: round1(Number(p.price)), order });
   }
   const team_value = round1(ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0));
   const budget = round1(team_value + bank);
@@ -231,7 +231,7 @@ export async function getPlayersForPicker(): Promise<PlayerForPicker[]> {
   for (const p of ((priceRes.data ?? []) as any[])) {
     const order = p.round?.display_order ?? 0;
     const cur = priceMap.get(p.player_id);
-    if (!cur || cur.order < order) priceMap.set(p.player_id, { price: Number(p.price), order });
+    if (!cur || cur.order < order) priceMap.set(p.player_id, { price: round1(Number(p.price)), order });
   }
 
   const lastFinishedRound = ((roundsRes.data ?? []) as any[]).filter((r) => r.status === "finished").pop();
