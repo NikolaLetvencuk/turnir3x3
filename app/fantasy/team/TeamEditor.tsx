@@ -100,11 +100,14 @@ export function TeamEditor({
   const selected = [slot1, slot2, slot3];
   const selectedIds = selected.filter(Boolean);
   const slotPlayers = selected.map((id) => (id ? playerMap.get(id) ?? null : null));
-  const totalCost = selectedIds.reduce((acc, id) => acc + (playerMap.get(id)?.price ?? BASE_PRICE), 0);
-  const remaining = Math.round((budget - totalCost) * 100) / 100;
+  // All money values at 1-decimal precision (matches stored player prices); strict
+  // > comparison so budget never under-runs current team cost.
+  const totalCost = Math.round(
+    selectedIds.reduce((acc, id) => acc + (playerMap.get(id)?.price ?? BASE_PRICE), 0) * 10,
+  ) / 10;
+  const remaining = Math.round((budget - totalCost) * 10) / 10;
   const isComplete = selectedIds.length === 3;
-  // 0.05 tolerance matches 1-decimal display so 9.9 in bank covers a 9.9 player.
-  const overBudget = totalCost > budget + 0.05;
+  const overBudget = totalCost > budget;
   const canLock = isComplete && !overBudget && !!overview.next_round;
 
   const teamOptions = useMemo(() => {
@@ -359,7 +362,7 @@ export function TeamEditor({
         <div className="space-y-2">
           {filteredPlayers.map((p) => {
             const isSel = selectedIds.includes(p.id);
-            const wouldExceed = !isSel && totalCost + p.price > budget + 0.05 && selectedIds.length < 3;
+            const wouldExceed = !isSel && Math.round((totalCost + p.price) * 10) / 10 > budget && selectedIds.length < 3;
             return (
               <div
                 key={p.id}

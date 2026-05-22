@@ -51,6 +51,12 @@ export async function setTeamName(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
+// All money values normalised to 1-decimal precision (matches stored player price
+// granularity); avoids FP junk like 29.700000000003 sneaking past the budget check.
+function round1(x: number): number {
+  return Math.round(x * 10) / 10;
+}
+
 // Validate the 3 picks against the user's dynamic budget (team-value-based).
 async function computeTeamCost(admin: ReturnType<typeof createAdminClient>, ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
@@ -64,14 +70,15 @@ async function computeTeamCost(admin: ReturnType<typeof createAdminClient>, ids:
     const cur = latestPrice.get(p.player_id);
     if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
   }
-  return ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
+  return round1(ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0));
 }
 
 async function validateBudget(admin: ReturnType<typeof createAdminClient>, user_id: string, ids: [string, string, string]): Promise<{ ok: true; total: number; budget: number; bank: number } | { ok: false; error: string }> {
   const total = await computeTeamCost(admin, ids);
   const { budget, bank } = await getUserBudget(user_id);
-  // 0.05 tolerance matches the 1-decimal display precision.
-  if (total > budget + 0.05) {
+  // Strict: at 1-decimal precision, no tolerance. Sum of three 1-decimal prices is
+  // exactly 1-decimal so any > budget is a real overdraft.
+  if (total > budget) {
     return { ok: false, error: `Prekoračen budžet (${total.toFixed(1)} / ${budget.toFixed(1)})` };
   }
   return { ok: true, total, budget, bank };
@@ -130,7 +137,7 @@ export async function saveDraft(formData: FormData): Promise<ActionResult> {
     .maybeSingle();
   const nr = nextRound as any;
   if (nr) {
-    const leftover = Math.max(0, Math.round((budget.budget - budget.total) * 100) / 100);
+    const leftover = round1(Math.max(0, budget.budget - budget.total));
     await admin
       .from("fantasy_team_snapshots")
       .upsert(
@@ -185,7 +192,7 @@ export async function lockTeamForUpcomingRound(): Promise<ActionResult<{ round_n
   // Budget check + capture bank (leftover after buying team)
   const budget = await validateBudget(admin, user.id, [d.player1_id, d.player2_id, d.player3_id]);
   if (!budget.ok) return budget;
-  const leftover = Math.max(0, Math.round((budget.budget - budget.total) * 100) / 100);
+  const leftover = round1(Math.max(0, budget.budget - budget.total));
 
   const { error } = await admin
     .from("fantasy_team_snapshots")

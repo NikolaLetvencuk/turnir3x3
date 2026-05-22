@@ -14,6 +14,12 @@ export type { RoundLite, PlayerForPicker, LeagueRanking, FantasyOverview };
  * Budget = team value (sum of latest player prices) + leftover bank from last lock.
  * For users without any snapshot, return DEFAULT_BUDGET (30).
  */
+// All money values stored at 1-decimal precision (matches price granularity).
+// Using Math.round(x * 10) / 10 normalises floating-point junk like 29.700000000003.
+function round1(x: number): number {
+  return Math.round(x * 10) / 10;
+}
+
 export async function getUserBudget(user_id: string): Promise<{ budget: number; bank: number; team_value: number }> {
   const admin = createAdminClient();
   const { data: snaps } = await admin
@@ -26,7 +32,7 @@ export async function getUserBudget(user_id: string): Promise<{ budget: number; 
   if (list.length === 0) return { budget: DEFAULT_BUDGET, bank: 0, team_value: 0 };
   const latest = list[0];
   const ids = [latest.player1_id, latest.player2_id, latest.player3_id].filter(Boolean) as string[];
-  const bank = Number(latest.bank ?? 0);
+  const bank = round1(Math.max(0, Number(latest.bank ?? 0)));
   if (ids.length === 0) return { budget: DEFAULT_BUDGET, bank, team_value: 0 };
 
   const { data: prices } = await admin
@@ -39,8 +45,8 @@ export async function getUserBudget(user_id: string): Promise<{ budget: number; 
     const cur = latestPrice.get(p.player_id);
     if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: Number(p.price), order });
   }
-  const team_value = ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0);
-  const budget = Math.round((team_value + bank) * 100) / 100;
+  const team_value = round1(ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0));
+  const budget = round1(team_value + bank);
   return { budget, bank, team_value };
 }
 
