@@ -73,8 +73,8 @@ export default async function FantasyLandingPage() {
           </div>
         )}
         <div className="mt-4 flex gap-2 flex-wrap">
-          <Link href="/fantasy/team" className="bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
-          <Link href="/fantasy/team/live" className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Pregled tima u tekućem kolu</Link>
+          <Link href="/fantasy/team/live" className="bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Pregledaj tim</Link>
+          <Link href="/fantasy/team" className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
           <Link href="/fantasy/team/history" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Istorija</Link>
         </div>
       </section>

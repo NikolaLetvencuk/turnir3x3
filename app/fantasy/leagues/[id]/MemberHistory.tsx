@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Lock, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { PitchTeam, type PitchPlayerSlot } from "@/components/fantasy/PitchTeam";
 
 type RoundLite = { id: string; name: string; status: string; display_order: number };
 type SnapRow = {
@@ -14,9 +14,29 @@ type SnapRow = {
   transfer_penalty: number;
 };
 type PlayerLite = { id: string; name: string; photo_url: string | null; team_id: string | null };
-type PpRow = { player_id: string; round_id: string; goals: number; assists: number; yellow_cards: number; red_cards: number; total_points: number };
+type PpRow = {
+  player_id: string;
+  round_id: string;
+  goals: number;
+  assists: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  clean_sheets: number;
+  yellow_cards: number;
+  red_cards: number;
+  own_goals: number;
+  total_points: number;
+};
 type FrpRow = { round_id: string; total_points: number };
-type TeamLite = { id: string; primary_color: string | null };
+type TeamLite = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+};
+type MatchLite = { round_id: string; home_team_id: string | null; away_team_id: string | null; status: string };
 
 export function MemberHistory({
   userId, displayName, isMe, onClose,
@@ -33,18 +53,20 @@ export function MemberHistory({
   const [teamMap, setTeamMap] = useState<Map<string, TeamLite>>(new Map());
   const [ppByKey, setPpByKey] = useState<Map<string, PpRow>>(new Map());
   const [frpMap, setFrpMap] = useState<Map<string, number>>(new Map());
+  const [matchesByTeamRound, setMatchesByTeamRound] = useState<Map<string, MatchLite[]>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const supabase = createClient();
-      const [roundsRes, snapRes, playersRes, teamsRes, ppRes, frpRes] = await Promise.all([
+      const [roundsRes, snapRes, playersRes, teamsRes, ppRes, frpRes, matchesRes] = await Promise.all([
         supabase.from("rounds").select("id, name, status, display_order").order("display_order"),
         supabase.from("fantasy_team_snapshots").select("round_id, player1_id, player2_id, player3_id, transfer_penalty").eq("user_id", userId),
         supabase.from("players").select("id, name, photo_url, team_id"),
-        supabase.from("teams").select("id, primary_color"),
-        supabase.from("fantasy_player_points").select("player_id, round_id, goals, assists, yellow_cards, red_cards, total_points"),
+        supabase.from("teams").select("id, name, short_name, primary_color, secondary_color"),
+        supabase.from("fantasy_player_points").select("player_id, round_id, goals, assists, wins, draws, losses, clean_sheets, yellow_cards, red_cards, own_goals, total_points"),
         supabase.from("fantasy_round_points").select("round_id, total_points").eq("user_id", userId),
+        supabase.from("matches").select("round_id, home_team_id, away_team_id, status"),
       ]);
       if (cancelled) return;
       setRounds((roundsRes.data ?? []) as RoundLite[]);
@@ -59,11 +81,59 @@ export function MemberHistory({
       const frp = new Map<string, number>();
       for (const r of ((frpRes.data ?? []) as FrpRow[])) frp.set(r.round_id, r.total_points);
       setFrpMap(frp);
+      const matchMap = new Map<string, MatchLite[]>();
+      for (const m of ((matchesRes.data ?? []) as MatchLite[])) {
+        if (m.home_team_id) {
+          const k = `${m.home_team_id}_${m.round_id}`;
+          const arr = matchMap.get(k) ?? [];
+          arr.push(m);
+          matchMap.set(k, arr);
+        }
+        if (m.away_team_id) {
+          const k = `${m.away_team_id}_${m.round_id}`;
+          const arr = matchMap.get(k) ?? [];
+          arr.push(m);
+          matchMap.set(k, arr);
+        }
+      }
+      setMatchesByTeamRound(matchMap);
       setLoading(false);
     }
     load();
     return () => { cancelled = true; };
   }, [userId]);
+
+  function slotFor(playerId: string | null, roundId: string): PitchPlayerSlot {
+    if (!playerId) return null;
+    const p = playerMap.get(playerId);
+    const team = p?.team_id ? teamMap.get(p.team_id) : null;
+    const pp = ppByKey.get(`${playerId}_${roundId}`);
+    const teamMatches = p?.team_id ? matchesByTeamRound.get(`${p.team_id}_${roundId}`) ?? [] : [];
+    const yetToPlay = teamMatches.length > 0 && teamMatches.some((m) => m.status !== "finished");
+    return {
+      id: playerId,
+      name: p?.name ?? "?",
+      team_name: team?.name ?? null,
+      team_short: team?.short_name ?? null,
+      team_primary: team?.primary_color ?? null,
+      team_secondary: team?.secondary_color ?? null,
+      points: pp?.total_points ?? 0,
+      breakdown: pp
+        ? {
+            goals: pp.goals,
+            assists: pp.assists,
+            wins: pp.wins,
+            draws: pp.draws,
+            losses: pp.losses ?? 0,
+            clean_sheets: pp.clean_sheets,
+            yellow_cards: pp.yellow_cards,
+            red_cards: pp.red_cards,
+            own_goals: pp.own_goals,
+          }
+        : null,
+      yet_to_play: yetToPlay,
+    };
+  }
 
   const snapByRound = new Map(snaps.map((s) => [s.round_id, s]));
 
@@ -82,7 +152,7 @@ export function MemberHistory({
             {rounds.map((r) => {
               const snap = snapByRound.get(r.id);
               const isUpcoming = r.status === "upcoming";
-              const canShow = !isUpcoming || isMe; // hide upcoming locks of other users
+              const canShow = !isUpcoming || isMe;
               const total = frpMap.get(r.id);
               return (
                 <div key={r.id} className="card !p-3">
@@ -106,31 +176,22 @@ export function MemberHistory({
                       <EyeOff className="w-3.5 h-3.5" /> Tim sakriven dok kolo ne počne
                     </div>
                   ) : (
-                    <div className="space-y-1 text-sm">
-                      {([snap.player1_id, snap.player2_id, snap.player3_id] as (string | null)[]).map((pid, i) => {
-                        if (!pid) return <div key={i} className="text-zinc-400 italic text-xs">— slot {i + 1} prazan</div>;
-                        const p = playerMap.get(pid);
-                        const pp = ppByKey.get(`${pid}_${r.id}`);
-                        const primary = p?.team_id ? teamMap.get(p.team_id)?.primary_color ?? null : null;
-                        return (
-                          <div key={i} className="flex items-center gap-2">
-                            <PlayerAvatar name={p?.name ?? "?"} photoUrl={p?.photo_url ?? null} teamPrimary={primary} size={28} />
-                            <span className="flex-1 min-w-0 truncate">{p?.name ?? "?"}</span>
-                            {pp && (
-                              <span className="text-[10px] text-zinc-500 shrink-0">
-                                {pp.goals}G {pp.assists}A {pp.yellow_cards ? `${pp.yellow_cards}🟨` : ""} {pp.red_cards ? `${pp.red_cards}🟥` : ""}
-                              </span>
-                            )}
-                            {pp && <span className="font-bold tabular-nums w-8 text-right">{pp.total_points}</span>}
-                          </div>
-                        );
-                      })}
+                    <>
+                      <PitchTeam
+                        slots={[
+                          slotFor(snap.player1_id, r.id),
+                          slotFor(snap.player2_id, r.id),
+                          slotFor(snap.player3_id, r.id),
+                        ]}
+                        size="sm"
+                        showHint={false}
+                      />
                       {isUpcoming && isMe && (
-                        <div className="text-[10px] text-blue-700 inline-flex items-center gap-1 mt-1">
+                        <div className="text-[10px] text-blue-700 inline-flex items-center gap-1 mt-2">
                           <Lock className="w-3 h-3" /> Tvoj lockovani tim (sakriven za ostale)
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               );
