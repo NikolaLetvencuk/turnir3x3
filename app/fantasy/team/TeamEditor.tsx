@@ -9,6 +9,7 @@ import { useActionRunner } from "@/components/admin/FormButton";
 import { useToast } from "@/components/ui/Toast";
 import { saveDraft, setTeamName } from "./actions";
 import { BASE_PRICE, type FantasyOverview, type PlayerForPicker } from "@/lib/fantasy-shared";
+import { Jersey } from "@/components/fantasy/PitchTeam";
 
 type Draft = {
   name: string | null;
@@ -24,57 +25,40 @@ type Locked = {
   player3_id: string | null;
 } | null;
 
-function PlayerCard({ player, onRemove }: { player: PlayerForPicker | null; onRemove?: () => void }) {
+function JerseySlot({ player, onRemove }: { player: PlayerForPicker | null; onRemove?: () => void }) {
   if (!player) {
     return (
-      <div className="relative rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50/50 aspect-[3/4] flex items-center justify-center text-zinc-400 text-xs text-center p-2">
-        Klikni igrača da popuniš slot
+      <div className="flex flex-col items-center justify-center text-white/70 text-[10px] text-center py-2">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-dashed border-white/40 inline-flex items-center justify-center text-2xl text-white/60">
+          +
+        </div>
+        <div className="mt-2 italic px-1">Klikni igrača ispod</div>
       </div>
     );
   }
+  const lastName = player.name.split(/\s+/).slice(-1)[0] || player.name;
   return (
-    <div className="relative rounded-xl bg-gradient-to-b from-white to-zinc-50 border-2 border-blue-300 shadow-md aspect-[3/4] p-2 flex flex-col items-center justify-between text-center">
+    <div className="relative flex flex-col items-center text-center">
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute top-1 right-1 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white/90 border border-zinc-200 text-zinc-500 hover:text-red-600 hover:border-red-300 z-10"
+          className="absolute -top-1 -right-1 sm:top-0 sm:right-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white text-zinc-700 hover:text-red-600 shadow-md border border-zinc-200 z-10"
           aria-label="Ukloni"
         >
           <X className="w-3 h-3" />
         </button>
       )}
-      <div className="absolute top-1 left-1 text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 font-bold tabular-nums z-10">
-        {player.price.toFixed(1)}
+      <Jersey
+        primary={player.team_primary || "#1f2937"}
+        secondary={player.team_secondary}
+        shortName={player.team_short}
+        size={72}
+      />
+      <div className="mt-1.5 bg-white/95 text-zinc-900 rounded-md px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold max-w-[90px] sm:max-w-[110px] truncate">
+        {lastName}
       </div>
-      <div className="w-full flex-1 flex items-center justify-center min-h-0 mt-3">
-        {player.photo_url ? (
-          <img
-            src={player.photo_url}
-            alt={player.name}
-            className="w-full aspect-square object-cover rounded-md bg-zinc-100"
-            loading="lazy"
-          />
-        ) : (
-          <div
-            className="w-full aspect-square rounded-md inline-flex items-center justify-center font-bold select-none text-2xl"
-            style={{
-              background: player.team_primary ?? "#52525b",
-              color: "#ffffff",
-            }}
-          >
-            {player.name.split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?"}
-          </div>
-        )}
-      </div>
-      <div className="w-full mt-1">
-        <div className="text-xs font-semibold leading-tight line-clamp-2">{player.name}</div>
-        <div className="text-[10px] text-zinc-500 truncate mt-0.5">{player.team_name ?? "—"}</div>
-        <div className="text-[10px] text-zinc-400 mt-0.5 flex justify-center gap-2">
-          {player.last_round_points !== null && (
-            <span><b className="text-zinc-700 tabular-nums">{player.last_round_points}</b> pt</span>
-          )}
-          <span><b className="text-zinc-700 tabular-nums">{player.total_points}</b> ukupno</span>
-        </div>
+      <div className="mt-1 rounded-md bg-blue-600 text-white px-2 py-0.5 text-xs font-black tabular-nums shadow-sm">
+        {player.price.toFixed(1)}M
       </div>
     </div>
   );
@@ -280,12 +264,24 @@ export function TeamEditor({
       )}
 
       {/* Pitch view */}
-      <div className="card !p-3 sm:!p-4 relative bg-gradient-to-b from-blue-100 via-blue-50 to-white border-blue-200">
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-blue-300/40" />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-blue-300/40" />
-        <div className="relative grid grid-cols-3 gap-1.5 sm:gap-3">
+      <div
+        className="relative rounded-2xl overflow-hidden border border-emerald-700/60 shadow-inner"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 50% 0%, #1f7a3a 0%, #14532d 60%, #0d3f22 100%)",
+          minHeight: 220,
+        }}
+      >
+        {/* Subtle field lines */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-white/35" />
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-white/30" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-10 sm:w-40 sm:h-14 border-2 border-white/35 border-t-0 rounded-b-md" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-10 sm:w-40 sm:h-14 border-2 border-white/35 border-b-0 rounded-t-md" />
+        </div>
+        <div className="relative px-2 sm:px-3 py-4 sm:py-6 grid grid-cols-3 gap-1.5 sm:gap-3 items-start">
           {slotPlayers.map((p, idx) => (
-            <PlayerCard
+            <JerseySlot
               key={idx}
               player={p}
               onRemove={p ? () => {
@@ -294,7 +290,11 @@ export function TeamEditor({
             />
           ))}
         </div>
-        <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+      </div>
+
+      {/* Budget + save */}
+      <div className="card !p-3 sm:!p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="min-w-0">
             <div className="text-xs text-zinc-600">Ime tima</div>
             <div className="font-semibold truncate text-base">{teamName}</div>
@@ -309,7 +309,7 @@ export function TeamEditor({
             </div>
           </div>
         </div>
-        <div className="relative mt-3">
+        <div className="mt-3">
           <button
             onClick={() => persistDraft(false)}
             disabled={pending || !isComplete || overBudget}
@@ -365,32 +365,26 @@ export function TeamEditor({
                 key={p.id}
                 className={`relative rounded-lg border transition ${isSel ? "border-blue-400 bg-blue-50/40" : "border-zinc-200 bg-white"}`}
               >
-                <div className="flex items-center gap-3 p-2.5">
+                <div className="flex items-center gap-2 sm:gap-3 p-2">
                   <button onClick={() => setDetailPlayer(p)} className="shrink-0">
-                    <PlayerAvatar name={p.name} photoUrl={p.photo_url} teamPrimary={p.team_primary} size={44} />
+                    <Jersey
+                      primary={p.team_primary || "#1f2937"}
+                      secondary={p.team_secondary}
+                      shortName={p.team_short}
+                      size={44}
+                    />
                   </button>
                   <button onClick={() => setDetailPlayer(p)} className="flex-1 min-w-0 text-left">
                     <div className="font-semibold text-sm truncate">{p.name}</div>
-                    <div className="text-xs text-zinc-500 truncate inline-flex items-center gap-1">
-                      {p.team_id && (
-                        <TeamCrest
-                          name={p.team_name ?? ""}
-                          shortName={null}
-                          primaryColor={p.team_primary}
-                          secondaryColor={null}
-                          size={14}
-                        />
-                      )}
-                      <span className="truncate">{p.team_name ?? "—"}</span>
-                    </div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5 flex flex-wrap gap-x-2 gap-y-0">
-                      <span><b className="text-zinc-700 tabular-nums">{p.total_points}</b> ukupno</span>
+                    <div className="text-[11px] text-zinc-500 truncate">{p.team_name ?? "—"}</div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5 flex flex-wrap gap-x-1.5">
+                      <span><b className="text-zinc-700 tabular-nums">{p.total_points}</b> uk.</span>
                       <span className="text-zinc-300">·</span>
                       <span><b className="text-zinc-700 tabular-nums">{p.last_round_points ?? 0}</b> prošlo</span>
                     </div>
                   </button>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <div className="bg-zinc-900 text-white rounded-md px-2 py-1 text-xs font-bold tabular-nums">
+                    <div className="bg-zinc-900 text-white rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
                       {p.price.toFixed(1)}M
                     </div>
                     <button
@@ -398,23 +392,23 @@ export function TeamEditor({
                       disabled={!isSel && wouldExceed}
                       className={
                         isSel
-                          ? "inline-flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-md px-2 py-1 text-xs font-medium"
+                          ? "inline-flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-md px-2 py-1 text-[11px] font-medium"
                           : wouldExceed
-                          ? "inline-flex items-center gap-1 bg-zinc-100 text-zinc-400 rounded-md px-2 py-1 text-xs font-medium cursor-not-allowed"
-                          : "inline-flex items-center gap-1 bg-blue-600 text-white hover:bg-blue-700 rounded-md px-2 py-1 text-xs font-medium"
+                          ? "inline-flex items-center gap-1 bg-zinc-100 text-zinc-400 rounded-md px-2 py-1 text-[11px] font-medium cursor-not-allowed"
+                          : "inline-flex items-center gap-1 bg-blue-600 text-white hover:bg-blue-700 rounded-md px-2 py-1 text-[11px] font-medium"
                       }
                     >
-                      {isSel ? <><Check className="w-3 h-3" />Izabran</> : wouldExceed ? "Skupo" : <><Plus className="w-3 h-3" />Dodaj</>}
+                      {isSel ? <><Check className="w-3 h-3" /><span className="hidden sm:inline">Izabran</span><span className="sm:hidden">✓</span></> : wouldExceed ? "Skupo" : <><Plus className="w-3 h-3" /><span className="hidden sm:inline">Dodaj</span></>}
                     </button>
                   </div>
                 </div>
                 {p.next_fixtures && p.next_fixtures.length > 0 && (
-                  <div className="px-2.5 pb-2 flex items-center gap-1.5 flex-wrap text-[10px]">
-                    <span className="text-zinc-400 uppercase tracking-wider">sledeće:</span>
-                    {p.next_fixtures.slice(0, 3).map((f) => (
+                  <div className="px-2 pb-1.5 flex items-center gap-1 flex-wrap text-[10px]">
+                    <span className="text-zinc-400 uppercase tracking-wider hidden sm:inline">sledeće:</span>
+                    {p.next_fixtures.slice(0, 2).map((f) => (
                       <span
                         key={f.match_id}
-                        className="inline-flex items-center gap-1 bg-zinc-100 rounded-md px-1.5 py-0.5"
+                        className="inline-flex items-center gap-1 bg-zinc-100 rounded-md px-1 py-0.5"
                         title={f.kickoff_at ?? ""}
                       >
                         <span className="text-zinc-400">{f.is_home ? "vs" : "@"}</span>
@@ -425,7 +419,7 @@ export function TeamEditor({
                           secondaryColor={f.opponent_secondary}
                           size={12}
                         />
-                        <span className="font-medium text-zinc-700 truncate max-w-[80px]">
+                        <span className="font-medium text-zinc-700 truncate max-w-[70px]">
                           {f.opponent_short_name || f.opponent_name}
                         </span>
                       </span>

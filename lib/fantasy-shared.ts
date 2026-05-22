@@ -24,7 +24,9 @@ export type PlayerForPicker = {
   name: string;
   team_id: string | null;
   team_name: string | null;
+  team_short: string | null;
   team_primary: string | null;
+  team_secondary: string | null;
   photo_url: string | null;
   price: number;
   last_round_points: number | null;

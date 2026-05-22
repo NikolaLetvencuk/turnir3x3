@@ -47,56 +47,56 @@ export function Jersey({
   return (
     <svg
       width={size}
-      height={Math.round(size * 1.05)}
-      viewBox="0 0 100 105"
+      height={Math.round(size * 1.1)}
+      viewBox="0 0 100 110"
       aria-hidden
       style={{ filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.35))" }}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.22)" />
-          <stop offset="55%" stopColor="rgba(255,255,255,0)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.22)" />
+          <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
+          <stop offset="40%" stopColor="rgba(255,255,255,0.04)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
         </linearGradient>
       </defs>
-      {/* Sleeves */}
+      {/* Sleeves — wider, more shaped like a tee */}
       <path
-        d="M3 18 L18 7 L30 14 L24 34 L14 38 Z"
+        d="M4 22 L20 8 Q24 8 27 11 L32 18 L26 40 L14 42 Q10 42 8 38 Z"
         fill={sleeve}
-        stroke="rgba(0,0,0,0.35)"
-        strokeWidth="0.9"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M97 18 L82 7 L70 14 L76 34 L86 38 Z"
-        fill={sleeve}
-        stroke="rgba(0,0,0,0.35)"
-        strokeWidth="0.9"
-        strokeLinejoin="round"
-      />
-      {/* Body */}
-      <path
-        d="M30 14 Q40 22 50 22 Q60 22 70 14 L76 34 L76 96 Q76 100 72 100 L28 100 Q24 100 24 96 L24 34 Z"
-        fill={p}
         stroke="rgba(0,0,0,0.4)"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M96 22 L80 8 Q76 8 73 11 L68 18 L74 40 L86 42 Q90 42 92 38 Z"
+        fill={sleeve}
+        stroke="rgba(0,0,0,0.4)"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      {/* Body — torso with subtle waist taper */}
+      <path
+        d="M32 18 Q40 24 50 24 Q60 24 68 18 L74 40 L76 102 Q76 106 72 106 L28 106 Q24 106 24 102 L26 40 Z"
+        fill={p}
+        stroke="rgba(0,0,0,0.45)"
         strokeWidth="1"
         strokeLinejoin="round"
       />
       {/* Highlight overlay */}
       <path
-        d="M30 14 Q40 22 50 22 Q60 22 70 14 L76 34 L76 96 Q76 100 72 100 L28 100 Q24 100 24 96 L24 34 Z"
+        d="M32 18 Q40 24 50 24 Q60 24 68 18 L74 40 L76 102 Q76 106 72 106 L28 106 Q24 106 24 102 L26 40 Z"
         fill={`url(#${gradId})`}
       />
-      {/* V-neck */}
+      {/* Collar — deeper V */}
       <path
-        d="M42 18 Q50 26 58 18 L55 24 Q50 28 45 24 Z"
-        fill="rgba(0,0,0,0.45)"
+        d="M40 18 Q42 18 44 20 L50 30 L56 20 Q58 18 60 18 L57 24 Q50 32 43 24 Z"
+        fill="rgba(0,0,0,0.5)"
       />
       {/* Crest/short name */}
       {shortName && (
         <text
           x="50"
-          y="68"
+          y="72"
           textAnchor="middle"
           fontSize="22"
           fontWeight="900"
