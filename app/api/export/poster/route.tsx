@@ -63,9 +63,10 @@ const C = {
   text: "#0f172a",
   textDim: "rgba(15,23,42,0.6)",
   textFaint: "rgba(15,23,42,0.4)",
-  cardBg: "#f8fafc",
-  cardBorder: "#e2e8f0",
-  rowDivider: "#e2e8f0",
+  // Semi-transparent so the watermark logo shows through the cards.
+  cardBg: "rgba(241,245,249,0.55)",
+  cardBorder: "rgba(15,23,42,0.12)",
+  rowDivider: "rgba(15,23,42,0.08)",
   accent: "#2563eb",
   gold: "#facc15",
   silver: "#cbd5e1",
@@ -156,7 +157,7 @@ function PosterFrame({
             position: "absolute",
             top: (height - watermarkSize) / 2,
             left: (width - watermarkSize) / 2,
-            opacity: 0.12,
+            opacity: 0.22,
             objectFit: "contain",
           }}
         />
