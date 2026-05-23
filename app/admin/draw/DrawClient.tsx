@@ -37,7 +37,7 @@ export function DrawClient({
   const router = useRouter();
   const { push } = useToast();
   const [mode, setMode] = useState<Mode>("auto");
-  const [groupCount, setGroupCount] = useState(Math.max(2, Math.min(8, Math.floor(teams.length / 3) || 2)));
+  const [groupCount, setGroupCount] = useState(Math.max(2, Math.min(10, Math.floor(teams.length / 3) || 2)));
   const [scheduleAt, setScheduleAt] = useState<string>("");
   const [pending, setPending] = useState(false);
 
@@ -63,7 +63,7 @@ export function DrawClient({
   async function onSchedule(when: "now" | "later") {
     if (when === "later" && !scheduleAt.trim()) { push("Izaberi datum/vreme", "error"); return; }
     if (teams.length < groupCount * 2) {
-      push(`Potrebno najmanje ${groupCount * 2} timova za ${groupCount} grupa`, "error");
+      push(`Za ${groupCount} grupa potrebno je najmanje ${groupCount * 2} timova`, "error");
       return;
     }
     if (hasExisting) {
@@ -179,13 +179,13 @@ export function DrawClient({
                 </p>
                 <div className="grid sm:grid-cols-2 gap-2">
                   <label className="block text-sm">
-                    <span className="label">Broj grupa (2–8)</span>
+                    <span className="label">Broj grupa (2–10)</span>
                     <input
                       type="number"
                       min={2}
-                      max={8}
+                      max={10}
                       value={groupCount}
-                      onChange={(e) => setGroupCount(Math.max(2, Math.min(8, Number(e.target.value) || 2)))}
+                      onChange={(e) => setGroupCount(Math.max(2, Math.min(10, Number(e.target.value) || 2)))}
                       className="input"
                     />
                   </label>
@@ -194,7 +194,7 @@ export function DrawClient({
                     <input type="datetime-local" className="input" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} />
                   </label>
                 </div>
-                <p className="text-xs text-zinc-500">Trenutno prijavljeno timova: <b>{teams.length}</b>. Treba ti bar {groupCount * 2}.</p>
+                <p className="text-xs text-zinc-500">Trenutno prijavljeno timova: <b>{teams.length}</b>. Za {groupCount} grupa potrebno je najmanje <b>{groupCount * 2} timova</b>.</p>
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={() => onSchedule("now")} disabled={pending || teams.length < groupCount * 2} className="btn-primary">Pokreni odmah</button>
                   <button onClick={() => onSchedule("later")} disabled={pending || !scheduleAt || teams.length < groupCount * 2} className="btn bg-blue-700 text-white hover:bg-blue-800">Zakaži</button>
@@ -204,13 +204,13 @@ export function DrawClient({
               <>
                 <p className="text-sm text-zinc-600">Sam dodeljuješ timove grupama; snima se odmah bez animacije.</p>
                 <label className="block text-sm">
-                  <span className="label">Broj grupa (2–8)</span>
+                  <span className="label">Broj grupa (2–10)</span>
                   <input
                     type="number"
                     min={2}
-                    max={8}
+                    max={10}
                     value={groupCount}
-                    onChange={(e) => setGroupCount(Math.max(2, Math.min(8, Number(e.target.value) || 2)))}
+                    onChange={(e) => setGroupCount(Math.max(2, Math.min(10, Number(e.target.value) || 2)))}
                     className="input w-24"
                   />
                 </label>
@@ -316,9 +316,9 @@ function ScheduledDrawStatus({
             <input
               type="number"
               min={2}
-              max={8}
+              max={10}
               value={gcInput}
-              onChange={(e) => setGcInput(Math.max(2, Math.min(8, Number(e.target.value) || 2)))}
+              onChange={(e) => setGcInput(Math.max(2, Math.min(10, Number(e.target.value) || 2)))}
               className="input w-24"
             />
           </label>

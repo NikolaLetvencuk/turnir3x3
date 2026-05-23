@@ -539,7 +539,7 @@ export async function scheduleDraw(input: {
   per_pick_ms?: number;
 }): Promise<ActionResult> {
   return withAdmin(async () => {
-    const gc = Math.max(2, Math.min(8, Math.floor(input.group_count)));
+    const gc = Math.max(2, Math.min(10, Math.floor(input.group_count)));
     if (!Number.isFinite(gc)) return { ok: false, error: "Neispravan broj grupa" };
     const admin = createAdminClient();
     const { error } = await admin.from("draw_state").upsert({
@@ -561,7 +561,7 @@ export async function scheduleDraw(input: {
 // Admin can change planned group count during the countdown (while result still null).
 export async function updateScheduledGroupCount(input: { group_count: number }): Promise<ActionResult> {
   return withAdmin(async () => {
-    const gc = Math.max(2, Math.min(8, Math.floor(input.group_count)));
+    const gc = Math.max(2, Math.min(10, Math.floor(input.group_count)));
     if (!Number.isFinite(gc)) return { ok: false, error: "Neispravan broj grupa" };
     const admin = createAdminClient();
     const { data: existing } = await admin.from("draw_state").select("state, result").eq("id", true).maybeSingle();
@@ -595,7 +595,7 @@ export async function triggerDrawIfDue(): Promise<ActionResult> {
   if (!d.scheduled_at) return { ok: false, error: "Nema vremena žreba" };
   if (new Date(d.scheduled_at).getTime() > Date.now()) return { ok: false, error: "Tajmer još nije istekao" };
 
-  const groupCount = Math.max(2, Math.min(8, Number(d.group_count ?? 2)));
+  const groupCount = Math.max(2, Math.min(10, Number(d.group_count ?? 2)));
 
   const { data: teams } = await admin
     .from("teams")
