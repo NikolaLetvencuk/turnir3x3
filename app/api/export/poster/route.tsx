@@ -438,48 +438,28 @@ function StandingsPoster({
   width: number;
   height: number;
 }) {
-  const useTwoCols = standings.length >= 3;
-  // All group cards render with exactly the same row count — pad shorter
-  // groups with placeholder rows so every card has the same height.
+  // All groups stack vertically — never side-by-side. Cap is enforced by the
+  // client which chunks the selection before posting. Each card renders the
+  // same row count (padded if needed) so cards are pixel-identical.
   const maxRows = standings.reduce((acc, g) => Math.max(acc, g.rows.length), 0);
+  // Switch to compact sizing whenever there are 2+ cards so they fit on the
+  // shorter Objava (1080×1350) format too.
+  const compact = standings.length >= 2;
   return (
     <PosterFrame heading="TABELE" subheading="Grupna faza" width={width} height={height}>
       {standings.length === 0 ? (
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 32 }}>
           Nema podataka.
         </div>
-      ) : useTwoCols ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {chunkEvery(standings, 2).map((row, i) => (
-            <div key={String(i)} style={{ display: "flex", gap: 20 }}>
-              {row.map((g) => (
-                <div key={g.group_id} style={{ display: "flex", flex: 1 }}>
-                  <GroupTable group={g} compact rowsToShow={maxRows} />
-                </div>
-              ))}
-              {/* Odd group count: empty placeholder so the lone card keeps half-width.
-                  Satori doesn't honour visibility:hidden so we use a truly empty div. */}
-              {row.length === 1 && (
-                <div key="__pad" style={{ display: "flex", flex: 1 }} />
-              )}
-            </div>
-          ))}
-        </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: compact ? 16 : 24 }}>
           {standings.map((g) => (
-            <GroupTable key={g.group_id} group={g} compact={false} rowsToShow={maxRows} />
+            <GroupTable key={g.group_id} group={g} compact={compact} rowsToShow={maxRows} />
           ))}
         </div>
       )}
     </PosterFrame>
   );
-}
-
-function chunkEvery<T>(arr: T[], n: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
-  return out;
 }
 
 function GroupTable({ group, compact, rowsToShow }: { group: GroupBlock; compact: boolean; rowsToShow: number }) {

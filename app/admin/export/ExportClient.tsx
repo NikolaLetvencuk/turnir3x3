@@ -40,9 +40,10 @@ type PosterKind = "results" | "standings" | "scorers";
 type ResultsMode = "round" | "day";
 
 const RESULTS_MAX = { story: 8, post: 5 } as const;
-// Hard cap per poster. If user picks more groups than this, downloadPoster
-// chunks the selection and produces multiple PNG files automatically.
-const STANDINGS_MAX = { story: 6, post: 4 } as const;
+// Hard cap per poster — at most 3 groups stacked vertically on a single
+// image. If user picks more groups than this, downloadPoster chunks the
+// selection and produces multiple PNG files automatically.
+const STANDINGS_MAX = { story: 3, post: 3 } as const;
 
 export function ExportClient({
   rounds,
@@ -531,11 +532,10 @@ export function ExportClient({
           </div>
           {(standingsExceedStory || standingsExceedPost) && (
             <InfoBox>
-              Izabrano je <b>{exportStandings.length} grupa</b>. Maksimalno staje{" "}
-              <b>{STANDINGS_MAX.story} za Stori</b> i <b>{STANDINGS_MAX.post} za Objavu</b>,
-              pa će se download automatski podeliti na više slika
-              (Stori: <b>{Math.ceil(exportStandings.length / STANDINGS_MAX.story)} fajla</b>,
-              Objava: <b>{Math.ceil(exportStandings.length / STANDINGS_MAX.post)} fajla</b>).
+              Izabrano je <b>{exportStandings.length} grupa</b>. Maksimum je{" "}
+              <b>{STANDINGS_MAX.story} grupe po slici</b> (sve su stack-ovane jedna ispod druge),
+              pa će se download automatski podeliti na{" "}
+              <b>{Math.ceil(exportStandings.length / STANDINGS_MAX.story)} fajla</b>.
             </InfoBox>
           )}
         </div>
