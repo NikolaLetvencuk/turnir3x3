@@ -77,6 +77,7 @@ export async function POST(request: Request) {
     const { kind, format } = body;
     const width = 1080;
     const height = format === "story" ? 1920 : 1350;
+    const logoUrl = `${new URL(request.url).origin}/logo/liga_sampiona.png`;
 
     let content: React.ReactElement;
     if (kind === "results") {
@@ -87,12 +88,17 @@ export async function POST(request: Request) {
           matches={body.matches ?? []}
           width={width}
           height={height}
+          logoUrl={logoUrl}
         />
       );
     } else if (kind === "standings") {
-      content = <StandingsPoster standings={body.standings ?? []} width={width} height={height} />;
+      content = (
+        <StandingsPoster standings={body.standings ?? []} width={width} height={height} logoUrl={logoUrl} />
+      );
     } else {
-      content = <ScorersPoster scorers={body.scorers ?? []} width={width} height={height} />;
+      content = (
+        <ScorersPoster scorers={body.scorers ?? []} width={width} height={height} logoUrl={logoUrl} />
+      );
     }
 
     return new ImageResponse(content, { width, height });
@@ -112,14 +118,17 @@ function PosterFrame({
   subheading,
   width,
   height,
+  logoUrl,
   children,
 }: {
   heading: string;
   subheading: string;
   width: number;
   height: number;
+  logoUrl?: string;
   children: React.ReactNode;
 }) {
+  const watermarkSize = Math.min(width, height) * 0.75;
   return (
     <div
       style={{
@@ -130,8 +139,27 @@ function PosterFrame({
         background: `linear-gradient(180deg, ${C.bg} 0%, ${C.bgEnd} 100%)`,
         color: C.text,
         padding: "80px 60px",
+        position: "relative",
       }}
     >
+      {/* Watermark — placed FIRST so subsequent flex children render visually on top.
+          Low opacity, centered, scaled to ~75% of the smaller dimension. */}
+      {logoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          width={watermarkSize}
+          height={watermarkSize}
+          alt=""
+          style={{
+            position: "absolute",
+            top: (height - watermarkSize) / 2,
+            left: (width - watermarkSize) / 2,
+            opacity: 0.08,
+            objectFit: "contain",
+          }}
+        />
+      )}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 40 }}>
         <div
           style={{
@@ -289,15 +317,17 @@ function ResultsPoster({
   matches,
   width,
   height,
+  logoUrl,
 }: {
   title: string;
   subtitle: string;
   matches: MatchEntry[];
   width: number;
   height: number;
+  logoUrl?: string;
 }) {
   return (
-    <PosterFrame heading={title.toUpperCase()} subheading={subtitle} width={width} height={height}>
+    <PosterFrame heading={title.toUpperCase()} subheading={subtitle} width={width} height={height} logoUrl={logoUrl}>
       {matches.length === 0 ? (
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 32 }}>
           Nema izabranih mečeva.
@@ -433,10 +463,12 @@ function StandingsPoster({
   standings,
   width,
   height,
+  logoUrl,
 }: {
   standings: GroupBlock[];
   width: number;
   height: number;
+  logoUrl?: string;
 }) {
   // All groups stack vertically — never side-by-side. Cap is enforced by the
   // client which chunks the selection before posting. Each card renders the
@@ -446,7 +478,7 @@ function StandingsPoster({
   // shorter Objava (1080×1350) format too.
   const compact = standings.length >= 2;
   return (
-    <PosterFrame heading="TABELE" subheading="Grupna faza" width={width} height={height}>
+    <PosterFrame heading="TABELE" subheading="Grupna faza" width={width} height={height} logoUrl={logoUrl}>
       {standings.length === 0 ? (
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 32 }}>
           Nema podataka.
@@ -587,15 +619,17 @@ function ScorersPoster({
   scorers,
   width,
   height,
+  logoUrl,
 }: {
   scorers: ScorerEntry[];
   width: number;
   height: number;
+  logoUrl?: string;
 }) {
   const isStory = height >= 1900;
   const max = isStory ? 10 : 8;
   return (
-    <PosterFrame heading="STRELCI" subheading="Najbolji" width={width} height={height}>
+    <PosterFrame heading="STRELCI" subheading="Najbolji" width={width} height={height} logoUrl={logoUrl}>
       {scorers.length === 0 ? (
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 32 }}>
           Još nema strelaca.
