@@ -39,13 +39,14 @@ type Format = "story" | "post";
 type PosterKind = "results" | "standings" | "scorers";
 type ResultsMode = "round" | "day";
 
-const RESULTS_MAX = { story: 8, post: 5 } as const;
-// Per-image cap depends on team count to avoid empty rows / cropping:
-//   ≤3 teams in group  → up to 3 tables on the slika
-//   4+ teams in group  → up to 2 tables on the slika
-// Mixed sizes are never put on the same slika (different team counts produce
-// different card heights, which would force padding and waste space).
-function maxStandingsPerImage(teamCount: number): number {
+const RESULTS_MAX = { story: 9, post: 6 } as const;
+// Per-image cap depends on team count AND format to avoid cropping:
+//   Story (1080×1920) — more vertical room: 4 tables if ≤3 teams, 3 if 4+
+//   Objava (1080×1350) — less room:         3 tables if ≤3 teams, 2 if 4+
+// Mixed team-count sizes are never put on the same slika (would force
+// padding and waste space).
+function maxStandingsPerImage(teamCount: number, format: Format): number {
+  if (format === "story") return teamCount <= 3 ? 4 : 3;
   return teamCount <= 3 ? 3 : 2;
 }
 
@@ -236,32 +237,45 @@ export function ExportClient({
     setDownloading(tag);
     try {
       if (kind === "results") {
-        const payload = {
-          kind,
-          format,
-          title: effectiveTitle(),
-          subtitle: effectiveSubtitle(),
-          matches: exportMatches.map((m) => ({
-            id: m.id,
-            status: m.status,
-            home_score: m.home_score,
-            away_score: m.away_score,
-            home_pen: m.home_pen,
-            away_pen: m.away_pen,
-            kickoff_at: m.kickoff_at,
-            home_team: m.home_team,
-            away_team: m.away_team,
-          })),
-        };
-        const slug =
+        // Auto-split into multiple posters if selection exceeds per-format cap.
+        const max = RESULTS_MAX[format];
+        const chunks: ExportMatch[][] = [];
+        for (let i = 0; i < exportMatches.length; i += max) {
+          chunks.push(exportMatches.slice(i, i + max));
+        }
+        const total = chunks.length;
+        const baseSlug =
           resultsMode === "round"
             ? `results-${format}-${round?.name ?? "export"}`
             : `results-${format}-${selectedDay}`;
-        await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const payload = {
+            kind,
+            format,
+            title: effectiveTitle(),
+            subtitle: effectiveSubtitle(),
+            matches: chunk.map((m) => ({
+              id: m.id,
+              status: m.status,
+              home_score: m.home_score,
+              away_score: m.away_score,
+              home_pen: m.home_pen,
+              away_pen: m.away_pen,
+              kickoff_at: m.kickoff_at,
+              home_team: m.home_team,
+              away_team: m.away_team,
+            })),
+          };
+          const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
+          const ok = await fetchAndDownloadPng(payload, `turnir-kula-${baseSlug}${partSuffix}.png`);
+          if (!ok) break;
+          if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
+        }
       } else if (kind === "standings") {
         // Bucket standings by team count, then chunk each bucket by its
-        // appropriate per-image cap. Same-size tables stay together; mixed
-        // sizes are always split onto separate images.
+        // appropriate per-image cap (different for Story vs Objava).
+        // Same-size tables stay together; mixed sizes always split.
         const chunks: GroupStandings[][] = [];
         let current: GroupStandings[] = [];
         let currentSize: number | null = null;
@@ -270,7 +284,7 @@ export function ExportClient({
           if (currentSize === null) {
             current.push(g);
             currentSize = size;
-          } else if (size !== currentSize || current.length >= maxStandingsPerImage(currentSize)) {
+          } else if (size !== currentSize || current.length >= maxStandingsPerImage(currentSize, format)) {
             chunks.push(current);
             current = [g];
             currentSize = size;
@@ -326,22 +340,19 @@ export function ExportClient({
     }
   }
 
-  const resultsExceedStory = exportMatches.length > RESULTS_MAX.story;
-  const resultsExceedPost = exportMatches.length > RESULTS_MAX.post;
-  // Predict how many image files the current selection will produce so we
-  // can show an info banner. Uses the same bucket-by-size-then-chunk logic
-  // as the download path.
-  const standingsChunkCount = useMemo(() => {
-    if (exportStandings.length === 0) return 0;
+  // Predict how many image files the current selection will produce per
+  // format so we can show an info banner with accurate counts.
+  function computeChunks(items: GroupStandings[], format: Format): number {
+    if (items.length === 0) return 0;
     let chunks = 0;
     let inChunk = 0;
     let currentSize: number | null = null;
-    for (const g of exportStandings) {
+    for (const g of items) {
       const size = g.rows.length;
       if (currentSize === null) {
         inChunk = 1;
         currentSize = size;
-      } else if (size !== currentSize || inChunk >= maxStandingsPerImage(currentSize)) {
+      } else if (size !== currentSize || inChunk >= maxStandingsPerImage(currentSize, format)) {
         chunks++;
         inChunk = 1;
         currentSize = size;
@@ -351,8 +362,14 @@ export function ExportClient({
     }
     if (inChunk > 0) chunks++;
     return chunks;
-  }, [exportStandings]);
-  const standingsWillSplit = standingsChunkCount > 1;
+  }
+  const standingsChunkStory = useMemo(() => computeChunks(exportStandings, "story"), [exportStandings]);
+  const standingsChunkPost = useMemo(() => computeChunks(exportStandings, "post"), [exportStandings]);
+  const standingsWillSplit = standingsChunkStory > 1 || standingsChunkPost > 1;
+
+  const resultsChunkStory = Math.ceil(exportMatches.length / RESULTS_MAX.story) || 0;
+  const resultsChunkPost = Math.ceil(exportMatches.length / RESULTS_MAX.post) || 0;
+  const resultsWillSplit = resultsChunkStory > 1 || resultsChunkPost > 1;
 
   return (
     <div className="space-y-4">
@@ -536,12 +553,13 @@ export function ExportClient({
           <div className="text-xs text-zinc-500 italic">Nema mečeva za izabrani filter.</div>
         )}
 
-        {resultsExceedStory && (
-          <WarningBox>
-            Izabrano je <b>{exportMatches.length} mečeva</b> — možda neće stati u jednu sliku.
-            Preporučujemo do <b>{RESULTS_MAX.story} mečeva</b> za Stori, ili podeli po danu i napravi
-            više postera (gore su prečice za brzo filtriranje po datumu).
-          </WarningBox>
+        {resultsWillSplit && (
+          <InfoBox>
+            Izabrano je <b>{exportMatches.length} mečeva</b>. Maks po slici je{" "}
+            <b>{RESULTS_MAX.story} za Stori</b> i <b>{RESULTS_MAX.post} za Objavu</b>, pa će se
+            download automatski podeliti (Stori: <b>{resultsChunkStory} fajla</b>, Objava:{" "}
+            <b>{resultsChunkPost} fajla</b>).
+          </InfoBox>
         )}
       </div>
 
@@ -573,10 +591,11 @@ export function ExportClient({
           </div>
           {standingsWillSplit && (
             <InfoBox>
-              Izabrano je <b>{exportStandings.length} grupa</b>. Maks po slici je{" "}
-              <b>3 ako grupa ima 3 tima</b>, <b>2 ako ima 4+ timova</b>, a mešovite veličine
-              uvek idu na zasebnim slikama (da ne bi ostalo prazno mesto u tabelama).
-              Sa trenutnom selekcijom dobićeš <b>{standingsChunkCount} fajla</b>.
+              Izabrano je <b>{exportStandings.length} grupa</b>. Maks po slici:{" "}
+              <b>Stori</b> = 4 grupe od 3 tima ili 3 grupe od 4+; <b>Objava</b> = 3 grupe
+              od 3 tima ili 2 grupe od 4+. Mešovite veličine uvek idu na zasebnim slikama
+              (da ne bi ostalo prazno mesto). Sa trenutnom selekcijom dobićeš:{" "}
+              <b>{standingsChunkStory} fajla za Stori</b>, <b>{standingsChunkPost} fajla za Objavu</b>.
             </InfoBox>
           )}
         </div>
@@ -591,8 +610,8 @@ export function ExportClient({
           downloading={downloading}
           kind="results"
           onDownload={downloadPoster}
-          exceedPost={resultsExceedPost}
-          exceedStory={resultsExceedStory}
+          exceedPost={false}
+          exceedStory={false}
         />
         <DownloadCard
           title="Tabele"
