@@ -40,14 +40,32 @@ type PosterKind = "results" | "standings" | "scorers";
 type ResultsMode = "round" | "day";
 
 const RESULTS_MAX = { story: 9, post: 6 } as const;
-// Per-image cap depends on team count AND format to avoid cropping:
-//   Story (1080×1920) — more vertical room: 4 tables if ≤3 teams, 3 if 4+
-//   Objava (1080×1350) — less room:         3 tables if ≤3 teams, 2 if 4+
-// Mixed team-count sizes are never put on the same slika (would force
-// padding and waste space).
-function maxStandingsPerImage(teamCount: number, format: Format): number {
-  if (format === "story") return teamCount <= 3 ? 4 : 3;
-  return teamCount <= 3 ? 3 : 2;
+
+// Bin-packing budgets per image — sum of (team_count + 1) for every group on
+// the slika must fit:
+//   Story (1080×1920) — 18 units
+//   Objava (1080×1350) — 12 units
+// The +1 per group accounts for the group's title row.
+const STANDINGS_BUDGET = { story: 18, post: 12 } as const;
+const GROUP_HEADER_COST = 1;
+
+function chunkStandingsByBudget(groups: GroupStandings[], budget: number): GroupStandings[][] {
+  const chunks: GroupStandings[][] = [];
+  let current: GroupStandings[] = [];
+  let currentSize = 0;
+  for (const g of groups) {
+    const cost = g.rows.length + GROUP_HEADER_COST;
+    if (current.length > 0 && currentSize + cost > budget) {
+      chunks.push(current);
+      current = [g];
+      currentSize = cost;
+    } else {
+      current.push(g);
+      currentSize += cost;
+    }
+  }
+  if (current.length) chunks.push(current);
+  return chunks;
 }
 
 export function ExportClient({
@@ -273,26 +291,10 @@ export function ExportClient({
           if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
         }
       } else if (kind === "standings") {
-        // Bucket standings by team count, then chunk each bucket by its
-        // appropriate per-image cap (different for Story vs Objava).
-        // Same-size tables stay together; mixed sizes always split.
-        const chunks: GroupStandings[][] = [];
-        let current: GroupStandings[] = [];
-        let currentSize: number | null = null;
-        for (const g of exportStandings) {
-          const size = g.rows.length;
-          if (currentSize === null) {
-            current.push(g);
-            currentSize = size;
-          } else if (size !== currentSize || current.length >= maxStandingsPerImage(currentSize, format)) {
-            chunks.push(current);
-            current = [g];
-            currentSize = size;
-          } else {
-            current.push(g);
-          }
-        }
-        if (current.length) chunks.push(current);
+        // Bin-pack groups by (teams + 1) units per group, with a budget of
+        // 12 for Objava and 18 for Stori. Each next group is added until
+        // budget would overflow, then a new image starts.
+        const chunks = chunkStandingsByBudget(exportStandings, STANDINGS_BUDGET[format]);
 
         const total = chunks.length;
         for (let i = 0; i < chunks.length; i++) {
@@ -340,32 +342,19 @@ export function ExportClient({
     }
   }
 
-  // Predict how many image files the current selection will produce per
-  // format so we can show an info banner with accurate counts.
-  function computeChunks(items: GroupStandings[], format: Format): number {
-    if (items.length === 0) return 0;
-    let chunks = 0;
-    let inChunk = 0;
-    let currentSize: number | null = null;
-    for (const g of items) {
-      const size = g.rows.length;
-      if (currentSize === null) {
-        inChunk = 1;
-        currentSize = size;
-      } else if (size !== currentSize || inChunk >= maxStandingsPerImage(currentSize, format)) {
-        chunks++;
-        inChunk = 1;
-        currentSize = size;
-      } else {
-        inChunk++;
-      }
-    }
-    if (inChunk > 0) chunks++;
-    return chunks;
-  }
-  const standingsChunkStory = useMemo(() => computeChunks(exportStandings, "story"), [exportStandings]);
-  const standingsChunkPost = useMemo(() => computeChunks(exportStandings, "post"), [exportStandings]);
+  const standingsChunkStory = useMemo(
+    () => chunkStandingsByBudget(exportStandings, STANDINGS_BUDGET.story).length,
+    [exportStandings],
+  );
+  const standingsChunkPost = useMemo(
+    () => chunkStandingsByBudget(exportStandings, STANDINGS_BUDGET.post).length,
+    [exportStandings],
+  );
   const standingsWillSplit = standingsChunkStory > 1 || standingsChunkPost > 1;
+  const standingsTotalUnits = useMemo(
+    () => exportStandings.reduce((acc, g) => acc + g.rows.length + GROUP_HEADER_COST, 0),
+    [exportStandings],
+  );
 
   const resultsChunkStory = Math.ceil(exportMatches.length / RESULTS_MAX.story) || 0;
   const resultsChunkPost = Math.ceil(exportMatches.length / RESULTS_MAX.post) || 0;
@@ -591,10 +580,10 @@ export function ExportClient({
           </div>
           {standingsWillSplit && (
             <InfoBox>
-              Izabrano je <b>{exportStandings.length} grupa</b>. Maks po slici:{" "}
-              <b>Stori</b> = 4 grupe od 3 tima ili 3 grupe od 4+; <b>Objava</b> = 3 grupe
-              od 3 tima ili 2 grupe od 4+. Mešovite veličine uvek idu na zasebnim slikama
-              (da ne bi ostalo prazno mesto). Sa trenutnom selekcijom dobićeš:{" "}
+              Izabrano je <b>{exportStandings.length} grupa</b> ({standingsTotalUnits} ukupno
+              jedinica — svaki tim 1 + naziv grupe 1). Maks po slici:{" "}
+              <b>{STANDINGS_BUDGET.story} jedinica za Stori</b>,{" "}
+              <b>{STANDINGS_BUDGET.post} za Objavu</b>. Sa trenutnom selekcijom dobićeš:{" "}
               <b>{standingsChunkStory} fajla za Stori</b>, <b>{standingsChunkPost} fajla za Objavu</b>.
             </InfoBox>
           )}
