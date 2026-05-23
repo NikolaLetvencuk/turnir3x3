@@ -57,15 +57,16 @@ type PosterRequest = {
 };
 
 const C = {
-  bg: "#0a1740",
-  bgEnd: "#1e3a8a",
-  text: "#ffffff",
-  textDim: "rgba(255,255,255,0.7)",
-  textFaint: "rgba(255,255,255,0.5)",
-  cardBg: "rgba(255,255,255,0.08)",
-  cardBorder: "rgba(255,255,255,0.14)",
-  rowDivider: "rgba(255,255,255,0.08)",
-  accent: "#60a5fa",
+  // Light theme: white poster background with dark navy text
+  bg: "#ffffff",
+  bgEnd: "#f1f5f9",
+  text: "#0f172a",
+  textDim: "rgba(15,23,42,0.6)",
+  textFaint: "rgba(15,23,42,0.4)",
+  cardBg: "#f8fafc",
+  cardBorder: "#e2e8f0",
+  rowDivider: "#e2e8f0",
+  accent: "#2563eb",
   gold: "#facc15",
   silver: "#cbd5e1",
   bronze: "#f59e0b",
@@ -155,7 +156,7 @@ function PosterFrame({
             position: "absolute",
             top: (height - watermarkSize) / 2,
             left: (width - watermarkSize) / 2,
-            opacity: 0.08,
+            opacity: 0.12,
             objectFit: "contain",
           }}
         />
@@ -233,6 +234,9 @@ function Crest({ team, size }: { team: Team | null; size: number }) {
         height: size,
         borderRadius: Math.round(size * 0.18),
         background: primary,
+        // Subtle outline so light-coloured crests (e.g. Real Madrid white) stay
+        // visible against the white poster background.
+        border: "1px solid rgba(15,23,42,0.2)",
         alignItems: "center",
         justifyContent: "center",
         color: textColor,
@@ -648,8 +652,8 @@ function ScorersPoster({
 function ScorerRow({ scorer, rank }: { scorer: ScorerEntry; rank: number }) {
   const top3 = rank <= 3;
   const rankBg =
-    rank === 1 ? C.gold : rank === 2 ? C.silver : rank === 3 ? C.bronze : "rgba(255,255,255,0.12)";
-  const rankFg = rank <= 3 ? "#0c1432" : "#ffffff";
+    rank === 1 ? C.gold : rank === 2 ? C.silver : rank === 3 ? C.bronze : "rgba(15,23,42,0.08)";
+  const rankFg = "#0f172a";
 
   const fittedFs = fitFontSize(scorer.player_name, 600, 34, 22);
 
@@ -658,8 +662,8 @@ function ScorerRow({ scorer, rank }: { scorer: ScorerEntry; rank: number }) {
       style={{
         display: "flex",
         alignItems: "center",
-        background: top3 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
-        border: top3 ? "2px solid rgba(250,204,21,0.6)" : `1px solid ${C.cardBorder}`,
+        background: top3 ? "rgba(250,204,21,0.12)" : C.cardBg,
+        border: top3 ? `2px solid ${C.gold}` : `1px solid ${C.cardBorder}`,
         borderRadius: 18,
         padding: "14px 22px",
       }}
