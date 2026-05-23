@@ -40,10 +40,14 @@ type PosterKind = "results" | "standings" | "scorers";
 type ResultsMode = "round" | "day";
 
 const RESULTS_MAX = { story: 8, post: 5 } as const;
-// Hard cap per poster — at most 3 groups stacked vertically on a single
-// image. If user picks more groups than this, downloadPoster chunks the
-// selection and produces multiple PNG files automatically.
-const STANDINGS_MAX = { story: 3, post: 3 } as const;
+// Per-image cap depends on team count to avoid empty rows / cropping:
+//   ≤3 teams in group  → up to 3 tables on the slika
+//   4+ teams in group  → up to 2 tables on the slika
+// Mixed sizes are never put on the same slika (different team counts produce
+// different card heights, which would force padding and waste space).
+function maxStandingsPerImage(teamCount: number): number {
+  return teamCount <= 3 ? 3 : 2;
+}
 
 export function ExportClient({
   rounds,
@@ -255,12 +259,27 @@ export function ExportClient({
             : `results-${format}-${selectedDay}`;
         await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
       } else if (kind === "standings") {
-        // Chunk standings if user selected more groups than fit on one poster.
-        const max = STANDINGS_MAX[format];
+        // Bucket standings by team count, then chunk each bucket by its
+        // appropriate per-image cap. Same-size tables stay together; mixed
+        // sizes are always split onto separate images.
         const chunks: GroupStandings[][] = [];
-        for (let i = 0; i < exportStandings.length; i += max) {
-          chunks.push(exportStandings.slice(i, i + max));
+        let current: GroupStandings[] = [];
+        let currentSize: number | null = null;
+        for (const g of exportStandings) {
+          const size = g.rows.length;
+          if (currentSize === null) {
+            current.push(g);
+            currentSize = size;
+          } else if (size !== currentSize || current.length >= maxStandingsPerImage(currentSize)) {
+            chunks.push(current);
+            current = [g];
+            currentSize = size;
+          } else {
+            current.push(g);
+          }
         }
+        if (current.length) chunks.push(current);
+
         const total = chunks.length;
         for (let i = 0; i < chunks.length; i++) {
           const chunk = chunks[i];
@@ -287,7 +306,6 @@ export function ExportClient({
           const slug = `standings-${format}-${groupNames}${partSuffix}`;
           const ok = await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
           if (!ok) break;
-          // Brief delay so the browser doesn't merge download prompts.
           if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
         }
       } else {
@@ -310,8 +328,31 @@ export function ExportClient({
 
   const resultsExceedStory = exportMatches.length > RESULTS_MAX.story;
   const resultsExceedPost = exportMatches.length > RESULTS_MAX.post;
-  const standingsExceedStory = exportStandings.length > STANDINGS_MAX.story;
-  const standingsExceedPost = exportStandings.length > STANDINGS_MAX.post;
+  // Predict how many image files the current selection will produce so we
+  // can show an info banner. Uses the same bucket-by-size-then-chunk logic
+  // as the download path.
+  const standingsChunkCount = useMemo(() => {
+    if (exportStandings.length === 0) return 0;
+    let chunks = 0;
+    let inChunk = 0;
+    let currentSize: number | null = null;
+    for (const g of exportStandings) {
+      const size = g.rows.length;
+      if (currentSize === null) {
+        inChunk = 1;
+        currentSize = size;
+      } else if (size !== currentSize || inChunk >= maxStandingsPerImage(currentSize)) {
+        chunks++;
+        inChunk = 1;
+        currentSize = size;
+      } else {
+        inChunk++;
+      }
+    }
+    if (inChunk > 0) chunks++;
+    return chunks;
+  }, [exportStandings]);
+  const standingsWillSplit = standingsChunkCount > 1;
 
   return (
     <div className="space-y-4">
@@ -530,12 +571,12 @@ export function ExportClient({
               ))}
             </div>
           </div>
-          {(standingsExceedStory || standingsExceedPost) && (
+          {standingsWillSplit && (
             <InfoBox>
-              Izabrano je <b>{exportStandings.length} grupa</b>. Maksimum je{" "}
-              <b>{STANDINGS_MAX.story} grupe po slici</b> (sve su stack-ovane jedna ispod druge),
-              pa će se download automatski podeliti na{" "}
-              <b>{Math.ceil(exportStandings.length / STANDINGS_MAX.story)} fajla</b>.
+              Izabrano je <b>{exportStandings.length} grupa</b>. Maks po slici je{" "}
+              <b>3 ako grupa ima 3 tima</b>, <b>2 ako ima 4+ timova</b>, a mešovite veličine
+              uvek idu na zasebnim slikama (da ne bi ostalo prazno mesto u tabelama).
+              Sa trenutnom selekcijom dobićeš <b>{standingsChunkCount} fajla</b>.
             </InfoBox>
           )}
         </div>
