@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, Unlock } from "lucide-react";
+import { Lock, Unlock, Trophy } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
 import { BracketTree, type BracketMatchView, type TeamLite } from "@/components/bracket/BracketTree";
 import { useActionRunner } from "@/components/admin/FormButton";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import {
   generateKnockoutBracket,
@@ -85,7 +86,12 @@ export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Eliminacije</h1>
+      <PageHeader
+        icon={Trophy}
+        title="Eliminacije"
+        hint="Generiši nokaut stablo posle grupne faze. Pobednik osmine ide u četvrtfinale, pa polufinale, finale."
+        tone="purple"
+      />
 
       <div className="card space-y-3">
         <h2 className="font-medium">Konfiguracija nokauta</h2>

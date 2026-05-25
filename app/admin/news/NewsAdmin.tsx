@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Megaphone, Trash2, Send } from "lucide-react";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { createNews, deleteNews } from "../actions";
 
@@ -57,14 +59,12 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Vesti</h1>
-        <p className="text-sm text-zinc-500">
-          Najnovija vest se prikazuje na početnoj stranici sajta. Pri objavi
-          opciono otvara se WhatsApp sa već pripremljenom porukom — odabereš
-          grupu kapitena, klikneš Send.
-        </p>
-      </div>
+      <PageHeader
+        icon={Megaphone}
+        title="Vesti"
+        hint="Najnovija vest se vidi na početnoj. Po objavi se otvara WhatsApp sa porukom — biraš grupu kapitena i šalješ."
+        tone="amber"
+      />
 
       {/* Set-up tip */}
       <div className="card border-blue-200 bg-blue-50">
@@ -152,12 +152,13 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
                   <span className="text-[10px] text-zinc-500 shrink-0">{formatRelativeDate(n.created_at)}</span>
                 </div>
                 <p className="text-sm text-zinc-700 mt-1 whitespace-pre-wrap">{n.body}</p>
-                <div className="flex gap-3 mt-1.5">
+                <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => setPostPublish({ title: n.title, body: n.body })}
-                    className="text-xs text-emerald-700 hover:underline"
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 text-xs font-medium"
+                    title="Ponovo pošalji u WhatsApp"
                   >
-                    💬 Ponovo pošalji u WA
+                    <Send className="w-3.5 h-3.5" /> WA
                   </button>
                   <button
                     onClick={async () => {
@@ -170,9 +171,10 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
                       push("Obrisano", "success");
                       router.refresh();
                     }}
-                    className="text-xs text-red-600 hover:underline"
+                    className="inline-flex items-center gap-1 rounded-md bg-red-100 hover:bg-red-200 text-red-700 px-2.5 py-1 text-xs font-medium"
+                    title="Obriši vest"
                   >
-                    Obriši
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </li>

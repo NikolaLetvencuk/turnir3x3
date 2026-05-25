@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { CalendarClock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { ScheduleBoard } from "./ScheduleBoard";
 
 export const revalidate = 0;
@@ -16,11 +18,17 @@ export default async function SchedulePage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Raspored po kolima</h1>
-        <Link href="/admin/draw" className="text-sm text-blue-700 hover:underline">Novi žreb →</Link>
+      <PageHeader
+        icon={CalendarClock}
+        title="Raspored"
+        hint="Prevuci meč iz jednog kola u drugo da promeniš raspored. Zaključana kola su 🔒."
+        tone="amber"
+      />
+      <div className="flex justify-end">
+        <Link href="/admin/draw" className="text-sm text-blue-700 hover:underline">
+          ← Novi žreb
+        </Link>
       </div>
-      <p className="text-sm text-zinc-600">Prevuci meč iz jednog kola u drugo da bi promenio raspored. Zaključana kola su označena katancem.</p>
       <ScheduleBoard rounds={(rounds ?? []) as any[]} matches={(matches ?? []) as any[]} />
     </div>
   );

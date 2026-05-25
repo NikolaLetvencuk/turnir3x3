@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Info, Calendar, X, Lock, Zap } from "lucide-react";
+import { Info, Calendar, X, Lock, Zap, ListChecks } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { useActionRunner } from "@/components/admin/FormButton";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { setMatchKickoff, startFirstHalf, finishMatch, bulkSetMatchKickoffs } from "../actions";
 import { formatKickoff, toDatetimeLocalValue, toLocalDate } from "@/lib/utils";
 
@@ -109,7 +110,12 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
   return (
     <div className="space-y-4">
       <LiveRefresh tag="admin-matches" />
-      <h1 className="text-xl font-semibold">Mečevi</h1>
+      <PageHeader
+        icon={ListChecks}
+        title="Mečevi"
+        hint="Postavi termine, pokreni mečeve i unosi golove. Klikni 'Otvori' kod meča da uneseš događaje uživo."
+        tone="purple"
+      />
 
       <div className="card bg-sky-50 border-sky-200 text-sm text-sky-900 flex items-start gap-2">
         <Info className="w-4 h-4 mt-0.5 shrink-0 text-sky-600" />

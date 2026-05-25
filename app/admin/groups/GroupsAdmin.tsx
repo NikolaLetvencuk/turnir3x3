@@ -1,6 +1,8 @@
 "use client";
 
+import { Users } from "lucide-react";
 import { useActionRunner } from "@/components/admin/FormButton";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { createGroup, deleteGroup, setTeamGroup } from "../actions";
 
 type Group = { id: string; name: string; display_order: number };
@@ -23,7 +25,12 @@ export function GroupsAdmin({ groups, teams, assignment }: { groups: Group[]; te
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Grupe</h1>
+      <PageHeader
+        icon={Users}
+        title="Grupe"
+        hint="Ručno raspoređivanje timova u grupe. Većini turnira ne treba ovde — koristi sekciju Žreb."
+        tone="blue"
+      />
       <form onSubmit={onCreate} className="card grid sm:grid-cols-[1fr_auto_auto] gap-2">
         <input name="name" placeholder="Naziv (npr. Grupa A)" required className="input" />
         <input name="display_order" type="number" defaultValue={groups.length} className="input w-24" />

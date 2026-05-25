@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Users, Plus, Pencil, Trash2, X } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { createTeam, updateTeam, deleteTeam, setCaptainPhone } from "../actions";
 
@@ -125,27 +127,58 @@ function TeamForm({
 export function TeamsAdmin({ teams }: { teams: Team[] }) {
   const run = useActionRunner();
   const [editing, setEditing] = useState<string | null>(null);
+  const [showNew, setShowNew] = useState(teams.length === 0);
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Timovi</h1>
-      <div className="card">
-        <h2 className="font-medium mb-2">Dodaj tim</h2>
-        <TeamForm
-          submitLabel="Dodaj"
-          onSubmit={async (fd, captain) => {
-            const ok = await run(createTeam, fd);
-            if (!ok) return false;
-            // For freshly created team we need its id — re-fetch by name match
-            // since createTeam doesn't return it. Cheap workaround: skip captain
-            // save here and tell user to open edit row.
-            if (captain.name || captain.phone) {
-              // Wait briefly then refresh — captain save will happen on edit.
-              // Page reloads via revalidate; admin can re-open the row.
-            }
-            return ok;
-          }}
-        />
+      <PageHeader
+        icon={Users}
+        title="Timovi"
+        hint="Dodaj sve ekipe koje učestvuju. Zatim u Igračima upiši njihove igrače."
+        tone="blue"
+      />
+
+      {!showNew ? (
+        <button
+          onClick={() => setShowNew(true)}
+          className="card flex items-center justify-between gap-3 hover:border-blue-300 hover:bg-blue-50 transition w-full"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Dodaj novi tim</div>
+              <div className="text-xs text-zinc-500">Naziv, boje i logo</div>
+            </div>
+          </div>
+        </button>
+      ) : (
+        <div className="card border-blue-300 border-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold">Novi tim</h2>
+            <button onClick={() => setShowNew(false)} className="text-zinc-400 hover:text-zinc-700" aria-label="Otkaži">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <TeamForm
+            submitLabel="Dodaj"
+              onSubmit={async (fd, captain) => {
+              const ok = await run(createTeam, fd);
+              if (!ok) return false;
+              if (captain.name || captain.phone) {
+                // Captain save happens after team gets an id — admin can edit row.
+              }
+              setShowNew(false);
+              return ok;
+            }}
+            onCancel={() => setShowNew(false)}
+          />
+        </div>
+      )}
+
+      <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold px-1 pt-1">
+        Postojeći timovi ({teams.length})
       </div>
 
       <div className="space-y-2">
@@ -178,20 +211,37 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
                     </div>
                   )}
                 </div>
-                <button onClick={() => setEditing(t.id)} className="btn-secondary !py-1 !px-2 text-xs">Izmeni</button>
+                <button
+                  onClick={() => setEditing(t.id)}
+                  className="inline-flex items-center gap-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-2 py-1.5 text-xs"
+                  aria-label="Izmeni"
+                  title="Izmeni"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (!confirm(`Obrisati tim „${t.name}"?`)) return;
                   const fd = new FormData(); fd.set("id", t.id);
                   await run(deleteTeam, fd, { successMessage: "Obrisano" });
                 }}>
-                  <button className="btn-danger !py-1 !px-2 text-xs">Obriši</button>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1.5 text-xs"
+                    aria-label="Obriši"
+                    title="Obriši"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </form>
               </div>
             )}
           </div>
         ))}
-        {teams.length === 0 && <p className="text-sm text-zinc-500 text-center">Nema timova.</p>}
+        {teams.length === 0 && (
+          <div className="card text-center text-sm text-zinc-500 py-6">
+            Još nema timova. Klikni <b>Dodaj novi tim</b> iznad.
+          </div>
+        )}
       </div>
     </div>
   );

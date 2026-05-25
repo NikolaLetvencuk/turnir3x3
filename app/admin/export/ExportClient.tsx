@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Share2 } from "lucide-react";
+import { PageHeader } from "@/components/admin/PageHeader";
 import type { GroupStandings, TopScorerRow } from "@/lib/standings";
 
 export type ExportRound = {
@@ -362,12 +364,12 @@ export function ExportClient({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Export</h1>
-        <p className="text-sm text-zinc-500">
-          Server generiše PNG preko <code>next/og</code> (Satori). Story 1080×1920, Objava 1080×1350.
-        </p>
-      </div>
+      <PageHeader
+        icon={Share2}
+        title="Export"
+        hint="Pravi gotove slike za Story (1080×1920) i Objavu (1080×1350). Klikni Generiši pa Preuzmi."
+        tone="blue"
+      />
 
       {/* Filters for Rezultati */}
       <div className="card space-y-3">

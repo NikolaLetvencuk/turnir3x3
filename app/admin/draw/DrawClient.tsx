@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { composeDraw, type DrawResult, type DrawTeam } from "@/lib/draw";
 import {
@@ -146,7 +148,12 @@ export function DrawClient({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Žreb grupa</h1>
+      <PageHeader
+        icon={Sparkles}
+        title="Žreb grupa"
+        hint="Postavi datum i broj grupa. Na dogovoreno vreme svi posetioci sajta vide sinhronizovan žreb sa animacijom."
+        tone="amber"
+      />
 
       {hasScheduled && (
         <ScheduledDrawStatus

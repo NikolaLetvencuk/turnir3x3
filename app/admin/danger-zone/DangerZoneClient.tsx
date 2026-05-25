@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Sparkles, RotateCcw } from "lucide-react";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { adminResetProgress, adminResetFull, adminSeedDemo } from "./actions";
 import { useToast } from "@/components/ui/Toast";
 
@@ -49,9 +50,12 @@ export function DangerZoneClient() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold flex items-center gap-2">
-        <AlertTriangle className="w-5 h-5 text-red-600" /> Opasna zona
-      </h1>
+      <PageHeader
+        icon={AlertTriangle}
+        title="Opasna zona"
+        hint="Resetovanje turnira ili učitavanje demo podataka. Pažljivo — promene se ne mogu vratiti."
+        tone="red"
+      />
 
       <div className="card border-amber-200 bg-amber-50">
         <h2 className="font-semibold text-amber-800 flex items-center gap-2">

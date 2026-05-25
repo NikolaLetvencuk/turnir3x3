@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { User, Pencil, Trash2 } from "lucide-react";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { createPlayer, deletePlayer, removePlayerPhoto, updatePlayer, uploadPlayerPhoto } from "../actions";
 
 type Player = { id: string; name: string; team_id: string | null; photo_url: string | null };
@@ -80,14 +82,22 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Igrači</h1>
-      <form onSubmit={onCreate} className="card grid sm:grid-cols-[1.5fr_1fr_auto] gap-2">
-        <input name="name" placeholder="Ime i prezime" required className="input" />
-        <select name="team_id" className="input">
-          <option value="">— bez tima —</option>
-          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-        <button className="btn-primary">Dodaj</button>
+      <PageHeader
+        icon={User}
+        title="Igrači"
+        hint="Unesi svakog igrača i poveži ga sa njegovim timom. Slika je opciona."
+        tone="emerald"
+      />
+      <form onSubmit={onCreate} className="card space-y-2">
+        <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Dodaj igrača</div>
+        <div className="grid sm:grid-cols-[1.5fr_1fr_auto] gap-2">
+          <input name="name" placeholder="Ime i prezime" required className="input" />
+          <select name="team_id" className="input" required>
+            <option value="">— Izaberi tim —</option>
+            {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <button className="btn-primary">+ Dodaj</button>
+        </div>
       </form>
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -122,21 +132,40 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
                     <td className="text-zinc-500">{p.team_id ? teamMap.get(p.team_id)?.name : "—"}</td>
                     <td className="text-right space-x-1 whitespace-nowrap">
                       <PhotoUploader playerId={p.id} hasPhoto={!!p.photo_url} run={run} />
-                      <button onClick={() => setEditing(p.id)} className="btn-secondary !py-1 !px-2 text-xs">Izmeni</button>
+                      <button
+                        onClick={() => setEditing(p.id)}
+                        className="inline-flex items-center rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 p-1.5"
+                        aria-label="Izmeni"
+                        title="Izmeni"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       <form className="inline" onSubmit={async (e) => {
                         e.preventDefault();
                         if (!confirm(`Obrisati igrača „${p.name}"?`)) return;
                         const fd = new FormData(); fd.set("id", p.id);
                         await run(deletePlayer, fd, { successMessage: "Obrisano" });
                       }}>
-                        <button className="btn-danger !py-1 !px-2 text-xs">Obriši</button>
+                        <button
+                          className="inline-flex items-center rounded-md bg-red-50 hover:bg-red-100 text-red-700 p-1.5"
+                          aria-label="Obriši"
+                          title="Obriši"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </form>
                     </td>
                   </>
                 )}
               </tr>
             ))}
-            {players.length === 0 && <tr><td colSpan={4} className="py-4 text-center text-zinc-500">Nema igrača.</td></tr>}
+            {players.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-6 text-center text-zinc-500 text-sm">
+                  Još nema igrača. Popuni formu iznad.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

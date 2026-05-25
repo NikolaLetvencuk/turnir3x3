@@ -1,6 +1,8 @@
 "use client";
 
+import { Trophy, RefreshCw } from "lucide-react";
 import { useActionRunner } from "@/components/admin/FormButton";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { recalcRound } from "../actions";
 
 type Round = { id: string; name: string; status: string };
@@ -9,24 +11,40 @@ export function FantasyAdmin({ rounds }: { rounds: Round[] }) {
   const run = useActionRunner();
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Fantasy administracija</h1>
+      <PageHeader
+        icon={Trophy}
+        title="Fantasy"
+        hint="Bodovi se obračunavaju automatski. Ovde samo ručno pokrećeš ponovni obračun ako je nešto pogrešno."
+        tone="emerald"
+      />
       <div className="card">
-        <h2 className="font-medium mb-2">Ručni obračun bodova</h2>
-        <p className="text-sm text-zinc-600 mb-3">Obračun se odvija automatski kod izmena događaja i kraja kola. Ovde možeš ručno pokrenuti recompute za neko kolo.</p>
-        <ul className="space-y-2">
+        <h2 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
+          <RefreshCw className="w-4 h-4 text-emerald-600" />
+          Ponovo izračunaj bodove po kolu
+        </h2>
+        <ul className="space-y-1.5">
           {rounds.map((r) => (
-            <li key={r.id} className="flex items-center justify-between border-b last:border-0 border-zinc-100 pb-2">
-              <span>{r.name} · <span className="text-zinc-500 text-xs">{r.status}</span></span>
+            <li key={r.id} className="flex items-center justify-between border-b last:border-0 border-zinc-100 pb-1.5">
+              <div>
+                <div className="text-sm font-medium">{r.name}</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{r.status}</div>
+              </div>
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 const fd = new FormData(); fd.set("round_id", r.id);
-                await run(recalcRound, fd, { successMessage: "Obračun izvršen" });
+                await run(recalcRound, fd, { successMessage: "Obračunato" });
               }}>
-                <button className="btn-secondary !py-1 !px-3 text-xs">Recompute</button>
+                <button className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1.5 text-xs font-medium">
+                  <RefreshCw className="w-3.5 h-3.5" /> Izračunaj
+                </button>
               </form>
             </li>
           ))}
-          {rounds.length === 0 && <p className="text-sm text-zinc-500">Nema kola.</p>}
+          {rounds.length === 0 && (
+            <li className="text-sm text-zinc-500 italic py-4 text-center">
+              Još nema kola. Pokreni žreb prvo.
+            </li>
+          )}
         </ul>
       </div>
     </div>
