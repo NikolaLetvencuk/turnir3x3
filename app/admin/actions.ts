@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { belgradeLocalToUTCISO } from "@/lib/utils";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function withAdmin<T>(fn: () => Promise<T>): Promise<T | { ok: false; error: string }> {
   try { await requireAdmin(); return await fn(); }
@@ -779,6 +779,76 @@ export async function setPopupAdEnabled(enabled: boolean): Promise<ActionResult>
     if (error) return { ok: false, error: error.message };
     revalidatePath("/");
     revalidatePath("/admin");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// NEWS: admin posts news items, public sees latest on homepage.
+const newsSchema = z.object({
+  title: z.string().trim().min(2, "Naslov mora imati bar 2 znaka").max(120, "Naslov je predugačak"),
+  body: z.string().trim().min(2, "Tekst mora imati bar 2 znaka").max(2000, "Tekst je predugačak"),
+});
+
+export async function createNews(input: { title: string; body: string }): Promise<ActionResult<{ id: string }>> {
+  return withAdmin(async () => {
+    const parsed = newsSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.errors[0]?.message ?? "Neispravan unos" };
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("news")
+      .insert({ title: parsed.data.title, body: parsed.data.body })
+      .select("id")
+      .single();
+    if (error || !data) return { ok: false, error: error?.message ?? "Greška" };
+    revalidatePath("/");
+    revalidatePath("/admin/news");
+    return { ok: true, data: { id: (data as { id: string }).id } };
+  }) as Promise<ActionResult<{ id: string }>>;
+}
+
+export async function deleteNews(input: { id: string }): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const admin = createAdminClient();
+    const { error } = await admin.from("news").delete().eq("id", input.id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/");
+    revalidatePath("/admin/news");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// TEAM CAPTAINS: name + phone per team, admin-only data.
+const captainSchema = z.object({
+  team_id: z.string().uuid(),
+  name: z.string().trim().max(80).nullable().optional(),
+  phone: z.string().trim().max(30).nullable().optional(),
+});
+
+export async function setCaptainPhone(input: {
+  team_id: string;
+  name?: string | null;
+  phone?: string | null;
+}): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const parsed = captainSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.errors[0]?.message ?? "Neispravan unos" };
+    const admin = createAdminClient();
+    const name = parsed.data.name?.trim() || null;
+    const phone = parsed.data.phone?.trim() || null;
+    if (!name && !phone) {
+      // Clear the row if both fields are empty.
+      await admin.from("team_captains").delete().eq("team_id", parsed.data.team_id);
+    } else {
+      const { error } = await admin
+        .from("team_captains")
+        .upsert(
+          { team_id: parsed.data.team_id, name, phone, updated_at: new Date().toISOString() },
+          { onConflict: "team_id" },
+        );
+      if (error) return { ok: false, error: error.message };
+    }
+    revalidatePath("/admin/teams");
+    revalidatePath("/admin/news");
     return { ok: true };
   }) as Promise<ActionResult>;
 }

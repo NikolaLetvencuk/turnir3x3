@@ -6,6 +6,7 @@ import { getGroupStandings, getTopScorers } from "@/lib/standings";
 import { TeamCrest } from "@/components/TeamCrest";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { DrawStatusBanner } from "@/components/DrawStatusBanner";
+import { NewsBanner } from "@/components/NewsBanner";
 import { PopupAd } from "@/components/PopupAd";
 import { getPopupAdSetting } from "@/lib/settings";
 
@@ -20,10 +21,12 @@ export default async function HomePage() {
   const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
   const hasGroups = (groupCheck?.length ?? 0) > 0;
 
-  const [{ data: drawStateRow }, popup] = await Promise.all([
+  const [{ data: drawStateRow }, popup, { data: latestNews }] = await Promise.all([
     adminRO.from("draw_state").select("state, scheduled_at, per_pick_ms, result").eq("id", true).maybeSingle(),
     getPopupAdSetting(),
+    adminRO.from("news").select("id, title, body, created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  const newsRow = (latestNews as { id: string; title: string; body: string; created_at: string } | null) ?? null;
 
   // Pre-draw view: only banner + team list
   if (!hasGroups) {
@@ -37,6 +40,7 @@ export default async function HomePage() {
       <div className="space-y-6">
         <LiveRefresh tag="home-predraw" />
         <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
+        <NewsBanner initial={newsRow} />
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
         <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
           <h1 className="text-2xl font-bold">Turnir Kula</h1>
@@ -95,6 +99,7 @@ export default async function HomePage() {
     <div className="space-y-6">
       <LiveRefresh tag="home" />
       <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
+      <NewsBanner initial={newsRow} />
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
       <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
         <h1 className="text-2xl font-bold">Turnir Kula</h1>

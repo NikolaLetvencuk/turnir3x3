@@ -602,6 +602,30 @@ export type Database = {
           },
         ]
       }
+      news: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       player_prices: {
         Row: {
           id: string
@@ -769,6 +793,35 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      team_captains: {
+        Row: {
+          name: string | null
+          phone: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          name?: string | null
+          phone?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string | null
+          phone?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_captains_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teams: {
         Row: {
