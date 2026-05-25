@@ -13,6 +13,7 @@ type Team = {
   secondary_color: string | null;
   captain_name?: string | null;
   captain_phone?: string | null;
+  players?: Array<{ id: string; name: string }>;
 };
 
 function CrestPreview({ name, shortName, primary, secondary }: { name: string; shortName: string; primary: string; secondary: string }) {
@@ -74,20 +75,33 @@ function TeamForm({
       </div>
       {sameColors && <p className="text-xs text-amber-700">Boje su iste — grb će biti slabo vidljiv.</p>}
 
-      {/* Kapiten — opciono, koristi se za slanje vesti kapitenima na WhatsApp/Viber */}
+      {/* Kapiten — bira se iz liste igrača ovog tima */}
       <div className="grid sm:grid-cols-2 gap-2 border-t border-zinc-100 pt-2">
         <label className="block text-sm">
-          <span className="text-xs text-zinc-600">Ime kapitena (opciono)</span>
-          <input
-            value={captainName}
-            onChange={(e) => setCaptainName(e.target.value)}
-            placeholder="npr. Marko Marković"
-            maxLength={80}
-            className="input"
-          />
+          <span className="text-xs text-zinc-600">Kapiten (izaberi igrača)</span>
+          {!initial?.id ? (
+            <p className="text-xs text-zinc-500 italic input flex items-center !cursor-not-allowed bg-zinc-100">
+              Prvo sačuvaj tim, pa dodaj igrače, pa se vrati.
+            </p>
+          ) : !initial?.players || initial.players.length === 0 ? (
+            <p className="text-xs text-amber-700 italic input flex items-center !cursor-not-allowed bg-amber-50">
+              Dodaj igrače timu u sekciji Igrači, pa se vrati ovde.
+            </p>
+          ) : (
+            <select
+              value={captainName}
+              onChange={(e) => setCaptainName(e.target.value)}
+              className="input"
+            >
+              <option value="">— bez kapitena —</option>
+              {initial.players.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          )}
         </label>
         <label className="block text-sm">
-          <span className="text-xs text-zinc-600">Telefon kapitena (za WhatsApp/Viber)</span>
+          <span className="text-xs text-zinc-600">Telefon kapitena (za WhatsApp/Viber/SMS)</span>
           <input
             value={captainPhone}
             onChange={(e) => setCaptainPhone(e.target.value)}
@@ -95,6 +109,7 @@ function TeamForm({
             maxLength={30}
             className="input"
             inputMode="tel"
+            disabled={!initial?.id}
           />
         </label>
       </div>
