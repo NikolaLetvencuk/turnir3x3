@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MatchCard } from "@/components/matches/MatchCard";
@@ -42,9 +43,27 @@ export default async function HomePage() {
         <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
         <NewsBanner initial={newsRow} />
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
-        <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
-          <h1 className="text-2xl font-bold">Turnir Kula</h1>
-          <p className="text-blue-50 mt-1 text-sm">Liparski put · prijave su otvorene</p>
+        <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
+          <Image
+            src="/logo/liga_sampiona.png"
+            alt=""
+            width={180}
+            height={180}
+            className="absolute -right-4 -top-4 opacity-25 rotate-12 pointer-events-none select-none"
+          />
+          <div className="relative flex items-center gap-3">
+            <Image
+              src="/logo/liga_sampiona.png"
+              alt="Turnir Kula"
+              width={56}
+              height={56}
+              className="rounded-lg shrink-0 bg-white/10 p-1"
+            />
+            <div>
+              <h1 className="text-2xl font-bold">Turnir Kula</h1>
+              <p className="text-blue-50 mt-0.5 text-sm">Liparski put · prijave su otvorene</p>
+            </div>
+          </div>
         </section>
 
         <section>
@@ -101,10 +120,28 @@ export default async function HomePage() {
       <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
       <NewsBanner initial={newsRow} />
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
-      <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
-        <h1 className="text-2xl font-bold">Turnir Kula</h1>
-        <p className="text-blue-50 mt-1 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
-        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium">
+      <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
+        <Image
+          src="/logo/liga_sampiona.png"
+          alt=""
+          width={180}
+          height={180}
+          className="absolute -right-4 -top-4 opacity-25 rotate-12 pointer-events-none select-none"
+        />
+        <div className="relative flex items-center gap-3">
+          <Image
+            src="/logo/liga_sampiona.png"
+            alt="Turnir Kula"
+            width={56}
+            height={56}
+            className="rounded-lg shrink-0 bg-white/10 p-1"
+          />
+          <div>
+            <h1 className="text-2xl font-bold">Turnir Kula</h1>
+            <p className="text-blue-50 mt-0.5 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
+          </div>
+        </div>
+        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium relative">
           Sastavi svoj fantasy tim →
         </Link>
       </section>

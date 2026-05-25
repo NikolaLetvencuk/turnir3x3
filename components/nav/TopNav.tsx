@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Trophy } from "lucide-react";
+import Image from "next/image";
 import { BackButton } from "./BackButton";
 
 type Profile = { email: string; role: string } | null;
@@ -12,7 +12,14 @@ export function TopNav({ profile }: { profile: Profile }) {
         <div className="flex items-center gap-1 min-w-0">
           <BackButton />
           <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
-            <Trophy className="w-5 h-5 text-blue-600" />
+            <Image
+              src="/logo/liga_sampiona.png"
+              alt="Turnir Kula"
+              width={32}
+              height={32}
+              className="rounded"
+              priority
+            />
             <span className="truncate">Turnir Kula</span>
           </Link>
         </div>
