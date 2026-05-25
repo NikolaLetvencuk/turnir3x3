@@ -34,6 +34,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
   const [body, setBody] = useState("");
   const [sendToWaGroup, setSendToWaGroup] = useState(true);
   const [pending, setPending] = useState(false);
+  const [postPublish, setPostPublish] = useState<{ title: string; body: string } | null>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,20 +47,8 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
       return;
     }
     push("Vest objavljena", "success");
-
     if (sendToWaGroup) {
-      const message = buildMessage(title.trim(), body.trim());
-      // whatsapp://send?text=... opens WhatsApp's "Share with..." dialog with
-      // the message pre-filled. Admin picks the captains' group, taps Send.
-      const waUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
-      window.location.href = waUrl;
-      // Fallback if the OS doesn't have the WA app installed — try wa.me as
-      // web-based universal link after a short delay.
-      setTimeout(() => {
-        if (document.hasFocus()) {
-          window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
-        }
-      }, 1500);
+      setPostPublish({ title: title.trim(), body: body.trim() });
     }
     setTitle("");
     setBody("");
@@ -86,6 +75,14 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
           buduće vesti šaljemo u tu grupu — jedan klik kod nas, jedan tap u WA.
         </p>
       </div>
+
+      {/* Post-publish action chooser */}
+      {postPublish && (
+        <PostPublishPanel
+          message={buildMessage(postPublish.title, postPublish.body)}
+          onClose={() => setPostPublish(null)}
+        />
+      )}
 
       {/* New post form */}
       <form onSubmit={submit} className="card space-y-3">
@@ -157,10 +154,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
                 <p className="text-sm text-zinc-700 mt-1 whitespace-pre-wrap">{n.body}</p>
                 <div className="flex gap-3 mt-1.5">
                   <button
-                    onClick={() => {
-                      const url = `whatsapp://send?text=${encodeURIComponent(buildMessage(n.title, n.body))}`;
-                      window.location.href = url;
-                    }}
+                    onClick={() => setPostPublish({ title: n.title, body: n.body })}
                     className="text-xs text-emerald-700 hover:underline"
                   >
                     💬 Ponovo pošalji u WA
@@ -186,6 +180,75 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+function PostPublishPanel({ message, onClose }: { message: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const encoded = encodeURIComponent(message);
+  // Two universal URLs — wa.me opens the native app on mobile, falls back to
+  // WhatsApp Web on desktop. web.whatsapp.com forces the browser variant.
+  const waUniversal = `https://wa.me/?text=${encoded}`;
+  const waApp = `whatsapp://send?text=${encoded}`;
+  const waWeb = `https://web.whatsapp.com/send?text=${encoded}`;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard might be blocked — ignore */
+    }
+  }
+
+  return (
+    <div className="card border-2 border-emerald-300 bg-emerald-50/60">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div>
+          <h2 className="font-semibold text-emerald-900">✓ Vest objavljena. Sad je pošalji u WA grupu kapitena.</h2>
+          <p className="text-xs text-emerald-900/80 mt-1">
+            Izaberi kako da otvoriš WhatsApp. WA ne dozvoljava da unapred
+            izaberemo grupu — uvek ćeš morati da tapneš grupu sa Share liste.
+          </p>
+        </div>
+        <button onClick={onClose} className="text-emerald-700 hover:text-emerald-900 text-xl leading-none">×</button>
+      </div>
+
+      <pre className="whitespace-pre-wrap font-sans text-xs bg-white border border-emerald-200 rounded p-2 mb-3 max-h-40 overflow-y-auto">
+        {message}
+      </pre>
+
+      <div className="grid sm:grid-cols-3 gap-2">
+        <a
+          href={waApp}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 text-sm font-medium"
+        >
+          📱 WhatsApp aplikacija
+        </a>
+        <a
+          href={waWeb}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2.5 text-sm font-medium"
+        >
+          🌐 WhatsApp Web
+        </a>
+        <button
+          onClick={copy}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2.5 text-sm font-medium"
+        >
+          {copied ? "✓ Kopirano" : "📋 Kopiraj tekst"}
+        </button>
+      </div>
+
+      <p className="text-[11px] text-emerald-900/70 mt-2">
+        Univerzalni link (mobile bira aplikaciju, desktop bira Web):{" "}
+        <a href={waUniversal} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+          wa.me/?text=…
+        </a>
+      </p>
     </div>
   );
 }

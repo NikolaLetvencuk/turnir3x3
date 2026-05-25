@@ -22,6 +22,7 @@ export function TopNav({ profile }: { profile: Profile }) {
           <Link href="/players" className="hover:text-blue-700">Igrači</Link>
           <Link href="/bracket" className="hover:text-blue-700">Eliminacije</Link>
           <Link href="/fantasy" className="hover:text-blue-700">Fantasy</Link>
+          <Link href="/vesti" className="hover:text-blue-700">Vesti</Link>
           {isAdmin && (
             <Link href="/admin" className="text-blue-700 font-medium">Admin</Link>
           )}

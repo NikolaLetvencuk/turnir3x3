@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -64,6 +65,12 @@ export function NewsBanner({ initial }: { initial: News | null }) {
             <span className="text-[10px] text-amber-700 shrink-0">{formatDateTime(news.created_at)}</span>
           </div>
           <p className="text-sm text-amber-900/90 mt-1 whitespace-pre-wrap">{news.body}</p>
+          <Link
+            href="/vesti"
+            className="text-xs text-amber-800 hover:text-amber-900 mt-2 inline-block underline"
+          >
+            Vidi sve vesti →
+          </Link>
         </div>
       </div>
     </div>
