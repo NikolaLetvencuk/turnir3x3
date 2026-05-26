@@ -13,7 +13,7 @@ export function TopNav({ profile }: { profile: Profile }) {
           <BackButton />
           <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
             <Image
-              src="/logo/mkpetrovski.png"
+              src="/logo/logomkpetrovskibela_pozadina.png"
               alt="Turnir Kula"
               width={32}
               height={32}

@@ -57,20 +57,21 @@ type PosterRequest = {
 };
 
 const C = {
-  // Light theme: white poster background with dark navy text
-  bg: "#ffffff",
-  bgEnd: "#f1f5f9",
-  text: "#0f172a",
-  textDim: "rgba(15,23,42,0.6)",
-  textFaint: "rgba(15,23,42,0.4)",
-  // Semi-transparent so the watermark logo shows through the cards.
-  cardBg: "rgba(241,245,249,0.55)",
-  cardBorder: "rgba(15,23,42,0.12)",
-  rowDivider: "rgba(15,23,42,0.08)",
-  accent: "#2563eb",
-  gold: "#facc15",
-  silver: "#cbd5e1",
-  bronze: "#f59e0b",
+  // Dark theme: near-black poster with gold accent
+  bg: "#0a0a0a",
+  bgEnd: "#1a1a1a",
+  text: "#f4f4f5",
+  textDim: "rgba(244,244,245,0.7)",
+  textFaint: "rgba(244,244,245,0.45)",
+  // Translucent dark card so the gold watermark glows through.
+  cardBg: "rgba(255,255,255,0.04)",
+  cardBorder: "rgba(212,175,55,0.25)",
+  rowDivider: "rgba(244,244,245,0.10)",
+  accent: "#d4af37",
+  accentSoft: "rgba(212,175,55,0.15)",
+  gold: "#d4af37",
+  silver: "#c0c0c0",
+  bronze: "#cd7f32",
 };
 
 export async function POST(request: Request) {
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     const { kind, format } = body;
     const width = 1080;
     const height = format === "story" ? 1920 : 1350;
-    const logoUrl = `${new URL(request.url).origin}/logo/mkpetrovski.png`;
+    const logoUrl = `${new URL(request.url).origin}/logo/mkpetrovski-gold.png`;
 
     let content: React.ReactElement;
     if (kind === "results") {
@@ -144,8 +145,8 @@ function PosterFrame({
         position: "relative",
       }}
     >
-      {/* Watermark — placed FIRST so subsequent flex children render visually on top.
-          Low opacity, centered, scaled to ~75% of the smaller dimension. */}
+      {/* Watermark — gold silhouette on dark bg, placed FIRST so subsequent flex
+          children render visually on top. */}
       {logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -157,7 +158,7 @@ function PosterFrame({
             position: "absolute",
             top: (height - watermarkSize) / 2,
             left: (width - watermarkSize) / 2,
-            opacity: 0.22,
+            opacity: 0.18,
             objectFit: "contain",
           }}
         />
@@ -182,6 +183,7 @@ function PosterFrame({
             fontWeight: 900,
             marginTop: 12,
             letterSpacing: -2,
+            color: C.accent,
           }}
         >
           {heading}
@@ -200,19 +202,22 @@ function PosterFrame({
 
       <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>{children}</div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          fontSize: 22,
-          color: C.textDim,
-          letterSpacing: 5,
-          textTransform: "uppercase",
-          fontWeight: 600,
-          marginTop: 30,
-        }}
-      >
-        TURNIR KULA · @turnir3x3
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 30 }}>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 22,
+            color: C.accent,
+            letterSpacing: 5,
+            textTransform: "uppercase",
+            fontWeight: 700,
+            border: `2px solid ${C.accent}`,
+            borderRadius: 999,
+            padding: "10px 22px",
+          }}
+        >
+          PETROVSKI · @turnir3x3
+        </div>
       </div>
     </div>
   );
@@ -235,9 +240,8 @@ function Crest({ team, size }: { team: Team | null; size: number }) {
         height: size,
         borderRadius: Math.round(size * 0.18),
         background: primary,
-        // Subtle outline so light-coloured crests (e.g. Real Madrid white) stay
-        // visible against the white poster background.
-        border: "1px solid rgba(15,23,42,0.2)",
+        // Subtle outline keeps light-coloured crests legible against the dark poster.
+        border: "1px solid rgba(244,244,245,0.25)",
         alignItems: "center",
         justifyContent: "center",
         color: textColor,
@@ -653,8 +657,8 @@ function ScorersPoster({
 function ScorerRow({ scorer, rank }: { scorer: ScorerEntry; rank: number }) {
   const top3 = rank <= 3;
   const rankBg =
-    rank === 1 ? C.gold : rank === 2 ? C.silver : rank === 3 ? C.bronze : "rgba(15,23,42,0.08)";
-  const rankFg = "#0f172a";
+    rank === 1 ? C.gold : rank === 2 ? C.silver : rank === 3 ? C.bronze : "rgba(244,244,245,0.10)";
+  const rankFg = rank <= 3 ? "#0a0a0a" : "#f4f4f5";
 
   const fittedFs = fitFontSize(scorer.player_name, 600, 34, 22);
 
@@ -663,8 +667,8 @@ function ScorerRow({ scorer, rank }: { scorer: ScorerEntry; rank: number }) {
       style={{
         display: "flex",
         alignItems: "center",
-        background: top3 ? "rgba(250,204,21,0.12)" : C.cardBg,
-        border: top3 ? `2px solid ${C.gold}` : `1px solid ${C.cardBorder}`,
+        background: top3 ? C.accentSoft : C.cardBg,
+        border: top3 ? `2px solid ${C.accent}` : `1px solid ${C.cardBorder}`,
         borderRadius: 18,
         padding: "14px 22px",
       }}

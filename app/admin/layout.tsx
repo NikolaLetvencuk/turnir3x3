@@ -46,7 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Brand strip */}
       <div className="flex items-center gap-3 px-2">
         <Image
-          src="/logo/mkpetrovski.png"
+          src="/logo/logomkpetrovskibela_pozadina.png"
           alt="Turnir Kula"
           width={48}
           height={48}
