@@ -13,6 +13,7 @@ import {
   Megaphone,
   Share2,
   AlertTriangle,
+  Crown,
 } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 
@@ -32,6 +33,7 @@ const NAV: Array<{
   { href: "/admin/matches", label: "Mečevi", icon: ListChecks },
   { href: "/admin/bracket", label: "Eliminacije", icon: Cup },
   { href: "/admin/fantasy", label: "Fantasy", icon: Trophy },
+  { href: "/admin/users", label: "Korisnici", icon: Crown },
   { href: "/admin/news", label: "Vesti", icon: Megaphone },
   { href: "/admin/export", label: "Export", icon: Share2 },
   { href: "/admin/danger-zone", label: "Reset", icon: AlertTriangle, tone: "danger" },
