@@ -143,7 +143,7 @@ export default async function HomePage() {
             <p className="text-blue-50 mt-0.5 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
           </div>
         </div>
-        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-zinc-900 text-blue-700 rounded-md px-4 py-2 text-sm font-medium relative">
+        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-zinc-900 text-blue-300 rounded-md px-4 py-2 text-sm font-medium relative">
           Sastavi svoj fantasy tim →
         </Link>
       </section>
@@ -200,7 +200,7 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-          <Link href="/standings" className="text-sm text-blue-700 mt-2 inline-block">Sve tabele →</Link>
+          <Link href="/standings" className="text-sm text-blue-300 mt-2 inline-block">Sve tabele →</Link>
         </section>
       )}
 

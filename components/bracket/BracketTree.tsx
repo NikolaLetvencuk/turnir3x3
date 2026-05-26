@@ -106,7 +106,7 @@ export function BracketTree({
                   <div className={`${winnerId && aTeam?.id === winnerId ? "font-semibold" : ""}`}>
                     <Slot team={aTeam ?? null} placeholder={m.away_placeholder} manual={!!m.away_team_id_manual} onClick={onSlotClick ? () => onSlotClick(m.id, "away", m.away_team_id) : undefined} />
                   </div>
-                  <Link href={`/admin/matches/${m.id}/live`} className="block text-[10px] text-blue-700 mt-1 hover:underline">otvori →</Link>
+                  <Link href={`/admin/matches/${m.id}/live`} className="block text-[10px] text-blue-300 mt-1 hover:underline">otvori →</Link>
                 </div>
               );
             })}

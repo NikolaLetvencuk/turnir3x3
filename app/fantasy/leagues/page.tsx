@@ -30,7 +30,7 @@ export default async function LeaguesPage() {
                 <div className="font-medium">{l.name}</div>
                 <div className="text-xs text-zinc-500">Kod: <span className="font-mono">{l.invite_code}</span></div>
               </div>
-              <span className="text-blue-700 text-sm">Otvori →</span>
+              <span className="text-blue-300 text-sm">Otvori →</span>
             </Link>
           ))}
         </div>

@@ -483,12 +483,12 @@ export function ExportClient({
               <div className="text-xs flex gap-2">
                 <button
                   onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
-                  className="text-blue-700 hover:underline"
+                  className="text-blue-300 hover:underline"
                 >
                   Sve
                 </button>
                 <span className="text-zinc-300">·</span>
-                <button onClick={() => setSelectedMatchIds(new Set())} className="text-blue-700 hover:underline">
+                <button onClick={() => setSelectedMatchIds(new Set())} className="text-blue-300 hover:underline">
                   Nijedan
                 </button>
               </div>
@@ -562,9 +562,9 @@ export function ExportClient({
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-zinc-400">Grupe ({selectedGroupIds.size} / {standings.length})</span>
               <div className="text-xs flex gap-2">
-                <button onClick={() => setSelectedGroupIds(new Set(standings.map((g) => g.group_id)))} className="text-blue-700 hover:underline">Sve</button>
+                <button onClick={() => setSelectedGroupIds(new Set(standings.map((g) => g.group_id)))} className="text-blue-300 hover:underline">Sve</button>
                 <span className="text-zinc-300">·</span>
-                <button onClick={() => setSelectedGroupIds(new Set())} className="text-blue-700 hover:underline">Nijedna</button>
+                <button onClick={() => setSelectedGroupIds(new Set())} className="text-blue-300 hover:underline">Nijedna</button>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 border border-zinc-800 rounded-md p-2 bg-zinc-900">

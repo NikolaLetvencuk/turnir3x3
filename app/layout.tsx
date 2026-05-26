@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { TopNav } from "@/components/nav/TopNav";
 import { BottomNav } from "@/components/nav/BottomNav";
@@ -58,6 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </main>
           <BottomNav isAuthed={!!profile} isAdmin={profile?.role === "admin"} />
         </ToastProvider>
+        <Analytics />
       </body>
     </html>
   );

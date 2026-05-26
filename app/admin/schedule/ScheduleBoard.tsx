@@ -94,7 +94,7 @@ export function ScheduleBoard({ rounds, matches }: { rounds: Round[]; matches: M
   }
 
   if (rounds.length === 0) {
-    return <div className="card text-sm text-zinc-400">Još nema kola. Pokreni žreb iz <a href="/admin/draw" className="text-blue-700 underline">/admin/draw</a>.</div>;
+    return <div className="card text-sm text-zinc-400">Još nema kola. Pokreni žreb iz <a href="/admin/draw" className="text-blue-300 underline">/admin/draw</a>.</div>;
   }
 
   return (

@@ -25,7 +25,7 @@ type DrawStateLite = {
   result: any | null;
 };
 
-const ALPHABET = "ABCDEFGH";
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export function DrawClient({
   teams,
@@ -171,7 +171,7 @@ export function DrawClient({
               <button
                 key={k}
                 onClick={() => setMode(k)}
-                className={`flex-1 py-2 px-3 text-sm font-medium transition ${mode === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
+                className={`flex-1 py-2 px-3 text-sm font-medium transition ${mode === k ? "bg-blue-50 text-blue-300 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
               >
                 {k === "auto" ? "Live žreb (sa tajmerom)" : "Ručno raspoređivanje"}
               </button>
@@ -242,7 +242,7 @@ export function DrawClient({
                 <div className="text-xs">
                   {unassignedCount > 0
                     ? <span className="text-amber-700">{unassignedCount} timova nije raspoređeno</span>
-                    : <span className="text-blue-700">Svi raspoređeni ✓</span>}
+                    : <span className="text-blue-300">Svi raspoređeni ✓</span>}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={buildManualResult} disabled={!manualValid} className="btn-primary">Generiši i pregledaj</button>
@@ -308,12 +308,12 @@ function ScheduledDrawStatus({
     <div className="card border-blue-300 bg-blue-50 space-y-3">
       <div>
         <h2 className="font-semibold text-blue-900">Aktivan žreb</h2>
-        <p className="text-sm text-blue-800">
+        <p className="text-sm text-blue-200">
           Zakazano za <b>{ds.scheduled_at ? formatKickoff(ds.scheduled_at) : "—"}</b>.
         </p>
-        {isPending && <p className="text-xs text-blue-700">Tajmer ističe za {Math.ceil(timeToStart / 1000)}s.</p>}
+        {isPending && <p className="text-xs text-blue-300">Tajmer ističe za {Math.ceil(timeToStart / 1000)}s.</p>}
         {!isPending && !alreadyDrawn && <p className="text-xs text-amber-700">Tajmer je istekao. Čeka se da klijent pokrene povlačenje.</p>}
-        {alreadyDrawn && <p className="text-xs text-blue-700">Žreb je povučen, animacija je u toku ili završena.</p>}
+        {alreadyDrawn && <p className="text-xs text-blue-300">Žreb je povučen, animacija je u toku ili završena.</p>}
       </div>
 
       {isPending && !alreadyDrawn && (

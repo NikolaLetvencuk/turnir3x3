@@ -257,7 +257,7 @@ function PlayerDetailModal({
                   </span>
                   <span
                     className={`tabular-nums font-bold w-12 text-right shrink-0 ${
-                      l.total >= 0 ? "text-blue-700" : "text-red-700"
+                      l.total >= 0 ? "text-blue-300" : "text-red-700"
                     }`}
                   >
                     {l.total > 0 ? `+${l.total}` : l.total}

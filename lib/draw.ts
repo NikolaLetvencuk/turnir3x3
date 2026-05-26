@@ -53,7 +53,7 @@ export type DrawResult = {
   rounds: Array<{ name: string; matches: Array<{ group_index: number; home: DrawTeam; away: DrawTeam }> }>;
 };
 
-const ALPHABET = "ABCDEFGH";
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /**
  * Build round-robin fixtures + kola from pre-composed groups (no random distribution).

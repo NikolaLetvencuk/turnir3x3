@@ -71,7 +71,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: { so
             {rows.map((r) => (
               <tr key={r.player_id} className="border-t border-zinc-800">
                 <td className="py-2">
-                  <Link href={`/players/${r.player_id}`} className="hover:text-blue-700 font-medium inline-flex items-center gap-2">
+                  <Link href={`/players/${r.player_id}`} className="hover:text-blue-300 font-medium inline-flex items-center gap-2">
                     <PlayerAvatar name={r.player_name} photoUrl={r.photo_url} teamPrimary={r.team_primary} size={28} />
                     {r.player_name}
                   </Link>

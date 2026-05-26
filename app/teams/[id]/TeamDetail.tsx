@@ -133,7 +133,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
+              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === k ? "bg-blue-50 text-blue-300 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
             >{l}</button>
           ))}
         </div>
@@ -215,7 +215,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                             {p.stats.goals}G · {p.stats.assists}A · {p.stats.yellows}🟨 · {p.stats.reds}🟥
                           </div>
                         </div>
-                        <span className="text-blue-700 text-sm">→</span>
+                        <span className="text-blue-300 text-sm">→</span>
                       </Link>
                     </li>
                   ))}
@@ -261,7 +261,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
               <div className="grid sm:grid-cols-2 gap-3">
                 {stats.biggestWin && (
                   <div className="card border-blue-200 bg-blue-50">
-                    <div className="text-xs text-blue-700 font-medium mb-1">Najveća pobeda</div>
+                    <div className="text-xs text-blue-300 font-medium mb-1">Najveća pobeda</div>
                     <div className="font-bold tabular-nums text-lg">{stats.biggestWin.us} : {stats.biggestWin.them}</div>
                     {stats.biggestWin.opp && (
                       <div className="text-sm text-zinc-400 inline-flex items-center gap-1.5 mt-1">

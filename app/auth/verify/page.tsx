@@ -1,6 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
 
-export default function VerifyPage() {
+export const dynamic = "force-dynamic";
+
+export default async function VerifyPage() {
+  // After clicking the confirmation link, Supabase establishes the session
+  // before redirecting here, so the user is already signed in.
+  const user = await getCurrentUser();
+  if (user) redirect("/");
   return (
     <div className="max-w-sm mx-auto card text-center space-y-3">
       <h1 className="text-xl font-semibold">Email potvrđen</h1>

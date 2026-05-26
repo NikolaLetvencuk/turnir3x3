@@ -27,7 +27,7 @@ export function RegisterForm() {
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: { emailRedirectTo: `${origin}/auth/verify` },
+      options: { emailRedirectTo: `${origin}/auth/callback?next=/auth/verify` },
     });
     setLoading(false);
     if (error) { push(error.message, "error"); return; }

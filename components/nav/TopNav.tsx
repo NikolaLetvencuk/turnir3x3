@@ -24,14 +24,14 @@ export function TopNav({ profile }: { profile: Profile }) {
           </Link>
         </div>
         <nav className="hidden sm:flex items-center gap-4 text-sm">
-          <Link href="/standings" className="hover:text-blue-700">Tabele</Link>
-          <Link href="/matches" className="hover:text-blue-700">Mečevi</Link>
-          <Link href="/players" className="hover:text-blue-700">Igrači</Link>
-          <Link href="/bracket" className="hover:text-blue-700">Eliminacije</Link>
-          <Link href="/fantasy" className="hover:text-blue-700">Fantasy</Link>
-          <Link href="/vesti" className="hover:text-blue-700">Vesti</Link>
+          <Link href="/standings" className="hover:text-blue-300">Tabele</Link>
+          <Link href="/matches" className="hover:text-blue-300">Mečevi</Link>
+          <Link href="/players" className="hover:text-blue-300">Igrači</Link>
+          <Link href="/bracket" className="hover:text-blue-300">Eliminacije</Link>
+          <Link href="/fantasy" className="hover:text-blue-300">Fantasy</Link>
+          <Link href="/vesti" className="hover:text-blue-300">Vesti</Link>
           {isAdmin && (
-            <Link href="/admin" className="text-blue-700 font-medium">Admin</Link>
+            <Link href="/admin" className="text-blue-300 font-medium">Admin</Link>
           )}
         </nav>
         <div className="flex items-center gap-2 text-sm min-w-0">

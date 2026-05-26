@@ -25,7 +25,7 @@ export default async function SchedulePage() {
         tone="amber"
       />
       <div className="flex justify-end">
-        <Link href="/admin/draw" className="text-sm text-blue-700 hover:underline">
+        <Link href="/admin/draw" className="text-sm text-blue-300 hover:underline">
           ← Novi žreb
         </Link>
       </div>

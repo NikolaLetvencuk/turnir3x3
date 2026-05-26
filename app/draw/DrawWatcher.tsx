@@ -111,8 +111,8 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     return (
       <div className="space-y-4">
         <div className="card text-center bg-blue-50 border-blue-200">
-          <div className="text-blue-700 font-semibold">Žreb je završen</div>
-          <p className="text-sm text-blue-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
+          <div className="text-blue-300 font-semibold">Žreb je završen</div>
+          <p className="text-sm text-blue-200/80 mt-1">Grupe i mečevi su sačuvani.</p>
           <div className="flex gap-2 justify-center mt-3 flex-wrap">
             <Link href="/standings" className="btn-primary">Tabele →</Link>
             <Link href="/matches" className="btn-secondary">Mečevi</Link>
@@ -145,8 +145,8 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     return (
       <div className="space-y-4">
         <div className="card text-center bg-blue-50 border-blue-200">
-          <div className="text-blue-700 font-semibold">Žreb je završen</div>
-          <p className="text-sm text-blue-800/80 mt-1">Grupe i mečevi su sačuvani.</p>
+          <div className="text-blue-300 font-semibold">Žreb je završen</div>
+          <p className="text-sm text-blue-200/80 mt-1">Grupe i mečevi su sačuvani.</p>
           <div className="flex gap-2 justify-center mt-3 flex-wrap">
             <Link href="/standings" className="btn-primary">Tabele →</Link>
             <Link href="/matches" className="btn-secondary">Mečevi</Link>

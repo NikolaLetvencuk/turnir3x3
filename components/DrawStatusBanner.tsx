@@ -91,20 +91,20 @@ export function DrawStatusBanner({ initial }: { initial: DrawState | null }) {
       }`}
     >
       <div className="flex items-center gap-3">
-        {variant === "countdown" && <Clock className="w-6 h-6 text-blue-700 shrink-0" />}
-        {variant === "running" && <Sparkles className="w-6 h-6 text-blue-700 shrink-0 animate-pulse" />}
+        {variant === "countdown" && <Clock className="w-6 h-6 text-blue-300 shrink-0" />}
+        {variant === "running" && <Sparkles className="w-6 h-6 text-blue-300 shrink-0 animate-pulse" />}
         {variant === "awaiting-commit" && <AlertCircle className="w-6 h-6 text-amber-700 shrink-0" />}
         <div className="flex-1 min-w-0">
           {variant === "countdown" && (
             <>
               <div className="text-sm font-semibold text-blue-900">Žreb počinje za</div>
-              <div className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-700 font-mono">{fmt(secondsToStart)}</div>
+              <div className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-300 font-mono">{fmt(secondsToStart)}</div>
             </>
           )}
           {variant === "running" && (
             <>
               <div className="text-sm font-semibold text-blue-900">Žreb je u toku!</div>
-              <div className="text-xs text-blue-700">Uđi i prati animaciju</div>
+              <div className="text-xs text-blue-300">Uđi i prati animaciju</div>
             </>
           )}
           {variant === "awaiting-commit" && (

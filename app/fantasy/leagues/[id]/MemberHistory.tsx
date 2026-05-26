@@ -141,7 +141,7 @@ export function MemberHistory({
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-2 sm:p-4" onClick={onClose}>
       <div className="bg-zinc-900 rounded-xl max-w-md w-full p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold truncate">{displayName} {isMe && <span className="text-xs text-blue-700">(ti)</span>}</h3>
+          <h3 className="font-semibold truncate">{displayName} {isMe && <span className="text-xs text-blue-300">(ti)</span>}</h3>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-300 text-xl leading-none" aria-label="Zatvori">×</button>
         </div>
 
@@ -187,7 +187,7 @@ export function MemberHistory({
                         showHint={false}
                       />
                       {isUpcoming && isMe && (
-                        <div className="text-[10px] text-blue-700 inline-flex items-center gap-1 mt-2">
+                        <div className="text-[10px] text-blue-300 inline-flex items-center gap-1 mt-2">
                           <Lock className="w-3 h-3" /> Tvoj lockovani tim (sakriven za ostale)
                         </div>
                       )}

@@ -19,7 +19,7 @@ export function ResetForm({ mode }: { mode: "request" | "update" }) {
     const supabase = createClient();
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/reset-password?mode=update`,
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/auth/reset-password?mode=update")}`,
     });
     setLoading(false);
     if (error) { push(error.message, "error"); return; }

@@ -245,7 +245,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                       ) : (
                         <button
                           onClick={() => setEditingId(m.id)}
-                          className="text-left hover:text-blue-700"
+                          className="text-left hover:text-blue-300"
                         >
                           {m.kickoff_at ? formatKickoff(m.kickoff_at) : <span className="text-zinc-400 italic">+ dodaj termin</span>}
                         </button>

@@ -14,7 +14,7 @@ export default async function FantasyLandingPage() {
           <h1 className="text-2xl font-bold">Fantasy turnira</h1>
           <p className="text-blue-50 mt-2">Izaberi 3 igrača (budžet {FANTASY_BUDGET.toFixed(0)}M). Skupljaj bodove. Takmiči se sa drugarima u privatnim ligama.</p>
           <div className="mt-4 flex gap-2">
-            <Link href="/auth/register" className="bg-zinc-900 text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Registracija</Link>
+            <Link href="/auth/register" className="bg-zinc-900 text-blue-300 rounded-md px-4 py-2 text-sm font-medium">Registracija</Link>
             <Link href="/auth/login" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Prijava</Link>
           </div>
         </section>
@@ -73,7 +73,7 @@ export default async function FantasyLandingPage() {
           </div>
         )}
         <div className="mt-4 flex gap-2 flex-wrap">
-          <Link href="/fantasy/team/live" className="bg-zinc-900 text-blue-700 rounded-md px-4 py-2 text-sm font-medium">Pregledaj tim</Link>
+          <Link href="/fantasy/team/live" className="bg-zinc-900 text-blue-300 rounded-md px-4 py-2 text-sm font-medium">Pregledaj tim</Link>
           <Link href="/fantasy/team" className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Sastavi tim za sledeće kolo</Link>
           <Link href="/fantasy/team/history" className="border border-white/40 rounded-md px-4 py-2 text-sm font-medium">Istorija</Link>
         </div>
@@ -82,7 +82,7 @@ export default async function FantasyLandingPage() {
       <section>
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold">Moje lige</h2>
-          <Link href="/fantasy/leagues" className="text-xs text-blue-700 hover:underline">+ Kreiraj / Pridruži se →</Link>
+          <Link href="/fantasy/leagues" className="text-xs text-blue-300 hover:underline">+ Kreiraj / Pridruži se →</Link>
         </div>
 
         {overview.leagues.length === 0 ? (

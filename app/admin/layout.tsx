@@ -71,7 +71,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 : "border-zinc-800 bg-zinc-900 hover:bg-blue-50 hover:border-blue-300 text-zinc-300"
             }`}
           >
-            <Icon className={`w-6 h-6 ${tone === "danger" ? "text-red-600" : "text-blue-600 group-hover:text-blue-700"}`} />
+            <Icon className={`w-6 h-6 ${tone === "danger" ? "text-red-600" : "text-blue-600 group-hover:text-blue-300"}`} />
             <span className="text-xs font-medium">{label}</span>
           </Link>
         ))}

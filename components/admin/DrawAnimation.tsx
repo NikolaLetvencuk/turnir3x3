@@ -331,7 +331,7 @@ function SpotlightCard({
   subPhase: "lift" | "reveal" | "fly" | "settle";
   pickSub: number;
 }) {
-  const groupLabel = "ABCDEFGH"[pick.groupIdx] ?? "?";
+  const groupLabel = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[pick.groupIdx] ?? "?";
   const isLift = subPhase === "lift";
   return (
     <motion.div
