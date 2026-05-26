@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
 
+import { MAX_LEAGUES_PER_USER } from "./constants";
+
 const createSchema = z.object({ name: z.string().min(2).max(60) });
 
 export async function createLeague(formData: FormData): Promise<ActionResult<{ id: string; invite_code: string }>> {
@@ -18,6 +20,19 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
   if (!parsed.success) return { ok: false, error: "Naziv nije validan" };
 
   const admin = createAdminClient();
+
+  // Cap on leagues a single user can OWN. Joining is unlimited.
+  const { count: ownedCount } = await admin
+    .from("fantasy_leagues")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+  if ((ownedCount ?? 0) >= MAX_LEAGUES_PER_USER) {
+    return {
+      ok: false,
+      error: `Možeš da napraviš najviše ${MAX_LEAGUES_PER_USER} lige. Pridruživanje tuđim ligama je neograničeno.`,
+    };
+  }
+
   const { data: codeRow } = await admin.rpc("generate_invite_code");
   const invite_code = (codeRow as unknown as string) ?? Math.random().toString(36).slice(2, 8).toUpperCase();
 

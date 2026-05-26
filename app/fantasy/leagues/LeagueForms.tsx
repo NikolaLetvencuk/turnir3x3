@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { createLeague, joinLeague } from "./actions";
 import { useToast } from "@/components/ui/Toast";
 
-export function LeagueForms() {
+export function LeagueForms({
+  remainingCreates = Infinity,
+  maxCreates = 3,
+}: {
+  remainingCreates?: number;
+  maxCreates?: number;
+}) {
   const { push } = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
+  const atCap = remainingCreates <= 0;
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -49,10 +56,30 @@ export function LeagueForms() {
   return (
     <div className="grid sm:grid-cols-2 gap-3">
       <form onSubmit={onCreate} className="card space-y-2">
-        <div className="font-medium text-sm">Kreiraj novu ligu</div>
-        <input className="input" placeholder="Naziv lige" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={60} />
-        <button disabled={pending} className="btn-primary w-full">{pending ? "..." : "Kreiraj"}</button>
-        <p className="text-[11px] text-zinc-500">Dobićeš 6-znakovni kod koji deliš sa drugarima.</p>
+        <div className="flex items-baseline justify-between">
+          <div className="font-medium text-sm">Kreiraj novu ligu</div>
+          <div className={`text-[10px] tabular-nums ${atCap ? "text-red-300" : "text-zinc-500"}`}>
+            {Math.max(0, maxCreates - remainingCreates)}/{maxCreates}
+          </div>
+        </div>
+        <input
+          className="input"
+          placeholder="Naziv lige"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          minLength={2}
+          maxLength={60}
+          disabled={atCap || pending}
+        />
+        <button disabled={pending || atCap} className="btn-primary w-full">
+          {atCap ? `Limit dostignut (${maxCreates})` : pending ? "..." : "Kreiraj"}
+        </button>
+        <p className="text-[11px] text-zinc-500">
+          {atCap
+            ? "Dostigao si maksimum sopstvenih liga. Pridruživanje tuđim ligama je neograničeno."
+            : `Možeš da napraviš još ${remainingCreates} lige. Dobićeš 6-znakovni kod koji deliš sa drugarima.`}
+        </p>
       </form>
       <form onSubmit={onJoin} className="card space-y-2">
         <div className="font-medium text-sm">Pridruži se preko koda</div>

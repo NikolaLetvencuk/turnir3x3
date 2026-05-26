@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Lock, LockOpen, X, Search, Plus, Check } from "lucide-react";
+import { CheckCircle2, Save, X, Search, Plus, Check } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { TeamCrest } from "@/components/TeamCrest";
 import { useActionRunner } from "@/components/admin/FormButton";
@@ -38,23 +38,27 @@ function JerseySlot({ player, onRemove }: { player: PlayerForPicker | null; onRe
   }
   const lastName = player.name.split(/\s+/).slice(-1)[0] || player.name;
   return (
-    <div className="relative flex flex-col items-center text-center">
-      {onRemove && (
-        <button
-          onClick={onRemove}
-          className="absolute -top-1 -right-1 sm:top-0 sm:right-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-zinc-900 text-zinc-300 hover:text-red-600 shadow-md border border-zinc-800 z-10"
-          aria-label="Ukloni"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      )}
-      <Jersey
-        primary={player.team_primary || "#1f2937"}
-        secondary={player.team_secondary}
-        shortName={player.team_short}
-        size={72}
-      />
-      <div className="mt-1.5 bg-white/95 text-zinc-100 rounded-md px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold max-w-[90px] sm:max-w-[110px] truncate">
+    <div className="flex flex-col items-center text-center">
+      {/* Tight wrapper around the jersey so the remove ×  sits right on the
+          jersey's top-right corner instead of floating on the column edge. */}
+      <div className="relative w-[72px] h-[72px]">
+        <Jersey
+          primary={player.team_primary || "#1f2937"}
+          secondary={player.team_secondary}
+          shortName={player.team_short}
+          size={72}
+        />
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            className="absolute -top-1.5 -right-1.5 w-6 h-6 inline-flex items-center justify-center rounded-full bg-zinc-900 text-zinc-300 hover:text-red-500 hover:bg-zinc-800 shadow-md border border-zinc-700 z-10"
+            aria-label="Ukloni"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="mt-1.5 bg-white/95 text-zinc-900 rounded-md px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold max-w-[90px] sm:max-w-[110px] truncate">
         {lastName}
       </div>
       <div className="mt-1 rounded-md bg-blue-600 text-white px-2 py-0.5 text-xs font-black tabular-nums shadow-sm">
@@ -248,16 +252,16 @@ export function TeamEditor({
         )}
       </div>
 
-      {/* Lock status — saved draft auto-locks for the upcoming round and carries
-          forward until the user edits again. */}
+      {/* Save status — once saved the draft carries forward to every
+          upcoming round until the user edits again. */}
       {overview.next_round ? (
-        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-blue-200 bg-blue-50" : "border-zinc-800"}`}>
-          {matchesLocked ? <Lock className="w-5 h-5 text-blue-600 shrink-0" /> : <LockOpen className="w-5 h-5 text-zinc-500 shrink-0" />}
+        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-emerald-500/40 bg-emerald-500/10" : "border-zinc-800"}`}>
+          {matchesLocked ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> : <Save className="w-5 h-5 text-zinc-500 shrink-0" />}
           <div className="flex-1 text-sm">
             <div className="font-medium">{overview.next_round.name}</div>
             <div className="text-xs text-zinc-400">
               {matchesLocked
-                ? "Tim spreman ✓ Važiće za sva naredna kola dok ga ne promeniš."
+                ? "Tim sačuvan ✓ Važiće za sva naredna kola dok ga ne promeniš."
                 : "Sačuvaj 3 igrača u okviru budžeta — tim će automatski važiti za naredna kola dok ga ne promeniš."}
             </div>
           </div>
@@ -315,10 +319,16 @@ export function TeamEditor({
         <div className="mt-3">
           <button
             onClick={() => persistDraft(false)}
-            disabled={pending || !isComplete || overBudget}
+            disabled={pending || !isComplete || overBudget || !!matchesLocked}
             className="btn-primary w-full"
           >
-            {matchesLocked ? "Tim sačuvan ✓ — sačuvaj ponovo da primeniš izmene" : "Sačuvaj tim"}
+            {!isComplete
+              ? "Izaberi 3 igrača"
+              : overBudget
+              ? "Preko budžeta"
+              : matchesLocked
+              ? "Tim sačuvan ✓"
+              : "Sačuvaj tim"}
           </button>
         </div>
       </div>
