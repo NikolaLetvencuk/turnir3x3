@@ -57,12 +57,15 @@ export function BracketAdmin({
   const run = useActionRunner();
   const { push } = useToast();
   const [advancingTotal, setAdvancingTotal] = useState<number>(state?.advancing_per_group ? state.advancing_per_group * groups.length + (state.best_thirds ?? 0) : Math.min(8, Math.max(2, groups.length * 2)));
-  const [advancingPerGroup, setAdvancingPerGroup] = useState<number>(state?.advancing_per_group ?? Math.floor(advancingTotal / Math.max(1, groups.length)));
   const [includeThird, setIncludeThird] = useState<boolean>(state?.include_third_place !== false);
 
+  // Direct-per-group is derived: floor(total / groups) so each group sends the
+  // same number of teams directly. Remaining slots go to wildcards.
+  const advancingPerGroup = groups.length > 0 ? Math.max(1, Math.floor(advancingTotal / groups.length)) : 1;
   const bestThirds = Math.max(0, advancingTotal - advancingPerGroup * groups.length);
   const validPowerOf2 = [2, 4, 8, 16].includes(advancingTotal);
   const enoughTeams = advancingTotal <= teams.length;
+  const enoughGroups = groups.length > 0 && advancingTotal >= groups.length;
 
   const [editingSlot, setEditingSlot] = useState<{ match_id: string; slot: "home" | "away"; current: string | null } | null>(null);
 
@@ -122,22 +125,33 @@ export function BracketAdmin({
 
       <div className="card space-y-3">
         <h2 className="font-medium">Konfiguracija nokauta</h2>
-        <div className="grid sm:grid-cols-3 gap-2">
-          <label className="text-sm">
-            <span className="label">Ukupno timova koji prolaze</span>
-            <select value={advancingTotal} onChange={(e) => setAdvancingTotal(Number(e.target.value))} className="input">
-              {[2, 4, 8, 16].map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="label">Direktno po grupi</span>
-            <input type="number" min={1} max={advancingTotal} value={advancingPerGroup} onChange={(e) => setAdvancingPerGroup(Math.max(1, Number(e.target.value) || 1))} className="input" />
-          </label>
-          <div className="text-sm">
-            <span className="label">Najbolji {ORDINAL_LABEL_TITLE[Math.max(1, advancingPerGroup)] ?? `${advancingPerGroup + 1}-toplasirani`}</span>
-            <div className="input bg-zinc-900">{bestThirds}</div>
+        <label className="text-sm block max-w-xs">
+          <span className="label">Ukupno timova koji prolaze</span>
+          <select value={advancingTotal} onChange={(e) => setAdvancingTotal(Number(e.target.value))} className="input">
+            {[2, 4, 8, 16].map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </label>
+
+        {groups.length > 0 && enoughGroups && (
+          <div className="rounded-lg bg-zinc-950/60 border border-zinc-800 px-3 py-2 text-sm">
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">Raspodela</div>
+            <div className="text-zinc-200">
+              <span className="font-semibold">{advancingPerGroup}</span> {advancingPerGroup === 1 ? "tim" : advancingPerGroup < 5 ? "tima" : "timova"} direktno iz svake grupe
+              {bestThirds > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-semibold">{bestThirds}</span> najbolji{bestThirds === 1 ? "" : "h"}{" "}
+                  {ORDINAL_LABEL_TITLE[Math.max(1, advancingPerGroup)] ?? `${advancingPerGroup + 1}-toplasiranih`}
+                </>
+              )}
+            </div>
+            <div className="text-[11px] text-zinc-500 mt-0.5 tabular-nums">
+              {groups.length} × {advancingPerGroup}
+              {bestThirds > 0 && ` + ${bestThirds}`} = {advancingTotal}
+            </div>
           </div>
-        </div>
+        )}
+
         <label className="text-sm flex items-center gap-2">
           <input type="checkbox" checked={includeThird} onChange={(e) => setIncludeThird(e.target.checked)} />
           Uključi meč za 3. mesto
@@ -145,7 +159,16 @@ export function BracketAdmin({
         {!validPowerOf2 && <p className="text-xs text-red-600">Ukupno mora biti 2, 4, 8 ili 16.</p>}
         {!enoughTeams && <p className="text-xs text-red-600">Imaš samo {teams.length} timova.</p>}
         {groups.length === 0 && <p className="text-xs text-amber-700">Prvo pokreni žreb grupa.</p>}
-        <button onClick={onGenerate} disabled={!validPowerOf2 || !enoughTeams || groups.length === 0} className="btn-primary">
+        {groups.length > 0 && !enoughGroups && (
+          <p className="text-xs text-red-600">
+            Imaš {groups.length} grupa a samo {advancingTotal} mesta — svaka grupa mora poslati bar 1 tim.
+          </p>
+        )}
+        <button
+          onClick={onGenerate}
+          disabled={!validPowerOf2 || !enoughTeams || groups.length === 0 || !enoughGroups}
+          className="btn-primary"
+        >
           {matches.length > 0 ? "Generiši ponovo" : "Generiši nokaut"}
         </button>
       </div>
