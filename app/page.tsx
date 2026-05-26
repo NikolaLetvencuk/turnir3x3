@@ -45,7 +45,7 @@ export default async function HomePage() {
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
         <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
           <Image
-            src="/logo/liga_sampiona.png"
+            src="/logo/mkpetrovski.png"
             alt=""
             width={180}
             height={180}
@@ -53,7 +53,7 @@ export default async function HomePage() {
           />
           <div className="relative flex items-center gap-3">
             <Image
-              src="/logo/liga_sampiona.png"
+              src="/logo/mkpetrovski.png"
               alt="Turnir Kula"
               width={56}
               height={56}
@@ -122,7 +122,7 @@ export default async function HomePage() {
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
       <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
         <Image
-          src="/logo/liga_sampiona.png"
+          src="/logo/mkpetrovski.png"
           alt=""
           width={180}
           height={180}
@@ -130,7 +130,7 @@ export default async function HomePage() {
         />
         <div className="relative flex items-center gap-3">
           <Image
-            src="/logo/liga_sampiona.png"
+            src="/logo/mkpetrovski.png"
             alt="Turnir Kula"
             width={56}
             height={56}

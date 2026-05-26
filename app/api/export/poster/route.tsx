@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     const { kind, format } = body;
     const width = 1080;
     const height = format === "story" ? 1920 : 1350;
-    const logoUrl = `${new URL(request.url).origin}/logo/liga_sampiona.png`;
+    const logoUrl = `${new URL(request.url).origin}/logo/mkpetrovski.png`;
 
     let content: React.ReactElement;
     if (kind === "results") {
