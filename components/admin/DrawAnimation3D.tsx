@@ -92,7 +92,7 @@ export default function DrawAnimation3D({
       {/* Header */}
       <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3 pointer-events-none">
         <div className="flex items-center gap-2 text-white/90">
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold">UŽIVO: Žreb Turnir Kula</span>
+          <span className="text-xs uppercase tracking-[0.3em] font-semibold">UŽIVO: Žreb Petrovski Kula</span>
         </div>
         {allowSkip && phase !== "done" && (
           <button
@@ -108,7 +108,7 @@ export default function DrawAnimation3D({
       {phase === "intro" && (
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
           <div className="text-center">
-            <div className="text-blue-300 text-xs uppercase tracking-[0.5em] mb-3 animate-pulse">Turnir Kula</div>
+            <div className="text-blue-300 text-xs uppercase tracking-[0.5em] mb-3 animate-pulse">Petrovski Kula</div>
             <div
               className="text-white text-7xl sm:text-9xl font-black tracking-tighter"
               style={{ textShadow: "0 0 80px rgba(37,99,235,0.8), 0 0 160px rgba(37,99,235,0.4)" }}

@@ -54,13 +54,14 @@ export default async function HomePage() {
           <div className="relative flex items-center gap-3">
             <Image
               src="/logo/mkpetrovski.png"
-              alt="Turnir Kula"
+              alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
               width={56}
               height={56}
               className="rounded-lg shrink-0 bg-white/10 p-1"
             />
-            <div>
-              <h1 className="text-2xl font-bold">Turnir Kula</h1>
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">Memorijalni Turnir</div>
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight">&ldquo;Vladislav Petrovski&rdquo; Kula</h1>
               <p className="text-blue-50 mt-0.5 text-sm">Liparski put · prijave su otvorene</p>
             </div>
           </div>
@@ -131,13 +132,14 @@ export default async function HomePage() {
         <div className="relative flex items-center gap-3">
           <Image
             src="/logo/mkpetrovski.png"
-            alt="Turnir Kula"
+            alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
             width={56}
             height={56}
             className="rounded-lg shrink-0 bg-white/10 p-1"
           />
-          <div>
-            <h1 className="text-2xl font-bold">Turnir Kula</h1>
+          <div className="min-w-0">
+            <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">Memorijalni Turnir</div>
+            <h1 className="text-xl sm:text-2xl font-bold leading-tight">&ldquo;Vladislav Petrovski&rdquo; Kula</h1>
             <p className="text-blue-50 mt-0.5 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
           </div>
         </div>

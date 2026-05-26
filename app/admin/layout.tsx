@@ -47,14 +47,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex items-center gap-3 px-2">
         <Image
           src="/logo/logomkpetrovskibela_pozadina.png"
-          alt="Turnir Kula"
+          alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
           width={48}
           height={48}
           className="rounded-md shrink-0"
         />
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-wider text-zinc-500">Admin panel</div>
-          <div className="font-bold truncate">Turnir Kula</div>
+          <div className="font-bold truncate leading-tight">&ldquo;Vladislav Petrovski&rdquo;</div>
+          <div className="text-[11px] text-zinc-500 truncate">Memorijalni Turnir · Kula</div>
         </div>
       </div>
 

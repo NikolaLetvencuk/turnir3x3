@@ -15,7 +15,7 @@ export type NewsRow = {
 };
 
 function buildMessage(title: string, body: string): string {
-  return `📢 *${title}*\n\n${body}\n\n— Turnir Kula\nhttps://turnir3x3.vercel.app`;
+  return `📢 *${title}*\n\n${body}\n\n— Memorijalni Turnir "Vladislav Petrovski" Kula\nhttps://turnir3x3.vercel.app`;
 }
 
 function formatRelativeDate(iso: string): string {
@@ -71,7 +71,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
         <h2 className="font-medium text-blue-900 mb-1">💡 Jednokratni setup</h2>
         <p className="text-sm text-blue-900/90">
           Napravi <b>WhatsApp grupu</b> sa svim kapitenima (otvori WA → Nova
-          grupa → dodaj 14 brojeva → daj joj ime &quot;Kapiteni Turnir Kula&quot;). Sve
+          grupa → dodaj 14 brojeva → daj joj ime &quot;Kapiteni Petrovski Kula&quot;). Sve
           buduće vesti šaljemo u tu grupu — jedan klik kod nas, jedan tap u WA.
         </p>
       </div>

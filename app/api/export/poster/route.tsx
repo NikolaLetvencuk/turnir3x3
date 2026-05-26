@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     if (kind === "results") {
       content = (
         <ResultsPoster
-          title={body.title ?? "TURNIR KULA"}
+          title={body.title ?? "PETROVSKI KULA"}
           subtitle={body.subtitle ?? "Grupna faza"}
           matches={body.matches ?? []}
           width={width}

@@ -108,7 +108,7 @@ export function DrawAnimation({
       <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2 text-white/90">
           <Sparkles className="w-4 h-4 text-blue-400" />
-          <span className="text-xs uppercase tracking-[0.2em] font-semibold">Žreb · Turnir Kula</span>
+          <span className="text-xs uppercase tracking-[0.2em] font-semibold">Žreb · Petrovski Kula</span>
         </div>
         {allowSkip && phase !== "done" && (
           <button
@@ -192,7 +192,7 @@ function IntroScreen() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="text-blue-400 text-xs uppercase tracking-[0.4em] font-semibold mb-3"
       >
-        Turnir Kula
+        Petrovski Kula
       </motion.div>
       <motion.h1
         initial={{ scale: 0.3, opacity: 0 }}

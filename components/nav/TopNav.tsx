@@ -14,13 +14,13 @@ export function TopNav({ profile }: { profile: Profile }) {
           <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
             <Image
               src="/logo/logomkpetrovskibela_pozadina.png"
-              alt="Turnir Kula"
+              alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
               width={32}
               height={32}
               className="rounded"
               priority
             />
-            <span className="truncate">Turnir Kula</span>
+            <span className="truncate">Petrovski Kula</span>
           </Link>
         </div>
         <nav className="hidden sm:flex items-center gap-4 text-sm">
