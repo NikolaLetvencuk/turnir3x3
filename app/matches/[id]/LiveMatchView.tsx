@@ -81,7 +81,7 @@ function ResultBadge({ result }: { result: "W" | "L" | "D" }) {
   const cls =
     result === "W" ? "bg-blue-500 text-white" :
     result === "L" ? "bg-red-500 text-white" :
-    "bg-amber-400 text-zinc-900";
+    "bg-amber-400 text-zinc-100";
   return (
     <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${cls}`}>{result}</span>
   );
@@ -155,7 +155,7 @@ function GroupStandingsCard({ rows, homeTeamId, awayTeamId }: { rows: StandingRo
           {rows.map((r, i) => {
             const highlight = r.team.id === homeTeamId || r.team.id === awayTeamId;
             return (
-              <tr key={r.team.id} className={`border-t border-zinc-100 ${highlight ? "bg-blue-50/50" : ""}`}>
+              <tr key={r.team.id} className={`border-t border-zinc-800 ${highlight ? "bg-blue-50/50" : ""}`}>
                 <td className="py-1 text-zinc-500">{i + 1}.</td>
                 <td className={`py-1 ${highlight ? "font-semibold" : ""}`}>
                   <span className="inline-flex items-center gap-1.5">
@@ -244,7 +244,7 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
           {events.length === 0 ? (
             <p className="text-sm text-zinc-500">Još nema događaja.</p>
           ) : (
-            <ul className="card divide-y divide-zinc-100">
+            <ul className="card divide-y divide-zinc-800">
               {events.map((e) => {
                 const p = playerMap.get(e.player_id);
                 const assist = e.assist_player_id ? playerMap.get(e.assist_player_id) : null;
@@ -273,19 +273,19 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
       )}
 
       <div className="card !p-0 overflow-hidden">
-        <div className="flex border-b border-zinc-200">
+        <div className="flex border-b border-zinc-800">
           <button
             onClick={() => setTab("form")}
-            className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "form" ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+            className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "form" ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
           >Forma</button>
           <button
             onClick={() => setTab("players")}
-            className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "players" ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+            className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "players" ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
           >Igrači</button>
           {hasStandings && (
             <button
               onClick={() => setTab("standings")}
-              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "standings" ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === "standings" ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
             >Tabela</button>
           )}
         </div>

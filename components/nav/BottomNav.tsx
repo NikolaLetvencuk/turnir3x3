@@ -16,7 +16,7 @@ const items = [
 export function BottomNav({ isAuthed }: { isAuthed: boolean; isAdmin?: boolean }) {
   const path = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30 sm:hidden pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 z-30 sm:hidden pb-[env(safe-area-inset-bottom)]">
       <ul className="grid grid-cols-5 max-w-5xl mx-auto">
         {items.map((it) => {
           const active = path === it.href || (it.href !== "/" && path.startsWith(it.href));

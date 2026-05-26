@@ -88,7 +88,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
       <form onSubmit={submit} className="card space-y-3">
         <h2 className="font-medium">Nova vest</h2>
         <label className="block">
-          <span className="text-xs text-zinc-600">Naslov</span>
+          <span className="text-xs text-zinc-400">Naslov</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -100,7 +100,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
           />
         </label>
         <label className="block">
-          <span className="text-xs text-zinc-600">Tekst vesti</span>
+          <span className="text-xs text-zinc-400">Tekst vesti</span>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -113,7 +113,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
           <span className="text-[10px] text-zinc-400">{body.length} / 2000</span>
         </label>
 
-        <label className="flex items-start gap-2 text-sm cursor-pointer p-2 -mx-1 rounded hover:bg-zinc-50">
+        <label className="flex items-start gap-2 text-sm cursor-pointer p-2 -mx-1 rounded hover:bg-zinc-800">
           <input
             type="checkbox"
             checked={sendToWaGroup}
@@ -144,14 +144,14 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
         {news.length === 0 ? (
           <p className="text-sm text-zinc-500 italic">Još nema vesti.</p>
         ) : (
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-zinc-800">
             {news.map((n) => (
               <li key={n.id} className="py-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="font-semibold text-sm">{n.title}</h3>
                   <span className="text-[10px] text-zinc-500 shrink-0">{formatRelativeDate(n.created_at)}</span>
                 </div>
-                <p className="text-sm text-zinc-700 mt-1 whitespace-pre-wrap">{n.body}</p>
+                <p className="text-sm text-zinc-300 mt-1 whitespace-pre-wrap">{n.body}</p>
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => setPostPublish({ title: n.title, body: n.body })}
@@ -218,7 +218,7 @@ function PostPublishPanel({ message, onClose }: { message: string; onClose: () =
         <button onClick={onClose} className="text-emerald-700 hover:text-emerald-900 text-xl leading-none">×</button>
       </div>
 
-      <pre className="whitespace-pre-wrap font-sans text-xs bg-white border border-emerald-200 rounded p-2 mb-3 max-h-40 overflow-y-auto">
+      <pre className="whitespace-pre-wrap font-sans text-xs bg-zinc-900 border border-emerald-200 rounded p-2 mb-3 max-h-40 overflow-y-auto">
         {message}
       </pre>
 
@@ -233,13 +233,13 @@ function PostPublishPanel({ message, onClose }: { message: string; onClose: () =
           href={waWeb}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2.5 text-sm font-medium"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2.5 text-sm font-medium"
         >
           🌐 WhatsApp Web
         </a>
         <button
           onClick={copy}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2.5 text-sm font-medium"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2.5 text-sm font-medium"
         >
           {copied ? "✓ Kopirano" : "📋 Kopiraj tekst"}
         </button>

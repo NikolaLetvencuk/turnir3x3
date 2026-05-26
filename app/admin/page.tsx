@@ -103,7 +103,7 @@ export default async function AdminDashboard() {
               <li key={m.id}>
                 <Link
                   href={`/admin/matches/${m.id}/live`}
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-zinc-50 text-sm"
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-zinc-800 text-sm"
                 >
                   <span className="truncate">
                     {m.home_team?.name} <b>{m.home_score}</b> : <b>{m.away_score}</b> {m.away_team?.name}

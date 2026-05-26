@@ -37,7 +37,7 @@ export function RegisterForm() {
 
   if (sent) {
     return (
-      <div className="card text-sm text-zinc-700">
+      <div className="card text-sm text-zinc-300">
         Poslali smo ti email sa linkom za potvrdu. Klikni link kako bi nastavio sa prijavom.
       </div>
     );
@@ -47,9 +47,9 @@ export function RegisterForm() {
     <div className="card space-y-3">
       <GoogleSignInButton next="/" />
       <div className="flex items-center gap-3 text-xs text-zinc-400 uppercase tracking-wider">
-        <div className="flex-1 h-px bg-zinc-200" />
+        <div className="flex-1 h-px bg-zinc-700" />
         ili
-        <div className="flex-1 h-px bg-zinc-200" />
+        <div className="flex-1 h-px bg-zinc-700" />
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div>

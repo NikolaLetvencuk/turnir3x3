@@ -130,7 +130,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
 
       {matches.length === 0 || rounds.length === 0 ? (
         <div className="card text-center py-8">
-          <p className="text-zinc-600 mb-3">Još nema mečeva.</p>
+          <p className="text-zinc-400 mb-3">Još nema mečeva.</p>
           <p className="text-sm text-zinc-500 mb-4">Pokrenite žreb da generišete grupne mečeve.</p>
           <Link href="/admin/draw" className="btn-primary inline-flex">Pokreni žreb →</Link>
         </div>
@@ -150,8 +150,8 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
                       active
                         ? "bg-blue-600 text-white"
                         : finished
-                        ? "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-                        : "bg-white text-zinc-700 hover:bg-zinc-100 border border-zinc-200"
+                        ? "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
+                        : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border border-zinc-800"
                     }`}
                   >
                     {finished && <Lock className="w-3 h-3" />}
@@ -182,7 +182,7 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
           {datesInSelected.length > 1 && (
             <div className="card flex flex-wrap items-center gap-2 text-sm">
               <Calendar className="w-4 h-4 text-zinc-500" />
-              <span className="text-zinc-600">Filter po danu:</span>
+              <span className="text-zinc-400">Filter po danu:</span>
               <select className="input !py-1 !w-auto" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
                 <option value="">Svi dani ({selectedMatches.length})</option>
                 {datesInSelected.map((d) => {
@@ -213,8 +213,8 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
               </thead>
               <tbody>
                 {filtered.map((m: any) => (
-                  <tr key={m.id} className="border-t border-zinc-100">
-                    <td className="text-zinc-600 min-w-[240px] py-2">
+                  <tr key={m.id} className="border-t border-zinc-800">
+                    <td className="text-zinc-400 min-w-[240px] py-2">
                       {editingId === m.id ? (
                         <form
                           className="flex items-center gap-1"
@@ -308,11 +308,11 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
 
       {bulkOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !bulkBusy && setBulkOpen(false)}>
-          <div className="bg-white rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-900 rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-600" /> Popuni termine za kolo
             </h3>
-            <p className="text-sm text-zinc-600 mb-3">
+            <p className="text-sm text-zinc-400 mb-3">
               Automatski postavlja termine za <b>{selectedMatches.length} mečeva</b>. Prvi meč počinje u izabrano vreme,
               svaki sledeći pomeren za izabrani razmak.
             </p>
@@ -341,8 +341,8 @@ export function MatchesAdmin({ matches, rounds }: { matches: Match[]; rounds: Ro
               </label>
 
               {bulkStart && Number.isFinite(bulkGap) && bulkGap >= 0 && selectedMatches.length > 0 && (
-                <div className="text-xs text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-md p-2 max-h-40 overflow-y-auto">
-                  <div className="font-medium text-zinc-700 mb-1">Pregled:</div>
+                <div className="text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-md p-2 max-h-40 overflow-y-auto">
+                  <div className="font-medium text-zinc-300 mb-1">Pregled:</div>
                   {selectedMatches.slice(0, 8).map((m: any, i: number) => {
                     const start = new Date(bulkStart);
                     if (isNaN(start.getTime())) return null;

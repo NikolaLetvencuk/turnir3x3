@@ -98,7 +98,7 @@ function PenaltyEntry({ match, run }: { match: Match; run: ReturnType<typeof use
       <div className="text-sm font-medium text-amber-900">Penali — unesi rezultat šutiranja:</div>
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="text-xs text-zinc-600">{match.home_team?.name}</span>
+          <span className="text-xs text-zinc-400">{match.home_team?.name}</span>
           <input
             type="number"
             min={0}
@@ -109,7 +109,7 @@ function PenaltyEntry({ match, run }: { match: Match; run: ReturnType<typeof use
           />
         </label>
         <label className="block">
-          <span className="text-xs text-zinc-600">{match.away_team?.name}</span>
+          <span className="text-xs text-zinc-400">{match.away_team?.name}</span>
           <input
             type="number"
             min={0}
@@ -152,7 +152,7 @@ type EventKind = "goal" | "own_goal" | "yellow_card" | "red_card";
 const KIND_LABELS: Record<EventKind, { verb: string; label: string; icon: string; tone: string }> = {
   goal: { verb: "postiže gol", label: "Gol", icon: "⚽", tone: "bg-emerald-600 hover:bg-emerald-700 text-white" },
   own_goal: { verb: "autogol", label: "Autogol", icon: "⚽", tone: "bg-zinc-700 hover:bg-zinc-800 text-white" },
-  yellow_card: { verb: "žuti karton", label: "Žuti karton", icon: "🟨", tone: "bg-yellow-400 hover:bg-yellow-500 text-zinc-900" },
+  yellow_card: { verb: "žuti karton", label: "Žuti karton", icon: "🟨", tone: "bg-yellow-400 hover:bg-yellow-500 text-zinc-100" },
   red_card: { verb: "crveni karton", label: "Crveni karton", icon: "🟥", tone: "bg-red-600 hover:bg-red-700 text-white" },
 };
 
@@ -216,16 +216,16 @@ function EventModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-2 sm:p-4" onClick={onCancel}>
-      <div className="bg-white rounded-xl max-w-md w-full p-4 space-y-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-zinc-900 rounded-xl max-w-md w-full p-4 space-y-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <span className="text-xl" aria-hidden>{cfg.icon}</span>
           <div className="flex-1 min-w-0">
             <div className="font-semibold truncate">{team.name} — {cfg.label}</div>
           </div>
-          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none" aria-label="Zatvori">×</button>
+          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-300 text-xl leading-none" aria-label="Zatvori">×</button>
         </div>
         <label className="block">
-          <span className="text-xs text-zinc-600">{playerLabel}</span>
+          <span className="text-xs text-zinc-400">{playerLabel}</span>
           <select
             className="input"
             value={playerId}
@@ -238,7 +238,7 @@ function EventModal({
         </label>
         {askAssist && (
           <label className="block">
-            <span className="text-xs text-zinc-600">Asistent (opciono)</span>
+            <span className="text-xs text-zinc-400">Asistent (opciono)</span>
             <select
               className="input"
               value={assistId}
@@ -325,7 +325,7 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
 
   return (
     <div className="space-y-4">
-      <Link href="/admin/matches" className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-blue-700">
+      <Link href="/admin/matches" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-blue-700">
         <ArrowLeft className="w-4 h-4" /> Nazad na mečeve
       </Link>
       <div className="card">
@@ -399,7 +399,7 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
         {events.length === 0 ? (
           <p className="text-sm text-zinc-500">Još nema događaja.</p>
         ) : (
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-zinc-800">
             {events.map((e) => {
               const p = playerMap.get(e.player_id);
               const assist = e.assist_player_id ? playerMap.get(e.assist_player_id) : null;

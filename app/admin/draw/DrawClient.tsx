@@ -166,12 +166,12 @@ export function DrawClient({
 
       {!hasScheduled && (
         <div className="card !p-0 overflow-hidden">
-          <div className="flex border-b border-zinc-200">
+          <div className="flex border-b border-zinc-800">
             {(["auto", "manual"] as const).map((k) => (
               <button
                 key={k}
                 onClick={() => setMode(k)}
-                className={`flex-1 py-2 px-3 text-sm font-medium transition ${mode === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+                className={`flex-1 py-2 px-3 text-sm font-medium transition ${mode === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
               >
                 {k === "auto" ? "Live žreb (sa tajmerom)" : "Ručno raspoređivanje"}
               </button>
@@ -180,7 +180,7 @@ export function DrawClient({
           <div className="p-3 space-y-3">
             {mode === "auto" ? (
               <>
-                <p className="text-sm text-zinc-600">
+                <p className="text-sm text-zinc-400">
                   Postavi broj grupa i termin. <b>Rezultat se povlači tek u trenutku žreba</b> — timovi se mogu dodavati do tada.
                   Svi sa otvorenom stranicom <a href="/draw" className="underline">/draw</a> vide odbrojavanje, pa žreb uživo.
                 </p>
@@ -209,7 +209,7 @@ export function DrawClient({
               </>
             ) : (
               <>
-                <p className="text-sm text-zinc-600">Sam dodeljuješ timove grupama; snima se odmah bez animacije.</p>
+                <p className="text-sm text-zinc-400">Sam dodeljuješ timove grupama; snima se odmah bez animacije.</p>
                 <label className="block text-sm">
                   <span className="label">Broj grupa (2–10)</span>
                   <input
@@ -261,7 +261,7 @@ export function DrawClient({
             <h2 className="font-medium mb-2">Pregled grupa</h2>
             <div className="grid sm:grid-cols-2 gap-3">
               {manualResult.groups.map((g) => (
-                <div key={g.name} className="border border-zinc-200 rounded-md p-3">
+                <div key={g.name} className="border border-zinc-800 rounded-md p-3">
                   <div className="font-semibold mb-1">{g.name}</div>
                   <ul className="space-y-1 text-sm">
                     {g.teams.map((t) => (

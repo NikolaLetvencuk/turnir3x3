@@ -7,7 +7,7 @@ type Profile = { email: string; role: string } | null;
 export function TopNav({ profile }: { profile: Profile }) {
   const isAdmin = profile?.role === "admin";
   return (
-    <header className="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1 min-w-0">
           <BackButton />
@@ -44,7 +44,7 @@ export function TopNav({ profile }: { profile: Profile }) {
             </Link>
           )}
           {profile ? (
-            <Link href="/profile" className="hidden sm:inline text-zinc-600 hover:text-zinc-900 truncate max-w-[180px]">
+            <Link href="/profile" className="hidden sm:inline text-zinc-400 hover:text-zinc-100 truncate max-w-[180px]">
               {profile.email}
             </Link>
           ) : (

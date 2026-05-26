@@ -57,7 +57,7 @@ export default async function HistoryPage() {
                       <div key={i} className="flex items-center justify-between">
                         <span>{pid ? (playerMap.get(pid) ?? "?") : "—"}</span>
                         <span className="text-zinc-500 text-xs">
-                          {pp ? `${pp.goals}G · ${pp.assists}A · ${pp.yellow_cards}🟨 · ${pp.red_cards}🟥` : "—"} · <b className="text-zinc-900">{pts}</b>
+                          {pp ? `${pp.goals}G · ${pp.assists}A · ${pp.yellow_cards}🟨 · ${pp.red_cards}🟥` : "—"} · <b className="text-zinc-100">{pts}</b>
                         </span>
                       </div>
                     );

@@ -104,7 +104,7 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
           <thead><tr className="text-xs text-zinc-500"><th className="text-left py-2 w-12"></th><th className="text-left">Ime</th><th className="text-left">Tim</th><th></th></tr></thead>
           <tbody>
             {players.map((p) => (
-              <tr key={p.id} className="border-t border-zinc-100">
+              <tr key={p.id} className="border-t border-zinc-800">
                 {editing === p.id ? (
                   <td colSpan={4} className="py-2">
                     <form onSubmit={async (e) => {
@@ -134,7 +134,7 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
                       <PhotoUploader playerId={p.id} hasPhoto={!!p.photo_url} run={run} />
                       <button
                         onClick={() => setEditing(p.id)}
-                        className="inline-flex items-center rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 p-1.5"
+                        className="inline-flex items-center rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-1.5"
                         aria-label="Izmeni"
                         title="Izmeni"
                       >

@@ -45,7 +45,7 @@ export default async function StandingsPage() {
                 </thead>
                 <tbody>
                   {g.rows.map((r, i) => (
-                    <tr key={r.team_id} className="border-t border-zinc-100">
+                    <tr key={r.team_id} className="border-t border-zinc-800">
                       <td className="py-2 text-zinc-500">{i + 1}.</td>
                       <td className="font-medium">
                         <Link href={`/teams/${r.team_id}`} className="inline-flex items-center gap-2 hover:text-blue-700">

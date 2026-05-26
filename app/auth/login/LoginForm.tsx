@@ -37,9 +37,9 @@ export function LoginForm({ next }: { next: string }) {
       <div className="card space-y-3">
         <GoogleSignInButton next={next} />
         <div className="flex items-center gap-3 text-xs text-zinc-400 uppercase tracking-wider">
-          <div className="flex-1 h-px bg-zinc-200" />
+          <div className="flex-1 h-px bg-zinc-700" />
           ili
-          <div className="flex-1 h-px bg-zinc-200" />
+          <div className="flex-1 h-px bg-zinc-700" />
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div>

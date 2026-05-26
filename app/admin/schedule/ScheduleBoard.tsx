@@ -28,7 +28,7 @@ function MatchCard({ match, disabled }: { match: Match; disabled: boolean }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`bg-white border border-zinc-200 rounded-md p-2 text-xs ${disabled ? "opacity-60" : "cursor-grab hover:border-blue-300"} ${isDragging ? "opacity-30" : ""}`}
+      className={`bg-zinc-900 border border-zinc-800 rounded-md p-2 text-xs ${disabled ? "opacity-60" : "cursor-grab hover:border-blue-300"} ${isDragging ? "opacity-30" : ""}`}
     >
       <div className="text-[10px] text-zinc-500 mb-1">{formatDateTime(match.kickoff_at)}</div>
       <div className="flex items-center gap-1 mb-1">
@@ -49,7 +49,7 @@ function RoundColumn({ round, children }: { round: Round; children: React.ReactN
   return (
     <div
       ref={setNodeRef}
-      className={`w-56 shrink-0 bg-zinc-50 rounded-lg p-2 border ${isOver ? "border-blue-400 bg-blue-50" : "border-zinc-200"}`}
+      className={`w-56 shrink-0 bg-zinc-900 rounded-lg p-2 border ${isOver ? "border-blue-400 bg-blue-50" : "border-zinc-800"}`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="font-semibold text-sm">{round.name}</div>
@@ -94,7 +94,7 @@ export function ScheduleBoard({ rounds, matches }: { rounds: Round[]; matches: M
   }
 
   if (rounds.length === 0) {
-    return <div className="card text-sm text-zinc-600">Još nema kola. Pokreni žreb iz <a href="/admin/draw" className="text-blue-700 underline">/admin/draw</a>.</div>;
+    return <div className="card text-sm text-zinc-400">Još nema kola. Pokreni žreb iz <a href="/admin/draw" className="text-blue-700 underline">/admin/draw</a>.</div>;
   }
 
   return (
@@ -110,7 +110,7 @@ export function ScheduleBoard({ rounds, matches }: { rounds: Round[]; matches: M
       </div>
       <DragOverlay>
         {activeMatch ? (
-          <div className="bg-white border border-blue-400 shadow-lg rounded-md p-2 text-xs w-52">
+          <div className="bg-zinc-900 border border-blue-400 shadow-lg rounded-md p-2 text-xs w-52">
             <div className="flex items-center gap-1 mb-1">
               <TeamCrest name={activeMatch.home?.name ?? "?"} shortName={activeMatch.home?.short_name} primaryColor={activeMatch.home?.primary_color} secondaryColor={activeMatch.home?.secondary_color} size={18} />
               <span className="truncate">{activeMatch.home?.name ?? "?"}</span>

@@ -377,18 +377,18 @@ export function ExportClient({
 
         {/* Mode toggle */}
         <div>
-          <div className="text-xs text-zinc-600 mb-1">Filtriraj po</div>
-          <div className="inline-flex rounded-md border border-zinc-300 overflow-hidden">
+          <div className="text-xs text-zinc-400 mb-1">Filtriraj po</div>
+          <div className="inline-flex rounded-md border border-zinc-700 overflow-hidden">
             <button
               onClick={() => changeMode("round")}
-              className={`px-3 py-1.5 text-sm ${resultsMode === "round" ? "bg-blue-600 text-white" : "bg-white text-zinc-700 hover:bg-zinc-50"}`}
+              className={`px-3 py-1.5 text-sm ${resultsMode === "round" ? "bg-blue-600 text-white" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}
             >
               Kolu
             </button>
             <button
               onClick={() => changeMode("day")}
               disabled={allDates.length === 0}
-              className={`px-3 py-1.5 text-sm border-l border-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed ${resultsMode === "day" ? "bg-blue-600 text-white" : "bg-white text-zinc-700 hover:bg-zinc-50"}`}
+              className={`px-3 py-1.5 text-sm border-l border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed ${resultsMode === "day" ? "bg-blue-600 text-white" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}
             >
               Danu
             </button>
@@ -403,7 +403,7 @@ export function ExportClient({
         <div className="grid sm:grid-cols-2 gap-3">
           {resultsMode === "round" ? (
             <label className="block">
-              <span className="text-xs text-zinc-600">Kolo</span>
+              <span className="text-xs text-zinc-400">Kolo</span>
               <select className="input" value={selectedRoundId} onChange={(e) => changeRound(e.target.value)}>
                 {rounds.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -414,7 +414,7 @@ export function ExportClient({
             </label>
           ) : (
             <label className="block">
-              <span className="text-xs text-zinc-600">Dan</span>
+              <span className="text-xs text-zinc-400">Dan</span>
               <select className="input" value={selectedDay} onChange={(e) => changeDay(e.target.value)}>
                 {allDates.map((d) => {
                   const count = matches.filter((m) => belgradeDateKey(m.kickoff_at) === d).length;
@@ -428,7 +428,7 @@ export function ExportClient({
             </label>
           )}
           <label className="block">
-            <span className="text-xs text-zinc-600">Naslov (opciono)</span>
+            <span className="text-xs text-zinc-400">Naslov (opciono)</span>
             <input
               className="input"
               placeholder={effectiveTitle()}
@@ -441,7 +441,7 @@ export function ExportClient({
         {/* Round mode: date pills inside the round */}
         {resultsMode === "round" && candidateMatches.length > 0 && (
           <div>
-            <div className="text-xs text-zinc-600 mb-1">Brzo filtriranje po danu (unutar kola)</div>
+            <div className="text-xs text-zinc-400 mb-1">Brzo filtriranje po danu (unutar kola)</div>
             {sortedRoundDateKeys.length === 1 && sortedRoundDateKeys[0] === "__no_date__" ? (
               <div className="text-xs text-zinc-500 italic">
                 Mečevi u ovom kolu nemaju postavljene termine. Idi na <code>/admin/matches</code>
@@ -451,7 +451,7 @@ export function ExportClient({
               <div className="flex flex-wrap gap-1.5">
                 <button
                   onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
-                  className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
+                  className="text-xs px-2.5 py-1 rounded-full border border-zinc-700 hover:bg-zinc-800"
                 >
                   Sve ({candidateMatches.length})
                 </button>
@@ -462,7 +462,7 @@ export function ExportClient({
                     <button
                       key={k}
                       onClick={() => selectOnlyDateInRound(k)}
-                      className="text-xs px-2.5 py-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
+                      className="text-xs px-2.5 py-1 rounded-full border border-zinc-700 hover:bg-zinc-800"
                     >
                       {label} ({list.length})
                     </button>
@@ -477,7 +477,7 @@ export function ExportClient({
         {candidateMatches.length > 0 ? (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-600">
+              <span className="text-xs text-zinc-400">
                 Mečevi ({selectedMatchIds.size} / {candidateMatches.length})
               </span>
               <div className="text-xs flex gap-2">
@@ -493,7 +493,7 @@ export function ExportClient({
                 </button>
               </div>
             </div>
-            <ul className="space-y-1 max-h-64 overflow-y-auto border border-zinc-200 rounded-md p-2 bg-zinc-50">
+            <ul className="space-y-1 max-h-64 overflow-y-auto border border-zinc-800 rounded-md p-2 bg-zinc-900">
               {resultsMode === "round"
                 ? sortedRoundDateKeys.map((dateKey) => {
                     const list = roundMatchesByDate.get(dateKey) ?? [];
@@ -560,16 +560,16 @@ export function ExportClient({
           <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Tabele&quot;</div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-600">Grupe ({selectedGroupIds.size} / {standings.length})</span>
+              <span className="text-xs text-zinc-400">Grupe ({selectedGroupIds.size} / {standings.length})</span>
               <div className="text-xs flex gap-2">
                 <button onClick={() => setSelectedGroupIds(new Set(standings.map((g) => g.group_id)))} className="text-blue-700 hover:underline">Sve</button>
                 <span className="text-zinc-300">·</span>
                 <button onClick={() => setSelectedGroupIds(new Set())} className="text-blue-700 hover:underline">Nijedna</button>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 border border-zinc-200 rounded-md p-2 bg-zinc-50">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 border border-zinc-800 rounded-md p-2 bg-zinc-900">
               {standings.map((g) => (
-                <label key={g.group_id} className="flex items-center gap-2 text-sm hover:bg-white rounded px-2 py-1.5 cursor-pointer">
+                <label key={g.group_id} className="flex items-center gap-2 text-sm hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedGroupIds.has(g.group_id)}
@@ -641,12 +641,12 @@ function MatchCheckRow({
   roundBadge?: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm hover:bg-white rounded px-2 py-1.5 cursor-pointer">
+    <label className="flex items-center gap-2 text-sm hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer">
       <input type="checkbox" checked={checked} onChange={onChange} />
       <span className="flex-1 truncate">
         {match.home_team?.name ?? "?"} vs {match.away_team?.name ?? "?"}
         {roundBadge && (
-          <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-500 bg-zinc-200 rounded px-1.5 py-0.5">
+          <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-500 bg-zinc-700 rounded px-1.5 py-0.5">
             {roundBadge}
           </span>
         )}

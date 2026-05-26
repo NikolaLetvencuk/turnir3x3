@@ -23,15 +23,15 @@ export function LeagueGrid({ rounds, rows, breakdown }: { rounds: RoundLite[]; r
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-zinc-500">
-              <th className="text-left py-2 sticky left-0 bg-white">Igrač</th>
+              <th className="text-left py-2 sticky left-0 bg-zinc-900">Igrač</th>
               {rounds.map((r) => <th key={r.id} className="text-right px-2 whitespace-nowrap">{r.name}</th>)}
               <th className="text-right px-2">∑</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row, i) => (
-              <tr key={row.user_id} className="border-t border-zinc-100">
-                <td className="py-2 font-medium sticky left-0 bg-white">{i + 1}. {row.email.split("@")[0]}</td>
+              <tr key={row.user_id} className="border-t border-zinc-800">
+                <td className="py-2 font-medium sticky left-0 bg-zinc-900">{i + 1}. {row.email.split("@")[0]}</td>
                 {row.cells.map((c) => {
                   const r = rounds.find((x) => x.id === c.round_id)!;
                   return (
@@ -54,7 +54,7 @@ export function LeagueGrid({ rounds, rows, breakdown }: { rounds: RoundLite[]; r
 
       {open && detail && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-2" onClick={() => setOpen(null)}>
-          <div className="bg-white rounded-xl max-w-md w-full p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-900 rounded-xl max-w-md w-full p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold">{open.email.split("@")[0]} — {open.round.name}</h3>
               <button onClick={() => setOpen(null)} className="text-zinc-500">✕</button>

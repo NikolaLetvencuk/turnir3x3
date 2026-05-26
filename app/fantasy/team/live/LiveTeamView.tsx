@@ -43,7 +43,7 @@ export function LiveTeamView({ round, slots, total, bank }: {
 
       {allEmpty ? (
         <div className="card text-center">
-          <p className="text-zinc-600 text-sm">
+          <p className="text-zinc-400 text-sm">
             {round.status === "upcoming"
               ? "Nisi lockovao tim za ovo kolo. Tim iz prošlog kola će biti automatski korišćen."
               : "Nisi imao tim u ovom kolu."}

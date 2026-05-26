@@ -35,13 +35,13 @@ export function PopupAdToggle({ initialEnabled }: { initialEnabled: boolean }) {
         onClick={onToggle}
         disabled={pending}
         className={`shrink-0 inline-flex items-center rounded-full h-7 w-12 px-0.5 transition ${
-          enabled ? "bg-blue-600" : "bg-zinc-300"
+          enabled ? "bg-blue-600" : "bg-zinc-600"
         } disabled:opacity-60`}
         aria-pressed={enabled}
         aria-label="Uključi/isključi popup reklamu"
       >
         <span
-          className={`block h-6 w-6 rounded-full bg-white shadow transition-transform ${
+          className={`block h-6 w-6 rounded-full bg-zinc-900 shadow transition-transform ${
             enabled ? "translate-x-5" : "translate-x-0"
           }`}
         />

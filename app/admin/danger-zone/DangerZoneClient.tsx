@@ -92,11 +92,11 @@ export function DangerZoneClient() {
 
       {resetOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && closeResetModal()}>
-          <div className="bg-white rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-900 rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold mb-2">
               {resetOpen === "progress" ? "Potvrdi reset turnira" : "Potvrdi potpuni reset"}
             </h3>
-            <p className="text-sm text-zinc-600 mb-3">
+            <p className="text-sm text-zinc-400 mb-3">
               {resetOpen === "progress"
                 ? <>Briše mečeve i fantasy, ali zadržava timove i igrače. Otkucaj <b className="font-mono">RESETUJ</b>:</>
                 : <>Briše <b>SVE</b>. Otkucaj <b className="font-mono">IZBRISI SVE</b>:</>}
@@ -121,9 +121,9 @@ export function DangerZoneClient() {
 
       {demoOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && setDemoOpen(false)}>
-          <div className="bg-white rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-900 rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold mb-2">Učitaj demo podatke</h3>
-            <p className="text-sm text-zinc-600 mb-3">
+            <p className="text-sm text-zinc-400 mb-3">
               Izaberi opciju:
             </p>
             <div className="space-y-2">

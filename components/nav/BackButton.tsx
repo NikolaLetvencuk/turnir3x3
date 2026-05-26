@@ -24,7 +24,7 @@ export function BackButton() {
       type="button"
       onClick={onClick}
       aria-label="Nazad"
-      className="-ml-1 inline-flex items-center justify-center w-9 h-9 rounded-md text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 sm:hidden"
+      className="-ml-1 inline-flex items-center justify-center w-9 h-9 rounded-md text-zinc-400 hover:bg-zinc-800 active:bg-zinc-700 sm:hidden"
     >
       <ChevronLeft className="w-5 h-5" />
     </button>

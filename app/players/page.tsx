@@ -51,7 +51,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: { so
       <h1 className="text-xl font-semibold">Igrači</h1>
       <div className="flex flex-wrap gap-2 text-xs">
         {([["goals","Golovi"],["assists","Asistencije"],["yellows","Žuti"],["reds","Crveni"],["price","Cena"]] as const).map(([k,l]) => (
-          <Link key={k} href={`/players?sort=${k}`} className={`px-3 py-1 rounded-full border ${sort===k?"bg-blue-600 text-white border-blue-600":"bg-white text-zinc-700 border-zinc-200"}`}>{l}</Link>
+          <Link key={k} href={`/players?sort=${k}`} className={`px-3 py-1 rounded-full border ${sort===k?"bg-blue-600 text-white border-blue-600":"bg-zinc-900 text-zinc-300 border-zinc-800"}`}>{l}</Link>
         ))}
       </div>
       <div className="card overflow-x-auto">
@@ -69,7 +69,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: { so
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.player_id} className="border-t border-zinc-100">
+              <tr key={r.player_id} className="border-t border-zinc-800">
                 <td className="py-2">
                   <Link href={`/players/${r.player_id}`} className="hover:text-blue-700 font-medium inline-flex items-center gap-2">
                     <PlayerAvatar name={r.player_name} photoUrl={r.photo_url} teamPrimary={r.team_primary} size={28} />

@@ -24,7 +24,7 @@ export function FantasyAdmin({ rounds }: { rounds: Round[] }) {
         </h2>
         <ul className="space-y-1.5">
           {rounds.map((r) => (
-            <li key={r.id} className="flex items-center justify-between border-b last:border-0 border-zinc-100 pb-1.5">
+            <li key={r.id} className="flex items-center justify-between border-b last:border-0 border-zinc-800 pb-1.5">
               <div>
                 <div className="text-sm font-medium">{r.name}</div>
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{r.status}</div>

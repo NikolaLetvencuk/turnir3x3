@@ -108,7 +108,7 @@ export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups
           </label>
           <div className="text-sm">
             <span className="label">Najbolji trećeplasirani</span>
-            <div className="input bg-zinc-50">{bestThirds}</div>
+            <div className="input bg-zinc-900">{bestThirds}</div>
           </div>
         </div>
         <label className="text-sm flex items-center gap-2">
@@ -150,7 +150,7 @@ export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups
 
       {editingSlot && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingSlot(null)}>
-          <div className="bg-white rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-900 rounded-xl p-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold mb-2">Postavi tim u slot</h3>
             <select
               className="input mb-3"

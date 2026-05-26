@@ -91,7 +91,7 @@ export default async function LiveTeamPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/fantasy" className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-blue-700">
+      <Link href="/fantasy" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-blue-700">
         <ArrowLeft className="w-4 h-4" /> Nazad na Fantasy
       </Link>
       <LiveTeamView round={focusRound} slots={slots} total={total} bank={snap?.bank ?? null} />

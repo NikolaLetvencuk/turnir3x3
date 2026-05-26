@@ -44,7 +44,7 @@ function ResultBadge({ result }: { result: "W" | "L" | "D" }) {
   const cls =
     result === "W" ? "bg-blue-500 text-white" :
     result === "L" ? "bg-red-500 text-white" :
-    "bg-amber-400 text-zinc-900";
+    "bg-amber-400 text-zinc-100";
   return <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${cls}`}>{result}</span>;
 }
 
@@ -116,15 +116,15 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
           <h1 className="text-xl sm:text-2xl font-bold break-words leading-tight">{team.name}</h1>
           {team.short_name && <p className="text-sm text-zinc-500">{team.short_name}</p>}
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="inline-block w-4 h-4 rounded border border-zinc-300" style={{ background: team.primary_color ?? "#1f2937" }} />
-            <span className="inline-block w-4 h-4 rounded border border-zinc-300" style={{ background: team.secondary_color ?? "#f3f4f6" }} />
+            <span className="inline-block w-4 h-4 rounded border border-zinc-700" style={{ background: team.primary_color ?? "#1f2937" }} />
+            <span className="inline-block w-4 h-4 rounded border border-zinc-700" style={{ background: team.secondary_color ?? "#f3f4f6" }} />
             <span className="text-xs text-zinc-400">{players.length} {players.length === 1 ? "igrač" : "igrača"}</span>
           </div>
         </div>
       </div>
 
       <div className="card !p-0 overflow-hidden">
-        <div className="flex border-b border-zinc-200">
+        <div className="flex border-b border-zinc-800">
           {([
             ["results", "Rezultati"],
             ["players", "Igrači"],
@@ -133,7 +133,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-600 hover:bg-zinc-50"}`}
+              className={`flex-1 py-2 px-3 text-sm font-medium transition ${tab === k ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600" : "text-zinc-400 hover:bg-zinc-800"}`}
             >{l}</button>
           ))}
         </div>
@@ -143,8 +143,8 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
             <div className="space-y-4">
               {finished.length > 0 && (
                 <section>
-                  <h3 className="font-medium text-sm text-zinc-600 mb-2">Odigrani mečevi</h3>
-                  <ul className="divide-y divide-zinc-100">
+                  <h3 className="font-medium text-sm text-zinc-400 mb-2">Odigrani mečevi</h3>
+                  <ul className="divide-y divide-zinc-800">
                     {finished.map((m) => {
                       const isHome = m.home_team_id === team.id;
                       const opp = isHome ? m.away_team : m.home_team;
@@ -153,7 +153,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                       const res = resultForTeam(m, team.id);
                       return (
                         <li key={m.id}>
-                          <Link href={`/matches/${m.id}`} className="flex items-center gap-2 py-2 hover:bg-zinc-50 -mx-2 px-2 rounded">
+                          <Link href={`/matches/${m.id}`} className="flex items-center gap-2 py-2 hover:bg-zinc-800 -mx-2 px-2 rounded">
                             {res && <ResultBadge result={res} />}
                             <span className="tabular-nums font-semibold shrink-0">{us} : {them}</span>
                             {opp && (
@@ -172,14 +172,14 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
               )}
               {upcoming.length > 0 && (
                 <section>
-                  <h3 className="font-medium text-sm text-zinc-600 mb-2">Predstojeći</h3>
-                  <ul className="divide-y divide-zinc-100">
+                  <h3 className="font-medium text-sm text-zinc-400 mb-2">Predstojeći</h3>
+                  <ul className="divide-y divide-zinc-800">
                     {upcoming.map((m) => {
                       const isHome = m.home_team_id === team.id;
                       const opp = isHome ? m.away_team : m.home_team;
                       return (
                         <li key={m.id}>
-                          <Link href={`/matches/${m.id}`} className="flex items-center gap-2 py-2 hover:bg-zinc-50 -mx-2 px-2 rounded">
+                          <Link href={`/matches/${m.id}`} className="flex items-center gap-2 py-2 hover:bg-zinc-800 -mx-2 px-2 rounded">
                             <span className="text-xs text-zinc-500 shrink-0">{m.round?.name}</span>
                             {opp && (
                               <span className="inline-flex items-center gap-1.5 text-sm min-w-0">
@@ -204,10 +204,10 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
               {players.length === 0 ? (
                 <p className="text-sm text-zinc-500">Nema igrača u timu.</p>
               ) : (
-                <ul className="divide-y divide-zinc-100">
+                <ul className="divide-y divide-zinc-800">
                   {[...players].sort((a, b) => b.stats.goals - a.stats.goals || a.name.localeCompare(b.name)).map((p) => (
                     <li key={p.id}>
-                      <Link href={`/players/${p.id}`} className="flex items-center gap-3 py-2 hover:bg-zinc-50 -mx-2 px-2 rounded">
+                      <Link href={`/players/${p.id}`} className="flex items-center gap-3 py-2 hover:bg-zinc-800 -mx-2 px-2 rounded">
                         <PlayerAvatar name={p.name} photoUrl={p.photo_url} teamPrimary={team.primary_color} size={36} />
                         <div className="flex-1">
                           <div className="font-medium">{p.name}</div>
@@ -264,7 +264,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                     <div className="text-xs text-blue-700 font-medium mb-1">Najveća pobeda</div>
                     <div className="font-bold tabular-nums text-lg">{stats.biggestWin.us} : {stats.biggestWin.them}</div>
                     {stats.biggestWin.opp && (
-                      <div className="text-sm text-zinc-600 inline-flex items-center gap-1.5 mt-1">
+                      <div className="text-sm text-zinc-400 inline-flex items-center gap-1.5 mt-1">
                         protiv
                         <TeamCrest name={stats.biggestWin.opp.name} shortName={stats.biggestWin.opp.short_name} primaryColor={stats.biggestWin.opp.primary_color} secondaryColor={stats.biggestWin.opp.secondary_color} size={18} />
                         {stats.biggestWin.opp.name}
@@ -277,7 +277,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                     <div className="text-xs text-red-700 font-medium mb-1">Najteži poraz</div>
                     <div className="font-bold tabular-nums text-lg">{stats.worstLoss.us} : {stats.worstLoss.them}</div>
                     {stats.worstLoss.opp && (
-                      <div className="text-sm text-zinc-600 inline-flex items-center gap-1.5 mt-1">
+                      <div className="text-sm text-zinc-400 inline-flex items-center gap-1.5 mt-1">
                         protiv
                         <TeamCrest name={stats.worstLoss.opp.name} shortName={stats.worstLoss.opp.short_name} primaryColor={stats.worstLoss.opp.primary_color} secondaryColor={stats.worstLoss.opp.secondary_color} size={18} />
                         {stats.worstLoss.opp.name}

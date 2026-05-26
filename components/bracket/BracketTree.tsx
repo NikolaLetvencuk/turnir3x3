@@ -41,7 +41,7 @@ function prettyBracketPosition(pos: string | null): string {
 function Slot({ team, placeholder, manual, onClick }: { team: TeamLite | null; placeholder: string | null; manual: boolean; onClick?: () => void }) {
   if (team) {
     return (
-      <button onClick={onClick} disabled={!onClick} className="flex items-center gap-2 w-full text-left py-1 px-2 rounded hover:bg-zinc-100 disabled:hover:bg-transparent">
+      <button onClick={onClick} disabled={!onClick} className="flex items-center gap-2 w-full text-left py-1 px-2 rounded hover:bg-zinc-800 disabled:hover:bg-transparent">
         <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={20} />
         <span className="text-sm truncate">{team.name}</span>
         {manual && <span className="text-[10px] text-blue-600 ml-auto">M</span>}
@@ -49,7 +49,7 @@ function Slot({ team, placeholder, manual, onClick }: { team: TeamLite | null; p
     );
   }
   return (
-    <button onClick={onClick} disabled={!onClick} className="flex items-center gap-2 w-full text-left py-1 px-2 rounded hover:bg-zinc-100 disabled:hover:bg-transparent text-zinc-400 italic text-sm">
+    <button onClick={onClick} disabled={!onClick} className="flex items-center gap-2 w-full text-left py-1 px-2 rounded hover:bg-zinc-800 disabled:hover:bg-transparent text-zinc-400 italic text-sm">
       {placeholder ?? "—"}
     </button>
   );
@@ -79,7 +79,7 @@ export function BracketTree({
       <div className="flex gap-3 min-w-fit">
         {rounds.map((r) => (
           <div key={r.id} className="w-60 shrink-0 space-y-2">
-            <h3 className="font-medium text-sm text-zinc-700">{r.name}</h3>
+            <h3 className="font-medium text-sm text-zinc-300">{r.name}</h3>
             {(byRound.get(r.id) ?? []).map((m) => {
               const hTeam = m.home_team_id ? teamMap.get(m.home_team_id) ?? m.home_team : m.home_team;
               const aTeam = m.away_team_id ? teamMap.get(m.away_team_id) ?? m.away_team : m.away_team;

@@ -68,7 +68,7 @@ export default async function PlayerPage({ params }: { params: { id: string } })
             <thead><tr className="text-xs text-zinc-500"><th className="text-left py-1">Kolo</th><th className="text-right">G</th><th className="text-right">A</th><th className="text-right">CS</th><th className="text-right">Pob</th><th className="text-right">Ner</th><th className="text-right">🟨</th><th className="text-right">🟥</th><th className="text-right">AG</th><th className="text-right">Bod</th></tr></thead>
             <tbody>
               {pointsByRound.map((p: any) => (
-                <tr key={p.id} className="border-t border-zinc-100">
+                <tr key={p.id} className="border-t border-zinc-800">
                   <td className="py-1">{p.round?.name}</td>
                   <td className="text-right">{p.goals}</td>
                   <td className="text-right">{p.assists}</td>

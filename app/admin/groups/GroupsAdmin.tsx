@@ -70,7 +70,7 @@ export function GroupsAdmin({ groups, teams, assignment }: { groups: Group[]; te
           <thead><tr className="text-xs text-zinc-500"><th className="text-left py-2">Tim</th><th className="text-left">Grupa</th></tr></thead>
           <tbody>
             {teams.map((t) => (
-              <tr key={t.id} className="border-t border-zinc-100">
+              <tr key={t.id} className="border-t border-zinc-800">
                 <td className="py-2">{t.name}</td>
                 <td>
                   <select className="input" defaultValue={assignment[t.id] ?? ""} onChange={(e) => onAssign(t.id, e.target.value)}>

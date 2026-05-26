@@ -42,7 +42,7 @@ function JerseySlot({ player, onRemove }: { player: PlayerForPicker | null; onRe
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute -top-1 -right-1 sm:top-0 sm:right-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white text-zinc-700 hover:text-red-600 shadow-md border border-zinc-200 z-10"
+          className="absolute -top-1 -right-1 sm:top-0 sm:right-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-zinc-900 text-zinc-300 hover:text-red-600 shadow-md border border-zinc-800 z-10"
           aria-label="Ukloni"
         >
           <X className="w-3 h-3" />
@@ -54,7 +54,7 @@ function JerseySlot({ player, onRemove }: { player: PlayerForPicker | null; onRe
         shortName={player.team_short}
         size={72}
       />
-      <div className="mt-1.5 bg-white/95 text-zinc-900 rounded-md px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold max-w-[90px] sm:max-w-[110px] truncate">
+      <div className="mt-1.5 bg-white/95 text-zinc-100 rounded-md px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold max-w-[90px] sm:max-w-[110px] truncate">
         {lastName}
       </div>
       <div className="mt-1 rounded-md bg-blue-600 text-white px-2 py-0.5 text-xs font-black tabular-nums shadow-sm">
@@ -251,11 +251,11 @@ export function TeamEditor({
       {/* Lock status — saved draft auto-locks for the upcoming round and carries
           forward until the user edits again. */}
       {overview.next_round ? (
-        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-blue-200 bg-blue-50" : "border-zinc-200"}`}>
+        <div className={`card flex items-center gap-3 ${matchesLocked ? "border-blue-200 bg-blue-50" : "border-zinc-800"}`}>
           {matchesLocked ? <Lock className="w-5 h-5 text-blue-600 shrink-0" /> : <LockOpen className="w-5 h-5 text-zinc-500 shrink-0" />}
           <div className="flex-1 text-sm">
             <div className="font-medium">{overview.next_round.name}</div>
-            <div className="text-xs text-zinc-600">
+            <div className="text-xs text-zinc-400">
               {matchesLocked
                 ? "Tim spreman ✓ Važiće za sva naredna kola dok ga ne promeniš."
                 : "Sačuvaj 3 igrača u okviru budžeta — tim će automatski važiti za naredna kola dok ga ne promeniš."}
@@ -263,7 +263,7 @@ export function TeamEditor({
           </div>
         </div>
       ) : (
-        <div className="card text-sm text-zinc-600">Nema predstojećeg kola.</div>
+        <div className="card text-sm text-zinc-400">Nema predstojećeg kola.</div>
       )}
 
       {/* Pitch view */}
@@ -299,12 +299,12 @@ export function TeamEditor({
       <div className="card !p-3 sm:!p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="min-w-0">
-            <div className="text-xs text-zinc-600">Ime tima</div>
+            <div className="text-xs text-zinc-400">Ime tima</div>
             <div className="font-semibold truncate text-base">{teamName}</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-zinc-600">Budžet</div>
-            <div className={`font-bold tabular-nums text-lg ${overBudget ? "text-red-600" : remaining < 1 ? "text-amber-600" : "text-zinc-900"}`}>
+            <div className="text-xs text-zinc-400">Budžet</div>
+            <div className={`font-bold tabular-nums text-lg ${overBudget ? "text-red-600" : remaining < 1 ? "text-amber-600" : "text-zinc-100"}`}>
               {totalCost.toFixed(1)} <span className="text-zinc-400 text-sm">/ {budget.toFixed(1)}M</span>
             </div>
             <div className="text-xs text-zinc-500">
@@ -352,7 +352,7 @@ export function TeamEditor({
             {(search || teamFilter) && (
               <button
                 onClick={() => { setSearch(""); setTeamFilter(""); }}
-                className="text-xs text-zinc-500 hover:text-zinc-700 inline-flex items-center gap-1 px-2"
+                className="text-xs text-zinc-500 hover:text-zinc-300 inline-flex items-center gap-1 px-2"
               >
                 <X className="w-3 h-3" /> Reset filter
               </button>
@@ -366,7 +366,7 @@ export function TeamEditor({
             return (
               <div
                 key={p.id}
-                className={`relative rounded-lg border transition ${isSel ? "border-blue-400 bg-blue-50/40" : "border-zinc-200 bg-white"}`}
+                className={`relative rounded-lg border transition ${isSel ? "border-blue-400 bg-blue-50/40" : "border-zinc-800 bg-zinc-900"}`}
               >
                 <div className="flex items-center gap-2 sm:gap-3 p-2">
                   <button onClick={() => setDetailPlayer(p)} className="shrink-0">
@@ -381,9 +381,9 @@ export function TeamEditor({
                     <div className="font-semibold text-sm truncate">{p.name}</div>
                     <div className="text-[11px] text-zinc-500 truncate">{p.team_name ?? "—"}</div>
                     <div className="text-[10px] text-zinc-500 mt-0.5 flex flex-wrap gap-x-1.5">
-                      <span><b className="text-zinc-700 tabular-nums">{p.total_points}</b> uk.</span>
+                      <span><b className="text-zinc-300 tabular-nums">{p.total_points}</b> uk.</span>
                       <span className="text-zinc-300">·</span>
-                      <span><b className="text-zinc-700 tabular-nums">{p.last_round_points ?? 0}</b> prošlo</span>
+                      <span><b className="text-zinc-300 tabular-nums">{p.last_round_points ?? 0}</b> prošlo</span>
                     </div>
                   </button>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -397,7 +397,7 @@ export function TeamEditor({
                         isSel
                           ? "inline-flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-md px-2 py-1 text-[11px] font-medium"
                           : wouldExceed
-                          ? "inline-flex items-center gap-1 bg-zinc-100 text-zinc-400 rounded-md px-2 py-1 text-[11px] font-medium cursor-not-allowed"
+                          ? "inline-flex items-center gap-1 bg-zinc-800 text-zinc-400 rounded-md px-2 py-1 text-[11px] font-medium cursor-not-allowed"
                           : "inline-flex items-center gap-1 bg-blue-600 text-white hover:bg-blue-700 rounded-md px-2 py-1 text-[11px] font-medium"
                       }
                     >
@@ -411,7 +411,7 @@ export function TeamEditor({
                     {p.next_fixtures.slice(0, 2).map((f) => (
                       <span
                         key={f.match_id}
-                        className="inline-flex items-center gap-1 bg-zinc-100 rounded-md px-1 py-0.5"
+                        className="inline-flex items-center gap-1 bg-zinc-800 rounded-md px-1 py-0.5"
                         title={f.kickoff_at ?? ""}
                       >
                         <span className="text-zinc-400">vs</span>
@@ -422,7 +422,7 @@ export function TeamEditor({
                           secondaryColor={f.opponent_secondary}
                           size={12}
                         />
-                        <span className="font-medium text-zinc-700 truncate max-w-[70px]">
+                        <span className="font-medium text-zinc-300 truncate max-w-[70px]">
                           {f.opponent_short_name || f.opponent_name}
                         </span>
                       </span>
@@ -447,14 +447,14 @@ export function TeamEditor({
 function PlayerDetailModal({ player, onClose }: { player: PlayerForPicker; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-2 sm:p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl max-w-md w-full p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-zinc-900 rounded-xl max-w-md w-full p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-3">
           <PlayerAvatar name={player.name} photoUrl={player.photo_url} teamPrimary={player.team_primary} size={56} />
           <div className="flex-1 min-w-0">
             <div className="font-semibold truncate">{player.name}</div>
             <div className="text-xs text-zinc-500 truncate">{player.team_name ?? "—"}</div>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none" aria-label="Zatvori">×</button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-300 text-xl leading-none" aria-label="Zatvori">×</button>
         </div>
         <div className="grid grid-cols-2 gap-2 text-center mb-3">
           <div className="card !p-2"><div className="text-[10px] text-zinc-500">Cena</div><div className="font-bold tabular-nums">{player.price.toFixed(1)}</div></div>

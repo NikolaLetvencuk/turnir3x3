@@ -76,12 +76,12 @@ export default async function HomePage() {
               Još nema prijavljenih ekipa.
             </div>
           ) : (
-            <ul className="card divide-y divide-zinc-100 !p-0">
+            <ul className="card divide-y divide-zinc-800 !p-0">
               {teams.map((t) => (
                 <li key={t.id}>
                   <Link
                     href={`/teams/${t.id}`}
-                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50"
+                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800"
                   >
                     <TeamCrest
                       name={t.name}
@@ -141,7 +141,7 @@ export default async function HomePage() {
             <p className="text-blue-50 mt-0.5 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
           </div>
         </div>
-        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-white text-blue-700 rounded-md px-4 py-2 text-sm font-medium relative">
+        <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-zinc-900 text-blue-700 rounded-md px-4 py-2 text-sm font-medium relative">
           Sastavi svoj fantasy tim →
         </Link>
       </section>
@@ -181,7 +181,7 @@ export default async function HomePage() {
                 <table className="w-full text-xs">
                   <tbody>
                     {g.rows.slice(0, 3).map((r, i) => (
-                      <tr key={r.team_id} className="border-b last:border-0 border-zinc-100">
+                      <tr key={r.team_id} className="border-b last:border-0 border-zinc-800">
                         <td className="py-1 text-zinc-500 w-6">{i + 1}.</td>
                         <td className="py-1 font-medium">
                           <span className="inline-flex items-center gap-1.5">
@@ -210,7 +210,7 @@ export default async function HomePage() {
               <thead><tr className="text-xs text-zinc-500"><th className="text-left py-1">Igrač</th><th className="text-left">Tim</th><th className="text-right">G</th><th className="text-right">A</th></tr></thead>
               <tbody>
                 {scorers.map((s) => (
-                  <tr key={s.player_id} className="border-t border-zinc-100">
+                  <tr key={s.player_id} className="border-t border-zinc-800">
                     <td className="py-1.5">{s.player_name}</td>
                     <td className="text-zinc-500">{s.team_name ?? "—"}</td>
                     <td className="text-right tabular-nums font-semibold">{s.goals}</td>

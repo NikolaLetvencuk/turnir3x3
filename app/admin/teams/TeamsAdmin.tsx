@@ -65,24 +65,24 @@ function TeamForm({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex items-center gap-2 text-sm">
-          <input type="color" name="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="h-9 w-12 border border-zinc-200 rounded" />
-          <span className="text-zinc-600">Primarna</span>
+          <input type="color" name="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="h-9 w-12 border border-zinc-800 rounded" />
+          <span className="text-zinc-400">Primarna</span>
           <input value={primary} onChange={(e) => setPrimary(e.target.value)} className="input flex-1 font-mono" maxLength={7} />
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="color" name="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="h-9 w-12 border border-zinc-200 rounded" />
-          <span className="text-zinc-600">Sekundarna</span>
+          <input type="color" name="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="h-9 w-12 border border-zinc-800 rounded" />
+          <span className="text-zinc-400">Sekundarna</span>
           <input value={secondary} onChange={(e) => setSecondary(e.target.value)} className="input flex-1 font-mono" maxLength={7} />
         </label>
       </div>
       {sameColors && <p className="text-xs text-amber-700">Boje su iste — grb će biti slabo vidljiv.</p>}
 
       {/* Kapiten — bira se iz liste igrača ovog tima */}
-      <div className="grid sm:grid-cols-2 gap-2 border-t border-zinc-100 pt-2">
+      <div className="grid sm:grid-cols-2 gap-2 border-t border-zinc-800 pt-2">
         <label className="block text-sm">
-          <span className="text-xs text-zinc-600">Kapiten (izaberi igrača)</span>
+          <span className="text-xs text-zinc-400">Kapiten (izaberi igrača)</span>
           {!initial?.id ? (
-            <p className="text-xs text-zinc-500 italic input flex items-center !cursor-not-allowed bg-zinc-100">
+            <p className="text-xs text-zinc-500 italic input flex items-center !cursor-not-allowed bg-zinc-800">
               Prvo sačuvaj tim, pa dodaj igrače, pa se vrati.
             </p>
           ) : !initial?.players || initial.players.length === 0 ? (
@@ -103,7 +103,7 @@ function TeamForm({
           )}
         </label>
         <label className="block text-sm">
-          <span className="text-xs text-zinc-600">Telefon kapitena (za WhatsApp/Viber/SMS)</span>
+          <span className="text-xs text-zinc-400">Telefon kapitena (za WhatsApp/Viber/SMS)</span>
           <input
             value={captainPhone}
             onChange={(e) => setCaptainPhone(e.target.value)}
@@ -157,7 +157,7 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
         <div className="card border-blue-300 border-2">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold">Novi tim</h2>
-            <button onClick={() => setShowNew(false)} className="text-zinc-400 hover:text-zinc-700" aria-label="Otkaži">
+            <button onClick={() => setShowNew(false)} className="text-zinc-400 hover:text-zinc-300" aria-label="Otkaži">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -213,7 +213,7 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
                 </div>
                 <button
                   onClick={() => setEditing(t.id)}
-                  className="inline-flex items-center gap-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-2 py-1.5 text-xs"
+                  className="inline-flex items-center gap-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1.5 text-xs"
                   aria-label="Izmeni"
                   title="Izmeni"
                 >

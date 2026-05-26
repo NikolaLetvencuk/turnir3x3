@@ -38,7 +38,7 @@ export const PlayerAvatar = memo(function PlayerAvatar({
         alt={name}
         width={size}
         height={size}
-        className={`rounded-full object-cover bg-zinc-100 ${className ?? ""}`}
+        className={`rounded-full object-cover bg-zinc-800 ${className ?? ""}`}
         style={{ width: px, height: px }}
         loading="lazy"
       />

@@ -38,14 +38,14 @@ export function PopupAd({ enabled, version }: { enabled: boolean; version: strin
       onClick={close}
     >
       <div
-        className="relative max-w-md w-full bg-white rounded-2xl overflow-hidden shadow-2xl"
+        className="relative max-w-md w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={close}
           aria-label="Zatvori"
-          className="absolute top-2 right-2 z-10 rounded-full bg-white/90 hover:bg-white text-zinc-700 p-1.5 shadow"
+          className="absolute top-2 right-2 z-10 rounded-full bg-white/90 hover:bg-zinc-800 text-zinc-300 p-1.5 shadow"
         >
           <X className="w-4 h-4" />
         </button>

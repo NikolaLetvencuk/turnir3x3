@@ -164,7 +164,7 @@ function Background() {
         {Array.from({ length: 40 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-[2px] h-[2px] bg-white rounded-full"
+            className="absolute w-[2px] h-[2px] bg-zinc-900 rounded-full"
             style={{ left: `${(i * 37) % 100}%`, top: `${(i * 53) % 100}%`, opacity: 0.6 }}
             animate={{ opacity: [0.2, 0.8, 0.2] }}
             transition={{ duration: 3 + (i % 5), repeat: Infinity, delay: (i % 10) * 0.3 }}

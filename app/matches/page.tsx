@@ -56,7 +56,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: { ro
 
       {Array.from(grouped.entries()).map(([roundName, list]) => (
         <section key={roundName}>
-          <h2 className="font-medium text-sm text-zinc-600 mb-2">{roundName}</h2>
+          <h2 className="font-medium text-sm text-zinc-400 mb-2">{roundName}</h2>
           <div className="space-y-2">{list.map((m) => <MatchCard key={m.id} match={m} />)}</div>
         </section>
       ))}

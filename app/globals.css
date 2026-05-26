@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html, body {
-  background: #fafafa;
-  color: #18181b;
+  background: #0a0a0a;
+  color: #f4f4f5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -20,7 +20,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Allow datetime-local on iOS Safari to not zoom on focus */
 @supports (-webkit-touch-callout: none) {
   input[type="datetime-local"],
   input[type="date"],
@@ -40,34 +39,34 @@ body {
     @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700;
+    @apply btn bg-gold-500 text-black hover:bg-gold-400;
   }
   .btn-secondary {
-    @apply btn bg-zinc-100 text-zinc-900 hover:bg-zinc-200 border border-zinc-200;
+    @apply btn bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700;
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
   .card {
-    @apply bg-white rounded-xl border border-zinc-200 p-3 sm:p-4;
+    @apply bg-zinc-900 rounded-xl border border-zinc-800 p-3 sm:p-4 text-zinc-100;
   }
   .input {
-    @apply w-full rounded-md border border-zinc-300 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500;
+    @apply w-full rounded-md border border-zinc-700 px-3 py-2 text-sm bg-zinc-900 text-zinc-100 placeholder-zinc-500 outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500;
   }
   .label {
-    @apply block text-xs font-medium text-zinc-600 mb-1;
+    @apply block text-xs font-medium text-zinc-300 mb-1;
   }
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
   }
   .badge-live {
-    @apply badge bg-red-100 text-red-700;
+    @apply badge bg-red-500/15 text-red-300 border border-red-500/30;
   }
   .badge-finished {
-    @apply badge bg-zinc-100 text-zinc-700;
+    @apply badge bg-zinc-800 text-zinc-300 border border-zinc-700;
   }
   .badge-scheduled {
-    @apply badge bg-blue-50 text-blue-700;
+    @apply badge bg-gold-500/15 text-gold-300 border border-gold-500/30;
   }
 }
 

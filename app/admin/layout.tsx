@@ -67,7 +67,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             className={`group flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition ${
               tone === "danger"
                 ? "border-red-200 bg-red-50 hover:bg-red-100 text-red-700"
-                : "border-zinc-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-zinc-700"
+                : "border-zinc-800 bg-zinc-900 hover:bg-blue-50 hover:border-blue-300 text-zinc-300"
             }`}
           >
             <Icon className={`w-6 h-6 ${tone === "danger" ? "text-red-600" : "text-blue-600 group-hover:text-blue-700"}`} />

@@ -100,7 +100,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     return (
       <div className="card text-center py-12 space-y-2">
         <Sparkles className="w-10 h-10 text-zinc-300 mx-auto" />
-        <h1 className="font-semibold text-zinc-700">Nema zakazanog žreba</h1>
+        <h1 className="font-semibold text-zinc-300">Nema zakazanog žreba</h1>
         <p className="text-sm text-zinc-500">Stranica će se ažurirati kad admin pokrene ili zakaže žreb.</p>
         <Link href="/" className="btn-secondary inline-flex mt-3">Početna</Link>
       </div>
@@ -133,7 +133,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     return (
       <div className="card text-center py-12 space-y-3">
         <Sparkles className="w-12 h-12 text-blue-500 mx-auto animate-pulse" />
-        <h1 className="font-semibold text-zinc-800 text-lg">Povlačenje žreba…</h1>
+        <h1 className="font-semibold text-zinc-200 text-lg">Povlačenje žreba…</h1>
         <p className="text-sm text-zinc-500">Sačekaj nekoliko sekundi.</p>
       </div>
     );
@@ -154,7 +154,7 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
         </div>
         <FinalGroups result={state.result} />
         {isAdmin && (
-          <div className="card border-dashed border-zinc-300">
+          <div className="card border-dashed border-zinc-700">
             <div className="text-xs text-zinc-500 mb-2">Admin kontrole (potrebno da bi se podaci stvarno snimili u bazi)</div>
             <div className="flex gap-2 flex-wrap">
               <button onClick={onCommit} disabled={committing} className="btn-primary">{committing ? "Snimam…" : "Potvrdi i snimi u bazu"}</button>
