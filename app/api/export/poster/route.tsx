@@ -46,14 +46,21 @@ type ScorerEntry = {
   goals: number;
 };
 
+type DrawGroupBlock = {
+  group_id: string;
+  group_name: string;
+  teams: Team[];
+};
+
 type PosterRequest = {
-  kind: "results" | "standings" | "scorers";
+  kind: "results" | "standings" | "scorers" | "draw";
   format: "story" | "post";
   title?: string;
   subtitle?: string;
   matches?: MatchEntry[];
   standings?: GroupBlock[];
   scorers?: ScorerEntry[];
+  draw?: DrawGroupBlock[];
 };
 
 const C = {
@@ -97,6 +104,10 @@ export async function POST(request: Request) {
     } else if (kind === "standings") {
       content = (
         <StandingsPoster standings={body.standings ?? []} width={width} height={height} logoUrl={logoUrl} />
+      );
+    } else if (kind === "draw") {
+      content = (
+        <DrawPoster draw={body.draw ?? []} width={width} height={height} logoUrl={logoUrl} />
       );
     } else {
       content = (
@@ -713,6 +724,121 @@ function ScorerRow({ scorer, rank }: { scorer: ScorerEntry; rank: number }) {
         >
           golova
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================ DRAW ============================ */
+
+function DrawPoster({
+  draw,
+  width,
+  height,
+  logoUrl,
+}: {
+  draw: DrawGroupBlock[];
+  width: number;
+  height: number;
+  logoUrl?: string;
+}) {
+  if (draw.length === 0) {
+    return (
+      <PosterFrame heading="ŽREB" subheading="Grupna faza" width={width} height={height} logoUrl={logoUrl}>
+        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 32 }}>
+          Nema podataka o žrebu.
+        </div>
+      </PosterFrame>
+    );
+  }
+  // Single column when 1-3 groups, 2 columns when 4+
+  const useTwoColumns = draw.length >= 4;
+  const compact = draw.length >= 5;
+  return (
+    <PosterFrame heading="ŽREB" subheading="Grupna faza" width={width} height={height} logoUrl={logoUrl}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: compact ? 14 : 22,
+          flex: 1,
+        }}
+      >
+        {draw.map((g) => (
+          <DrawGroupCard key={g.group_id} group={g} compact={compact} two={useTwoColumns} />
+        ))}
+      </div>
+    </PosterFrame>
+  );
+}
+
+function DrawGroupCard({
+  group,
+  compact,
+  two,
+}: {
+  group: DrawGroupBlock;
+  compact: boolean;
+  two: boolean;
+}) {
+  const titleSize = compact ? 30 : 38;
+  const rowFs = compact ? 24 : 30;
+  const crestSize = compact ? 36 : 44;
+  const rowH = compact ? 56 : 66;
+  const padding = compact ? 22 : 28;
+
+  // Width: half-minus-gap when stacked side-by-side, full when single column
+  const widthStyle = two ? "calc(50% - 11px)" : "100%";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: widthStyle,
+        background: C.cardBg,
+        border: `1px solid ${C.cardBorder}`,
+        borderRadius: 20,
+        padding,
+      }}
+    >
+      <div style={{ display: "flex", fontSize: titleSize, fontWeight: 900, letterSpacing: -1, color: C.accent, marginBottom: 14 }}>
+        {group.group_name.toUpperCase()}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {group.teams.map((t, i) => {
+          const isLast = i === group.teams.length - 1;
+          return (
+            <div
+              key={t.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                height: rowH,
+                borderBottom: isLast ? "none" : `1px solid ${C.rowDivider}`,
+              }}
+            >
+              <Crest team={t} size={crestSize} />
+              <div
+                style={{
+                  display: "flex",
+                  marginLeft: 16,
+                  fontSize: rowFs,
+                  fontWeight: 700,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                {t.name}
+              </div>
+            </div>
+          );
+        })}
+        {group.teams.length === 0 && (
+          <div style={{ display: "flex", color: C.textFaint, fontStyle: "italic", fontSize: rowFs, padding: "10px 0" }}>
+            Bez timova
+          </div>
+        )}
       </div>
     </div>
   );

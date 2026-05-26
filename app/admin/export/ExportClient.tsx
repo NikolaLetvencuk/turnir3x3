@@ -37,9 +37,38 @@ export type ExportMatch = {
   away_team: TeamLite | null;
 };
 
+export type DrawGroup = {
+  group_id: string;
+  group_name: string;
+  teams: TeamLite[];
+};
+
 type Format = "story" | "post";
-type PosterKind = "results" | "standings" | "scorers";
+type PosterKind = "results" | "standings" | "scorers" | "draw";
 type ResultsMode = "round" | "day";
+
+// Bin-packing budget for draw poster (team rows + 1 header per group).
+// Same budgets as standings since the layout is similar.
+const DRAW_BUDGET = { story: 20, post: 14 } as const;
+
+function chunkDrawByBudget(groups: DrawGroup[], budget: number): DrawGroup[][] {
+  const chunks: DrawGroup[][] = [];
+  let current: DrawGroup[] = [];
+  let currentSize = 0;
+  for (const g of groups) {
+    const cost = g.teams.length + GROUP_HEADER_COST;
+    if (current.length > 0 && currentSize + cost > budget) {
+      chunks.push(current);
+      current = [g];
+      currentSize = cost;
+    } else {
+      current.push(g);
+      currentSize += cost;
+    }
+  }
+  if (current.length) chunks.push(current);
+  return chunks;
+}
 
 const RESULTS_MAX = { story: 9, post: 6 } as const;
 
@@ -75,11 +104,13 @@ export function ExportClient({
   matches,
   standings,
   scorers,
+  drawGroups,
 }: {
   rounds: ExportRound[];
   matches: ExportMatch[];
   standings: GroupStandings[];
   scorers: TopScorerRow[];
+  drawGroups: DrawGroup[];
 }) {
   const roundsById = useMemo(() => new Map(rounds.map((r) => [r.id, r])), [rounds]);
 
@@ -107,7 +138,20 @@ export function ExportClient({
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(
     () => new Set(standings.map((g) => g.group_id)),
   );
+  const [selectedDrawGroupIds, setSelectedDrawGroupIds] = useState<Set<string>>(
+    () => new Set(drawGroups.map((g) => g.group_id)),
+  );
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  const exportDraw = drawGroups.filter((g) => selectedDrawGroupIds.has(g.group_id));
+  function toggleDrawGroup(id: string) {
+    setSelectedDrawGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const round = rounds.find((r) => r.id === selectedRoundId) ?? null;
 
@@ -326,6 +370,33 @@ export function ExportClient({
           if (!ok) break;
           if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
         }
+      } else if (kind === "draw") {
+        const chunks = chunkDrawByBudget(exportDraw, DRAW_BUDGET[format]);
+        const total = chunks.length;
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const payload = {
+            kind,
+            format,
+            draw: chunk.map((g) => ({
+              group_id: g.group_id,
+              group_name: g.group_name,
+              teams: g.teams.map((t) => ({
+                id: t.id,
+                name: t.name,
+                short_name: t.short_name,
+                primary_color: t.primary_color,
+                secondary_color: t.secondary_color,
+              })),
+            })),
+          };
+          const groupNames = chunk.map((g) => g.group_name).join("-");
+          const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
+          const slug = `draw-${format}-${groupNames}${partSuffix}`;
+          const ok = await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
+          if (!ok) break;
+          if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
+        }
       } else {
         const payload = {
           kind,
@@ -361,6 +432,20 @@ export function ExportClient({
   const resultsChunkStory = Math.ceil(exportMatches.length / RESULTS_MAX.story) || 0;
   const resultsChunkPost = Math.ceil(exportMatches.length / RESULTS_MAX.post) || 0;
   const resultsWillSplit = resultsChunkStory > 1 || resultsChunkPost > 1;
+
+  const drawChunkStory = useMemo(
+    () => chunkDrawByBudget(exportDraw, DRAW_BUDGET.story).length,
+    [exportDraw],
+  );
+  const drawChunkPost = useMemo(
+    () => chunkDrawByBudget(exportDraw, DRAW_BUDGET.post).length,
+    [exportDraw],
+  );
+  const drawWillSplit = drawChunkStory > 1 || drawChunkPost > 1;
+  const drawTotalUnits = useMemo(
+    () => exportDraw.reduce((acc, g) => acc + g.teams.length + GROUP_HEADER_COST, 0),
+    [exportDraw],
+  );
 
   return (
     <div className="space-y-4">
@@ -592,8 +677,50 @@ export function ExportClient({
         </div>
       )}
 
-      {/* Three poster cards */}
-      <div className="grid sm:grid-cols-3 gap-4">
+      {/* Filters for Žreb */}
+      {drawGroups.length > 1 && (
+        <div className="card space-y-3">
+          <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Žreb&quot;</div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-zinc-400">
+                Grupe ({selectedDrawGroupIds.size} / {drawGroups.length})
+              </span>
+              <div className="text-xs flex gap-2">
+                <button onClick={() => setSelectedDrawGroupIds(new Set(drawGroups.map((g) => g.group_id)))} className="text-blue-300 hover:underline">Sve</button>
+                <span className="text-zinc-300">·</span>
+                <button onClick={() => setSelectedDrawGroupIds(new Set())} className="text-blue-300 hover:underline">Nijedna</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 border border-zinc-800 rounded-md p-2 bg-zinc-900">
+              {drawGroups.map((g) => (
+                <label key={g.group_id} className="flex items-center gap-2 text-sm hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedDrawGroupIds.has(g.group_id)}
+                    onChange={() => toggleDrawGroup(g.group_id)}
+                  />
+                  <span className="truncate">
+                    {g.group_name}
+                    <span className="text-[10px] text-zinc-500 ml-1">· {g.teams.length}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {drawWillSplit && (
+            <InfoBox>
+              Izabrano je <b>{exportDraw.length} grupa</b> ({drawTotalUnits} ukupno jedinica).
+              Maks po slici: <b>{DRAW_BUDGET.story} jedinica za Stori</b>,{" "}
+              <b>{DRAW_BUDGET.post} za Objavu</b>. Sa trenutnom selekcijom dobićeš:{" "}
+              <b>{drawChunkStory} fajla za Stori</b>, <b>{drawChunkPost} fajla za Objavu</b>.
+            </InfoBox>
+          )}
+        </div>
+      )}
+
+      {/* Four poster cards */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <DownloadCard
           title="Rezultati"
           subtitle={`${exportMatches.length} mečeva`}
@@ -610,6 +737,16 @@ export function ExportClient({
           disabled={exportStandings.length === 0}
           downloading={downloading}
           kind="standings"
+          onDownload={downloadPoster}
+          exceedPost={false}
+          exceedStory={false}
+        />
+        <DownloadCard
+          title="Žreb"
+          subtitle={drawGroups.length === 0 ? "nema žreba" : `${exportDraw.length} / ${drawGroups.length} grupa`}
+          disabled={exportDraw.length === 0}
+          downloading={downloading}
+          kind="draw"
           onDownload={downloadPoster}
           exceedPost={false}
           exceedStory={false}
