@@ -45,11 +45,12 @@ export async function resolveAllPlaceholders(): Promise<{ ok: true } | { ok: fal
 
   if (!groups || !sview || !matches) return { ok: false, error: "Greška čitanja podataka" };
 
-  // Group letter map
+  // Letters by display order — must match generateKnockoutBracket so
+  // placeholders like "I1" always line up with the 9th group regardless of
+  // how the group is named.
   const letterByGroupId = new Map<string, string>();
-  (groups as any[]).forEach((g) => {
-    const m = g.name.match(/Grupa\s+([A-Z])/i);
-    letterByGroupId.set(g.id, m ? m[1].toUpperCase() : g.name.slice(-1).toUpperCase());
+  (groups as any[]).forEach((g, i) => {
+    letterByGroupId.set(g.id, String.fromCharCode(65 + i));
   });
 
   // h2h points (via DB function)
@@ -208,9 +209,8 @@ export async function getWildcardReport(
   ]);
 
   const letterByGroupId = new Map<string, string>();
-  (groups ?? []).forEach((g: any) => {
-    const m = g.name.match(/Grupa\s+([A-Z])/i);
-    letterByGroupId.set(g.id, m ? m[1].toUpperCase() : g.name.slice(-1).toUpperCase());
+  (groups ?? []).forEach((g: any, i: number) => {
+    letterByGroupId.set(g.id, String.fromCharCode(65 + i));
   });
   const nameByTeam = new Map<string, string>(((teams ?? []) as any[]).map((t) => [t.id, t.name]));
 

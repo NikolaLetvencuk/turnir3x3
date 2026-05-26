@@ -28,10 +28,9 @@ export async function generateKnockoutBracket(input: { advancingPerGroup: number
 
     const { data: groups } = await admin.from("groups").select("id, name, display_order").order("display_order");
     if (!groups || groups.length === 0) return { ok: false, error: "Prvo pokreni žreb grupa" };
-    const groupLetters = (groups as any[]).map((g) => {
-      const m = g.name.match(/Grupa\s+([A-Z])/i);
-      return m ? m[1].toUpperCase() : g.name.slice(-1).toUpperCase();
-    });
+    // Letters are assigned by display order (A, B, C, ...) so naming doesn't
+    // matter -- "Grupa 9" still gets letter "I" if it is the 9th group.
+    const groupLetters = (groups as any[]).map((_, i) => String.fromCharCode(65 + i));
 
     let bracket;
     try {
