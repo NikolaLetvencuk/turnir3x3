@@ -18,9 +18,10 @@ export type StandingsRowWithDiscipline = {
  * 1. points desc
  * 2. goal_diff desc
  * 3. goals_for desc
- * 4. head-to-head points desc (computed externally and passed in)
- * 5. discipline_points asc (fewer cards better)
- * 6. team_id asc (deterministic fallback)
+ * 4. goals_against asc (fewer conceded is better)
+ * 5. head-to-head points desc (computed externally and passed in)
+ * 6. discipline_points asc (fewer cards better)
+ * 7. team_id asc (deterministic fallback)
  */
 export function sortGroupStandings(
   rows: StandingsRowWithDiscipline[],
@@ -30,6 +31,7 @@ export function sortGroupStandings(
     if (b.points !== a.points) return b.points - a.points;
     if (b.goal_diff !== a.goal_diff) return b.goal_diff - a.goal_diff;
     if (b.goals_for !== a.goals_for) return b.goals_for - a.goals_for;
+    if (a.goals_against !== b.goals_against) return a.goals_against - b.goals_against;
     if (h2h) {
       const ah = h2h(a.team_id, b.team_id);
       const bh = h2h(b.team_id, a.team_id);

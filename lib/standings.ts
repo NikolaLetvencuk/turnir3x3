@@ -61,7 +61,11 @@ export async function getGroupStandings(): Promise<GroupStandings[]> {
       };
     });
     rows.sort((a, b) =>
-      b.points - a.points || b.goal_diff - a.goal_diff || b.goals_for - a.goals_for || a.team_name.localeCompare(b.team_name)
+      b.points - a.points
+      || b.goal_diff - a.goal_diff
+      || b.goals_for - a.goals_for
+      || a.goals_against - b.goals_against
+      || a.team_name.localeCompare(b.team_name)
     );
     return { group_id: g.id, group_name: g.name, display_order: g.display_order, rows };
   });

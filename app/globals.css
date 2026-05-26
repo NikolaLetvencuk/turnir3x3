@@ -12,6 +12,20 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Faint gold silhouette watermark behind the whole app. Layered so a thin
+   dark overlay sits on top of the logo, keeping the rest of the UI readable
+   while the figure stays just barely visible. */
+body {
+  background-color: #0a0a0a;
+  background-image:
+    linear-gradient(rgba(10, 10, 10, 0.92), rgba(10, 10, 10, 0.92)),
+    url('/logo/mkpetrovski-gold.png');
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, min(75vmin, 600px) auto;
+  background-attachment: fixed, fixed;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
