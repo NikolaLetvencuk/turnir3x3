@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, Unlock, Trophy } from "lucide-react";
+import { AlertTriangle, Lock, Unlock, Trophy } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
 import { BracketTree, type BracketMatchView, type TeamLite } from "@/components/bracket/BracketTree";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { useToast } from "@/components/ui/Toast";
+import type { WildcardReport } from "@/lib/resolveBracket";
 import {
   generateKnockoutBracket,
   setBracketSlot,
@@ -26,7 +27,33 @@ type State = {
   include_third_place: boolean;
 } | null;
 
-export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups: Group[]; teams: TeamLite[]; rounds: Round[]; matches: Match[]; state: State }) {
+const ORDINAL_LABEL_TITLE: Record<number, string> = {
+  1: "drugoplasirani",
+  2: "trećeplasirani",
+  3: "četvrtoplasirani",
+  4: "petoplasirani",
+  5: "šestoplasirani",
+  6: "sedmoplasirani",
+  7: "osmoplasirani",
+};
+
+export function BracketAdmin({
+  groups,
+  teams,
+  rounds,
+  matches,
+  state,
+  wildcardReport,
+  totalAdvancing: savedTotalAdvancing,
+}: {
+  groups: Group[];
+  teams: TeamLite[];
+  rounds: Round[];
+  matches: Match[];
+  state: State;
+  wildcardReport: WildcardReport | null;
+  totalAdvancing: number;
+}) {
   const run = useActionRunner();
   const { push } = useToast();
   const [advancingTotal, setAdvancingTotal] = useState<number>(state?.advancing_per_group ? state.advancing_per_group * groups.length + (state.best_thirds ?? 0) : Math.min(8, Math.max(2, groups.length * 2)));
@@ -107,7 +134,7 @@ export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups
             <input type="number" min={1} max={advancingTotal} value={advancingPerGroup} onChange={(e) => setAdvancingPerGroup(Math.max(1, Number(e.target.value) || 1))} className="input" />
           </label>
           <div className="text-sm">
-            <span className="label">Najbolji trećeplasirani</span>
+            <span className="label">Najbolji {ORDINAL_LABEL_TITLE[Math.max(1, advancingPerGroup)] ?? `${advancingPerGroup + 1}-toplasirani`}</span>
             <div className="input bg-zinc-900">{bestThirds}</div>
           </div>
         </div>
@@ -122,6 +149,10 @@ export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups
           {matches.length > 0 ? "Generiši ponovo" : "Generiši nokaut"}
         </button>
       </div>
+
+      {wildcardReport && (
+        <WildcardPanel report={wildcardReport} savedTotal={savedTotalAdvancing} />
+      )}
 
       <div className="card">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
@@ -167,6 +198,97 @@ export function BracketAdmin({ groups, teams, rounds, matches, state }: { groups
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function WildcardPanel({ report, savedTotal }: { report: WildcardReport; savedTotal: number }) {
+  const selected = report.candidates.filter((c) => c.selected);
+  const overflow = report.candidates.length < report.needed;
+
+  return (
+    <div className="card space-y-3">
+      <div className="flex items-baseline justify-between gap-2 flex-wrap">
+        <h2 className="font-medium">
+          Najbolji {report.rankLabel}
+          <span className="ml-2 text-xs font-normal text-zinc-400">
+            izabrano {selected.length} / {report.needed}
+            {savedTotal > 0 && ` · plasira se u nokaut od ${savedTotal}`}
+          </span>
+        </h2>
+      </div>
+
+      {overflow && (
+        <div className="flex items-start gap-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-md p-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            Treba {report.needed} timova ali samo {report.candidates.length} grupa ima{" "}
+            {report.rankLabel.replace("ih", "og")} igrača.
+            {report.missingGroups.length > 0 && (
+              <> Grupe bez te pozicije: {report.missingGroups.join(", ")}.</>
+            )}
+          </div>
+        </div>
+      )}
+
+      {report.contestedTies.length > 0 && (
+        <div className="flex items-start gap-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-md p-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            Izjednačenje ne razrešava ni bodovima, ni gol-razlikom, ni datim/primljenim golovima.
+            Sistem bira deterministički — ako ne odgovara, ručno postavi slot ili odluči baražom.
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="text-zinc-500 uppercase tracking-wider">
+            <tr>
+              <th className="text-left py-1.5 pr-2 font-medium">#</th>
+              <th className="text-left py-1.5 pr-2 font-medium">Tim</th>
+              <th className="text-left py-1.5 pr-2 font-medium">Grupa</th>
+              <th className="text-right py-1.5 px-2 font-medium">O</th>
+              <th className="text-right py-1.5 px-2 font-medium">Bod</th>
+              <th className="text-right py-1.5 px-2 font-medium">GR</th>
+              <th className="text-right py-1.5 px-2 font-medium">DG</th>
+              <th className="text-right py-1.5 px-2 font-medium">PG</th>
+              <th className="text-right py-1.5 pl-2 font-medium">PPG</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {report.candidates.map((c, i) => {
+              const cutoff = i === report.needed - 1;
+              return (
+                <tr
+                  key={c.team_id}
+                  className={
+                    c.selected
+                      ? "text-zinc-100" + (cutoff ? " border-b-2 border-gold-500/40" : "")
+                      : "text-zinc-500"
+                  }
+                >
+                  <td className="py-1.5 pr-2 tabular-nums">{i + 1}</td>
+                  <td className="py-1.5 pr-2">
+                    {c.selected && <span className="inline-block w-1.5 h-1.5 rounded-full bg-gold-500 mr-1.5 align-middle" />}
+                    {c.team_name}
+                  </td>
+                  <td className="py-1.5 pr-2">{c.group_letter}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums">{c.played}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums font-semibold">{c.points}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums">{c.goal_diff > 0 ? `+${c.goal_diff}` : c.goal_diff}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums">{c.goals_for}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums">{c.goals_against}</td>
+                  <td className="py-1.5 pl-2 text-right tabular-nums">{c.ppg.toFixed(2)}</td>
+                </tr>
+              );
+            })}
+            {report.candidates.length === 0 && (
+              <tr><td colSpan={9} className="py-3 text-center text-zinc-500 italic">Nema kandidata — proveri da grupe imaju dovoljno timova.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -42,8 +42,9 @@ export function sortGroupStandings(
 }
 
 /**
- * Rank the N-th placed teams across all groups for best-thirds selection.
- * Uses PPG to normalize uneven group sizes.
+ * Rank the N-th placed teams across all groups for wildcard selection.
+ * Uses per-game stats to normalise uneven group sizes.
+ * Order: points-per-game → GD/game → GF/game → GA/game (lower is better) → discipline → team_id.
  */
 export function rankCrossGroup(
   rows: StandingsRowWithDiscipline[],
@@ -56,7 +57,42 @@ export function rankCrossGroup(
     const aGfPerGame = a.played > 0 ? a.goals_for / a.played : 0;
     const bGfPerGame = b.played > 0 ? b.goals_for / b.played : 0;
     if (bGfPerGame !== aGfPerGame) return bGfPerGame - aGfPerGame;
+    const aGaPerGame = a.played > 0 ? a.goals_against / a.played : 0;
+    const bGaPerGame = b.played > 0 ? b.goals_against / b.played : 0;
+    if (aGaPerGame !== bGaPerGame) return aGaPerGame - bGaPerGame; // fewer conceded = better
     if (a.discipline_points !== b.discipline_points) return a.discipline_points - b.discipline_points;
     return a.team_id.localeCompare(b.team_id);
   });
+}
+
+/**
+ * Group rows from {@link rankCrossGroup} into buckets that are still tied after
+ * every objective tiebreaker (everything except the deterministic team_id
+ * fallback). Useful for surfacing genuine ties to the admin so a manual
+ * decision or playoff can be made.
+ */
+export function crossGroupTieBuckets(
+  ranked: StandingsRowWithDiscipline[],
+): StandingsRowWithDiscipline[][] {
+  const key = (r: StandingsRowWithDiscipline) => {
+    const gd = r.played > 0 ? r.goal_diff / r.played : 0;
+    const gf = r.played > 0 ? r.goals_for / r.played : 0;
+    const ga = r.played > 0 ? r.goals_against / r.played : 0;
+    return `${r.ppg.toFixed(6)}|${gd.toFixed(6)}|${gf.toFixed(6)}|${ga.toFixed(6)}|${r.discipline_points}`;
+  };
+  const buckets: StandingsRowWithDiscipline[][] = [];
+  let current: StandingsRowWithDiscipline[] = [];
+  let currentKey = "";
+  for (const row of ranked) {
+    const k = key(row);
+    if (k === currentKey && current.length) {
+      current.push(row);
+    } else {
+      if (current.length) buckets.push(current);
+      current = [row];
+      currentKey = k;
+    }
+  }
+  if (current.length) buckets.push(current);
+  return buckets;
 }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getWildcardReport } from "@/lib/resolveBracket";
 import { BracketAdmin } from "./BracketAdmin";
 
 export const revalidate = 0;
@@ -16,13 +17,27 @@ export default async function BracketAdminPage() {
     supabase.from("tournament_state").select("*").eq("id", true).maybeSingle(),
   ]);
 
+  const groupsList = (groups ?? []) as any[];
+  const stateRow = (state ?? null) as any;
+  const advancingPerGroup = stateRow?.advancing_per_group ?? 1;
+  const totalAdvancing =
+    stateRow?.advancing_per_group != null
+      ? stateRow.advancing_per_group * groupsList.length + (stateRow.best_thirds ?? 0)
+      : 0;
+  const neededWildcards = stateRow?.best_thirds ?? 0;
+  const wildcardReport = neededWildcards > 0 && groupsList.length > 0
+    ? await getWildcardReport(neededWildcards, advancingPerGroup)
+    : null;
+
   return (
     <BracketAdmin
-      groups={(groups ?? []) as any[]}
+      groups={groupsList}
       teams={(teams ?? []) as any[]}
       rounds={(rounds ?? []) as any[]}
       matches={(matches ?? []) as any[]}
-      state={state as any ?? null}
+      state={stateRow}
+      wildcardReport={wildcardReport}
+      totalAdvancing={totalAdvancing}
     />
   );
 }
