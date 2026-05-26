@@ -139,7 +139,7 @@ export function resolvePlaceholder(
   knockoutLosers: Map<string, string>, // bracket_position → loser team_id
 ): string | null {
   // Group position: A1, B2, etc.
-  const groupMatch = placeholder.match(/^([A-H])(\d+)$/);
+  const groupMatch = placeholder.match(/^([A-Z])(\d+)$/);
   if (groupMatch) {
     const letter = groupMatch[1];
     const pos = parseInt(groupMatch[2], 10);
