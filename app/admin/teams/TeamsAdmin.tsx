@@ -81,7 +81,11 @@ function TeamForm({
   submitLabel,
 }: {
   initial?: Partial<Team>;
-  onSubmit: (fd: FormData, captain: { name: string; phone: string }) => Promise<boolean>;
+  onSubmit: (
+    fd: FormData,
+    captain: { name: string; phone: string },
+    stagedCrest: Blob | null,
+  ) => Promise<boolean>;
   onCancel?: () => void;
   submitLabel: string;
 }) {
@@ -93,28 +97,44 @@ function TeamForm({
   const [secondary, setSecondary] = useState(initial?.secondary_color ?? "#f3f4f6");
   const [logoUrl, setLogoUrl] = useState<string | null>(initial?.logo_url ?? null);
   const [uploadingCrest, setUploadingCrest] = useState(false);
+  // For create mode: the file is held locally until the team is saved and
+  // we know its id. uploadTeamCrest fires from the parent's onSubmit handler
+  // after createTeam returns the new id.
+  const [stagedCrest, setStagedCrest] = useState<Blob | null>(null);
+  const [stagedPreview, setStagedPreview] = useState<string | null>(null);
   const [captainName, setCaptainName] = useState(initial?.captain_name ?? "");
   const [captainPhone, setCaptainPhone] = useState(initial?.captain_phone ?? "");
   const sameColors = primary.toLowerCase() === secondary.toLowerCase();
+
+  // Effective preview: staged (unsaved) image takes precedence over the
+  // server URL while the form is open.
+  const effectiveLogoUrl = stagedPreview ?? logoUrl;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     if (initial?.id) fd.set("id", initial.id);
-    await onSubmit(fd, { name: captainName.trim(), phone: captainPhone.trim() });
+    await onSubmit(fd, { name: captainName.trim(), phone: captainPhone.trim() }, stagedCrest);
   }
 
   async function onCrestFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f) return;
-    if (!initial?.id) {
-      push("Prvo sačuvaj tim, pa dodaj sliku.", "error");
-      return;
-    }
+
     setUploadingCrest(true);
     try {
       const blob = await resizeToJpegBlob(f);
+
+      if (!initial?.id) {
+        // New team: stage locally, defer upload until createTeam returns.
+        if (stagedPreview) URL.revokeObjectURL(stagedPreview);
+        setStagedCrest(blob);
+        setStagedPreview(URL.createObjectURL(blob));
+        return;
+      }
+
+      // Existing team: upload immediately.
       const fd = new FormData();
       fd.set("team_id", initial.id);
       fd.set("file", new File([blob], "crest.jpg", { type: "image/jpeg" }));
@@ -124,8 +144,6 @@ function TeamForm({
         return;
       }
       push("Slika tima sačuvana", "success");
-      // Optimistic: use local blob URL so the preview updates immediately;
-      // the real URL lands on next router.refresh().
       setLogoUrl(URL.createObjectURL(blob));
       router.refresh();
     } catch (err: any) {
@@ -136,6 +154,13 @@ function TeamForm({
   }
 
   async function onCrestRemove() {
+    // Local-staged (unsaved team) — just drop it.
+    if (stagedCrest) {
+      if (stagedPreview) URL.revokeObjectURL(stagedPreview);
+      setStagedCrest(null);
+      setStagedPreview(null);
+      return;
+    }
     if (!initial?.id) return;
     if (!confirm("Obrisati sliku grba (boje ostaju)?")) return;
     const fd = new FormData();
@@ -153,13 +178,14 @@ function TeamForm({
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="grid sm:grid-cols-[auto_1fr_1fr] gap-2 items-center">
-        <CrestPreview name={name} shortName={shortName} primary={primary} secondary={secondary} logoUrl={logoUrl} />
+        <CrestPreview name={name} shortName={shortName} primary={primary} secondary={secondary} logoUrl={effectiveLogoUrl} />
         <input name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Naziv tima" required className="input" />
         <input name="short_name" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="Skraćeno (npr. KUL)" maxLength={4} className="input" />
       </div>
 
       {/* Optional uploaded crest image. Boje i dalje stoje kao fallback i
-          podloga ispod prozirne slike. */}
+          podloga ispod prozirne slike. Za novi tim slika se čuva tek po
+          „Dodaj" pošto se dobije team_id. */}
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <label className="btn-secondary !py-1.5 !px-3 text-xs cursor-pointer inline-flex items-center gap-1.5">
           <ImageIcon className="w-3.5 h-3.5" />
@@ -168,22 +194,22 @@ function TeamForm({
             accept="image/*"
             className="hidden"
             onChange={onCrestFile}
-            disabled={uploadingCrest || !initial?.id}
+            disabled={uploadingCrest}
           />
-          {uploadingCrest ? "..." : logoUrl ? "Promeni sliku grba" : "Dodaj sliku grba"}
+          {uploadingCrest ? "..." : effectiveLogoUrl ? "Promeni sliku grba" : "Dodaj sliku grba"}
         </label>
-        {logoUrl && initial?.id && (
+        {effectiveLogoUrl && (
           <button
             type="button"
             onClick={onCrestRemove}
             className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1 text-red-300"
           >
-            <X className="w-3 h-3" /> Vrati na boje
+            <X className="w-3 h-3" /> {stagedCrest ? "Otkaži sliku" : "Vrati na boje"}
           </button>
         )}
-        {!initial?.id && (
-          <span className="text-[11px] text-zinc-500 italic">
-            Prvo sačuvaj tim, pa ovde upload-uj sliku grba (PNG/JPG, max 300KB).
+        {stagedCrest && !initial?.id && (
+          <span className="text-[11px] text-emerald-300 italic">
+            Slika je spremna — sačuvaće se čim klikneš &bdquo;{submitLabel}&rdquo;.
           </span>
         )}
       </div>
@@ -301,15 +327,26 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
           </div>
           <TeamForm
             submitLabel="Dodaj"
-            onSubmit={async (fd) => {
+            onSubmit={async (fd, _captain, stagedCrest) => {
               const res = await createTeam(fd);
               if (!res.ok) {
                 push(res.error, "error");
                 return false;
               }
+              const newName = String(fd.get("name") ?? "").trim();
+              // If admin picked a crest before saving, upload it now that we
+              // know the team_id.
+              if (stagedCrest) {
+                const cfd = new FormData();
+                cfd.set("team_id", res.data!.id);
+                cfd.set("file", new File([stagedCrest], "crest.jpg", { type: "image/jpeg" }));
+                const up = await uploadTeamCrest(cfd);
+                if (!up.ok) {
+                  push(`Tim dodat, ali slika nije: ${up.error}`, "error");
+                }
+              }
               push("Tim dodat", "success");
               router.refresh();
-              const newName = String(fd.get("name") ?? "").trim();
               setAddPlayersFor({ id: res.data!.id, name: newName });
               setShowNew(false);
               return true;

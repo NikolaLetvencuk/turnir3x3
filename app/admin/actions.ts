@@ -68,6 +68,14 @@ export async function deleteTeam(formData: FormData): Promise<ActionResult> {
   }) as Promise<ActionResult>;
 }
 
+async function ensureTeamCrestBucket(admin: ReturnType<typeof createAdminClient>) {
+  // Idempotent: skip the create call if the bucket is already there. Avoids
+  // requiring migration 0026 to be applied before the upload UI works.
+  const { data: existing } = await admin.storage.getBucket("team-crests");
+  if (existing) return;
+  await admin.storage.createBucket("team-crests", { public: true });
+}
+
 // TEAM CRESTS — optional uploaded crest image. Stored at team-crests/<team_id>/<ts>.jpg.
 export async function uploadTeamCrest(formData: FormData): Promise<ActionResult> {
   return withAdmin(async () => {
@@ -76,6 +84,7 @@ export async function uploadTeamCrest(formData: FormData): Promise<ActionResult>
     if (!team_id || !file) return { ok: false, error: "Nedostaje fajl ili tim" };
     if (file.size > 300 * 1024) return { ok: false, error: "Fajl je veći od 300KB" };
     const admin = createAdminClient();
+    await ensureTeamCrestBucket(admin);
 
     const path = `${team_id}/${Date.now()}.jpg`;
     const buf = Buffer.from(await file.arrayBuffer());
