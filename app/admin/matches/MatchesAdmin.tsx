@@ -601,7 +601,7 @@ function ShiftSchedulePanel({ onSaved }: { onSaved: () => void }) {
                 onChange={(e) => setCreateNews(e.target.checked)}
               />
               <span>
-                Objavi vest &bdquo;Sutra se ne igra&rdquo;
+                Objavi vest da se izabranog dana ne igra
                 {!isTomorrow && (
                   <span className="block text-[11px] text-zinc-500">
                     (dostupno samo kad je neradni dan tačno sutra)

@@ -400,7 +400,7 @@ export async function shiftScheduleFromDate(input: { off_date: string; create_ne
     if (create_news) {
       const human = formatSrDate(off_date);
       await admin.from("news").insert({
-        title: `Sutra (${human}) se ne igra`,
+        title: `${human}. se ne igra`,
         body: `Mečevi planirani za ${human}. su pomereni za jedan dan kasnije. Termini se automatski osvežavaju na sajtu.`,
       });
     }
