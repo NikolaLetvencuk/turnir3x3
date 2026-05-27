@@ -1040,6 +1040,14 @@ function BracketPoster({
         {columns.map((c) => {
           const n = Math.max(1, c.matches.length);
           const slotHeight = Math.floor(innerHeight / n);
+          // In split mode the center "F" column only shows this half's
+          // finalist (home for left, away for right) — no opponent rectangle.
+          const singleFinalSlot: "home" | "away" | null =
+            c.side === "center" && layout === "left"
+              ? "home"
+              : c.side === "center" && layout === "right"
+              ? "away"
+              : null;
           return (
             <BracketPosterColumn
               key={c.key}
@@ -1050,6 +1058,7 @@ function BracketPoster({
               columnHeight={bracketHeight}
               side={c.side}
               isOutermost={c.isOutermost}
+              singleFinalSlot={singleFinalSlot}
             />
           );
         })}
@@ -1079,7 +1088,10 @@ function BracketPoster({
             Utakmica za 3. mesto
           </div>
           <div style={{ display: "flex", width: Math.min(colWidth * 3 + colGap * 2, width - 200) }}>
-            <BracketPosterMatch match={thirdPlace[0]} />
+            <BracketPosterMatch
+              match={thirdPlace[0]}
+              colWidth={Math.min(colWidth * 3 + colGap * 2, width - 200)}
+            />
           </div>
         </div>
       )}
@@ -1095,6 +1107,7 @@ function BracketPosterColumn({
   columnHeight,
   side,
   isOutermost,
+  singleFinalSlot,
 }: {
   title: string;
   matches: BracketMatchEntry[];
@@ -1103,6 +1116,8 @@ function BracketPosterColumn({
   columnHeight: number;
   side: "left" | "right" | "center";
   isOutermost: boolean;
+  /** Center column in split-mode renders only this side's finalist. */
+  singleFinalSlot?: "home" | "away" | null;
 }) {
   const outgoingRight = side === "left";
   const isCenter = side === "center";
@@ -1202,7 +1217,11 @@ function BracketPosterColumn({
                   }}
                 />
               )}
-              <BracketPosterMatch match={m} />
+              <BracketPosterMatch
+                match={m}
+                colWidth={colWidth}
+                only={side === "center" ? singleFinalSlot ?? null : null}
+              />
             </div>
           );
         })}
@@ -1211,13 +1230,34 @@ function BracketPosterColumn({
   );
 }
 
-function BracketPosterMatch({ match: m }: { match: BracketMatchEntry }) {
+function BracketPosterMatch({
+  match: m,
+  colWidth,
+  only,
+}: {
+  match: BracketMatchEntry;
+  colWidth: number;
+  /** When set, render only one slot. Used for split-mode final card so we
+   *  don't draw an empty rectangle for the other side's finalist. */
+  only?: "home" | "away" | null;
+}) {
   const isFinished = m.status === "finished" || m.status === "live";
   const winnerId = m.winner_team_id;
   const homeWin = winnerId && m.home_team && m.home_team.id === winnerId;
   const awayWin = winnerId && m.away_team && m.away_team.id === winnerId;
   const homeText = m.home_team?.name ?? m.home_placeholder ?? "—";
   const awayText = m.away_team?.name ?? m.away_placeholder ?? "—";
+
+  // Font + padding scale with the column width so a split-mode poster
+  // (wider columns) renders names large enough to read at a glance.
+  const nameFs = colWidth >= 220 ? 28 : colWidth >= 180 ? 24 : colWidth >= 150 ? 20 : 16;
+  const scoreFs = colWidth >= 220 ? 22 : colWidth >= 180 ? 19 : colWidth >= 150 ? 17 : 14;
+  const padV = colWidth >= 180 ? 12 : 8;
+  const padH = colWidth >= 180 ? 16 : 10;
+
+  const showHome = only !== "away";
+  const showAway = only !== "home";
+  const showScore = !only;
 
   return (
     <div
@@ -1227,26 +1267,30 @@ function BracketPosterMatch({ match: m }: { match: BracketMatchEntry }) {
         background: C.cardBg,
         border: `1px solid ${C.cardBorder}`,
         borderRadius: 10,
-        padding: "8px 10px",
+        padding: `${padV}px ${padH}px`,
         width: "100%",
       }}
     >
-      <SlotRow text={homeText} highlighted={!!homeWin} placeholder={!m.home_team} />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          fontSize: 14,
-          color: C.textDim,
-          fontWeight: 700,
-          padding: "2px 0",
-        }}
-      >
-        {isFinished
-          ? `${m.home_score ?? 0} : ${m.away_score ?? 0}`
-          : "vs"}
-      </div>
-      <SlotRow text={awayText} highlighted={!!awayWin} placeholder={!m.away_team} />
+      {showHome && (
+        <SlotRow text={homeText} highlighted={!!homeWin} placeholder={!m.home_team} fontSize={nameFs} />
+      )}
+      {showScore && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            fontSize: scoreFs,
+            color: C.textDim,
+            fontWeight: 700,
+            padding: "4px 0",
+          }}
+        >
+          {isFinished ? `${m.home_score ?? 0} : ${m.away_score ?? 0}` : "vs"}
+        </div>
+      )}
+      {showAway && (
+        <SlotRow text={awayText} highlighted={!!awayWin} placeholder={!m.away_team} fontSize={nameFs} />
+      )}
     </div>
   );
 }
@@ -1255,19 +1299,21 @@ function SlotRow({
   text,
   highlighted,
   placeholder,
+  fontSize = 14,
 }: {
   text: string;
   highlighted: boolean;
   placeholder: boolean;
+  fontSize?: number;
 }) {
   return (
     <div
       style={{
         display: "flex",
-        fontSize: 14,
+        fontSize,
         fontWeight: highlighted ? 900 : 600,
         color: highlighted ? C.accent : placeholder ? C.textFaint : C.text,
-        padding: "3px 2px",
+        padding: "4px 2px",
         fontStyle: placeholder ? "italic" : "normal",
       }}
     >
