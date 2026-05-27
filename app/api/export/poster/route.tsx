@@ -1012,10 +1012,14 @@ function BracketPoster({
   const colGap = 14;
   const colWidth = Math.floor((horizontalBudget - colGap * (totalColumns - 1)) / totalColumns);
 
-  // Explicit bracket grid height so we can compute exact slot positions.
-  const headingArea = 240;
-  const footerArea = 80;
-  const thirdPlaceArea = include_third_place && thirdPlace.length > 0 ? 200 : 0;
+  // Explicit bracket grid height. The reserves below account for the heading
+  // block at the top, the gold footer pill + its margin at the bottom, and
+  // the 3rd-place card stack that hangs below the F column — so the F
+  // column's natural height (header + matches + 3rd-place) doesn't push
+  // into the pill area on Story format.
+  const headingArea = 260;
+  const footerArea = 140;
+  const thirdPlaceArea = include_third_place && thirdPlace.length > 0 ? 240 : 0;
   const bracketHeight = Math.max(360, height - 80 * 2 - headingArea - footerArea - thirdPlaceArea);
 
   // Slot height per column = bracketHeight divided by match count. Using
@@ -1259,6 +1263,9 @@ function BracketPosterMatch({
   const showAway = only !== "home";
   const showScore = !only;
 
+  // Available horizontal space for team-name text inside the card row.
+  const textWidth = colWidth - padH * 2 - 4;
+
   return (
     <div
       style={{
@@ -1272,7 +1279,13 @@ function BracketPosterMatch({
       }}
     >
       {showHome && (
-        <SlotRow text={homeText} highlighted={!!homeWin} placeholder={!m.home_team} fontSize={nameFs} />
+        <SlotRow
+          text={homeText}
+          highlighted={!!homeWin}
+          placeholder={!m.home_team}
+          fontSize={nameFs}
+          textWidth={textWidth}
+        />
       )}
       {showScore && (
         <div
@@ -1289,10 +1302,26 @@ function BracketPosterMatch({
         </div>
       )}
       {showAway && (
-        <SlotRow text={awayText} highlighted={!!awayWin} placeholder={!m.away_team} fontSize={nameFs} />
+        <SlotRow
+          text={awayText}
+          highlighted={!!awayWin}
+          placeholder={!m.away_team}
+          fontSize={nameFs}
+          textWidth={textWidth}
+        />
       )}
     </div>
   );
+}
+
+/** Pick the largest font size from [minFs, baseFs] at which the text fits a
+ *  single line within textWidth. Empirical char-width = 0.55 × fontSize. */
+function fitFontSizeForText(text: string, baseFs: number, textWidth: number, minFs = 12): number {
+  if (!text) return baseFs;
+  const charWidth = 0.55;
+  if (text.length * baseFs * charWidth <= textWidth) return baseFs;
+  const target = Math.floor(textWidth / (text.length * charWidth));
+  return Math.max(minFs, Math.min(baseFs, target));
 }
 
 function SlotRow({
@@ -1300,21 +1329,26 @@ function SlotRow({
   highlighted,
   placeholder,
   fontSize = 14,
+  textWidth,
 }: {
   text: string;
   highlighted: boolean;
   placeholder: boolean;
   fontSize?: number;
+  textWidth?: number;
 }) {
+  const fittedFs = textWidth ? fitFontSizeForText(text, fontSize, textWidth) : fontSize;
   return (
     <div
       style={{
         display: "flex",
-        fontSize,
+        fontSize: fittedFs,
         fontWeight: highlighted ? 900 : 600,
         color: highlighted ? C.accent : placeholder ? C.textFaint : C.text,
         padding: "4px 2px",
         fontStyle: placeholder ? "italic" : "normal",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
       }}
     >
       {text}
