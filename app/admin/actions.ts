@@ -257,6 +257,74 @@ const bulkSchema = z.object({
   gap_minutes: z.number().int().min(0).max(24 * 60),
 });
 
+const bulkAutoFillSchema = z.object({
+  ordered_match_ids: z.array(z.string().uuid()).min(1),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start_time: z.string().regex(/^\d{1,2}:\d{2}$/),
+  match_duration: z.number().int().min(5).max(24 * 60),
+  max_per_day: z.number().int().min(1).max(100),
+  skip_dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).default([]),
+});
+
+function shiftDayUTC(yyyymmdd: string, days: number): string {
+  const [y, m, d] = yyyymmdd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * Auto-fill kickoff times for a list of matches across multiple days.
+ * Slots `max_per_day` matches per day starting at `start_time`, with each
+ * match taking `match_duration` minutes. Skips days listed in `skip_dates`.
+ */
+export async function bulkAutoFillKickoffs(input: {
+  ordered_match_ids: string[];
+  start_date: string;
+  start_time: string;
+  match_duration: number;
+  max_per_day: number;
+  skip_dates: string[];
+}): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const parsed = bulkAutoFillSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
+    const { ordered_match_ids, start_date, start_time, match_duration, max_per_day, skip_dates } = parsed.data;
+    const skipSet = new Set(skip_dates);
+
+    const admin = createAdminClient();
+    let day = start_date;
+    let slot = 0;
+    while (skipSet.has(day)) day = shiftDayUTC(day, 1);
+
+    for (const matchId of ordered_match_ids) {
+      if (slot >= max_per_day) {
+        slot = 0;
+        day = shiftDayUTC(day, 1);
+        while (skipSet.has(day)) day = shiftDayUTC(day, 1);
+      }
+
+      const [hRaw, mRaw] = start_time.split(":");
+      const hh = String(parseInt(hRaw, 10)).padStart(2, "0");
+      const mm = String(parseInt(mRaw, 10)).padStart(2, "0");
+      const baseLocal = `${day}T${hh}:${mm}`;
+      const baseUtcIso = belgradeLocalToUTCISO(baseLocal);
+      if (!baseUtcIso) return { ok: false, error: `Neispravan datum/vreme za ${day}` };
+      const kickoffMs = new Date(baseUtcIso).getTime() + slot * match_duration * 60_000;
+      const kickoff_at = new Date(kickoffMs).toISOString();
+
+      const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", matchId);
+      if (error) return { ok: false, error: error.message };
+      slot++;
+    }
+
+    revalidatePath("/admin/matches");
+    revalidatePath("/admin/schedule");
+    revalidatePath("/matches");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
 export async function bulkSetMatchKickoffs(input: { ordered_match_ids: string[]; start: string; gap_minutes: number }): Promise<ActionResult> {
   return withAdmin(async () => {
     const parsed = bulkSchema.safeParse(input);
