@@ -345,15 +345,33 @@ function shiftDayUTC(yyyymmdd: string, days: number): string {
 }
 
 /**
+ * Split `total` matches into a list of per-day counts.
+ *
+ * - Every day gets at least 3 matches whenever `total >= 3` (so we never
+ *   leave a tail of 1-2). To keep `>= 3` per day, the algorithm reduces the
+ *   number of days even if that means slightly exceeding `maxPerDay`.
+ * - When `total < 3` (e.g. a 2-match SF or a single-match Final) we accept
+ *   a smaller day because the bracket structure leaves no choice.
+ */
+function splitPoolIntoDays(total: number, maxPerDay: number): number[] {
+  if (total <= 0) return [];
+  if (total < 3) return [total];
+  if (total <= maxPerDay) return [total];
+  let days = Math.ceil(total / maxPerDay);
+  while (days > 1 && Math.floor(total / days) < 3) days--;
+  const base = Math.floor(total / days);
+  const rem = total % days;
+  return Array.from({ length: days }, (_, i) => (i < rem ? base + 1 : base));
+}
+
+/**
  * Auto-fill kickoff times for a list of matches across multiple days.
  *
- * - Slots `max_per_day` matches per day, starting at `start_time`, each
- *   match taking `match_duration` minutes.
+ * - Group-stage matches share days freely; knockout rounds always start on a
+ *   new day and never overlap each other (R16 / QF / SF / F+TP each get
+ *   their own day(s)).
+ * - Each day holds at least 3 matches whenever possible (`>= 3` rule).
  * - Skips days listed in `skip_dates`.
- * - Forces a new day every time we cross into a different **knockout**
- *   round, so the elimination rounds (R16, QF, SF, Final) never share a
- *   day. The Final and the 3rd-place match share the same round_id, so
- *   they remain on the same day.
  */
 export async function bulkAutoFillKickoffs(input: {
   ordered_matches: Array<{ id: string; round_id: string }>;
@@ -371,7 +389,6 @@ export async function bulkAutoFillKickoffs(input: {
 
     const admin = createAdminClient();
 
-    // Fetch round stages so we know when to force a new day.
     const uniqueRoundIds = Array.from(new Set(ordered_matches.map((m) => m.round_id)));
     const { data: roundRows } = await admin
       .from("rounds")
@@ -381,35 +398,62 @@ export async function bulkAutoFillKickoffs(input: {
       ((roundRows ?? []) as Array<{ id: string; stage: string }>).map((r) => [r.id, r.stage]),
     );
 
-    let day = start_date;
-    let slot = 0;
-    while (skipSet.has(day)) day = shiftDayUTC(day, 1);
-    let lastRoundId: string | null = null;
-
+    // Bucket matches into "pools": all group matches share a pool; each
+    // knockout round is its own pool. Pools are scheduled in order and
+    // every pool starts on a fresh day.
+    type Pool = { matches: Array<{ id: string; round_id: string }>; label: string };
+    const groupPool: Pool = { matches: [], label: "group" };
+    const knockoutPools = new Map<string, Pool>();
+    const knockoutOrder: string[] = [];
     for (const m of ordered_matches) {
       const stage = stageByRound.get(m.round_id) ?? "group";
-      const enteredNewKnockoutRound =
-        lastRoundId !== null && m.round_id !== lastRoundId && stage === "knockout";
+      if (stage === "knockout") {
+        if (!knockoutPools.has(m.round_id)) {
+          knockoutPools.set(m.round_id, { matches: [], label: `ko-${m.round_id}` });
+          knockoutOrder.push(m.round_id);
+        }
+        knockoutPools.get(m.round_id)!.matches.push(m);
+      } else {
+        groupPool.matches.push(m);
+      }
+    }
+    const pools: Pool[] = [];
+    if (groupPool.matches.length > 0) pools.push(groupPool);
+    for (const rid of knockoutOrder) pools.push(knockoutPools.get(rid)!);
 
-      if (slot >= max_per_day || enteredNewKnockoutRound) {
-        slot = 0;
+    let day = start_date;
+    while (skipSet.has(day)) day = shiftDayUTC(day, 1);
+    let firstPool = true;
+
+    for (const pool of pools) {
+      if (!firstPool) {
         day = shiftDayUTC(day, 1);
         while (skipSet.has(day)) day = shiftDayUTC(day, 1);
       }
+      firstPool = false;
 
-      const [hRaw, mRaw] = start_time.split(":");
-      const hh = String(parseInt(hRaw, 10)).padStart(2, "0");
-      const mm = String(parseInt(mRaw, 10)).padStart(2, "0");
-      const baseLocal = `${day}T${hh}:${mm}`;
-      const baseUtcIso = belgradeLocalToUTCISO(baseLocal);
-      if (!baseUtcIso) return { ok: false, error: `Neispravan datum/vreme za ${day}` };
-      const kickoffMs = new Date(baseUtcIso).getTime() + slot * match_duration * 60_000;
-      const kickoff_at = new Date(kickoffMs).toISOString();
-
-      const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", m.id);
-      if (error) return { ok: false, error: error.message };
-      slot++;
-      lastRoundId = m.round_id;
+      const plan = splitPoolIntoDays(pool.matches.length, max_per_day);
+      let matchIdx = 0;
+      for (let d = 0; d < plan.length; d++) {
+        if (d > 0) {
+          day = shiftDayUTC(day, 1);
+          while (skipSet.has(day)) day = shiftDayUTC(day, 1);
+        }
+        const dayCount = plan[d];
+        for (let slot = 0; slot < dayCount; slot++) {
+          const m = pool.matches[matchIdx++];
+          const [hRaw, mRaw] = start_time.split(":");
+          const hh = String(parseInt(hRaw, 10)).padStart(2, "0");
+          const mm = String(parseInt(mRaw, 10)).padStart(2, "0");
+          const baseLocal = `${day}T${hh}:${mm}`;
+          const baseUtcIso = belgradeLocalToUTCISO(baseLocal);
+          if (!baseUtcIso) return { ok: false, error: `Neispravan datum/vreme za ${day}` };
+          const kickoffMs = new Date(baseUtcIso).getTime() + slot * match_duration * 60_000;
+          const kickoff_at = new Date(kickoffMs).toISOString();
+          const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", m.id);
+          if (error) return { ok: false, error: error.message };
+        }
+      }
     }
 
     revalidatePath("/admin/matches");

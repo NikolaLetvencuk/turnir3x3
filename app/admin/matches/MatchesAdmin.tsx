@@ -660,9 +660,11 @@ function AutoFillPanel({
   }
 
   // Live preview of first N kickoffs — mirrors the server's auto-fill rules
-  // exactly (incl. "elimination rounds never share a day").
+  // exactly (group pool + one pool per knockout round, >= 3 matches per day
+  // when possible).
   const preview = useMemo(() => {
-    if (remainingMatches.length === 0) return [] as Array<{ id: string; date: string; time: string; label: string }>;
+    if (remainingMatches.length === 0)
+      return [] as Array<{ id: string; date: string; time: string; label: string }>;
     const skipSet = new Set(skipDates);
     function shift(d: string, days: number) {
       const [y, m, da] = d.split("-").map(Number);
@@ -670,34 +672,74 @@ function AutoFillPanel({
       dt.setUTCDate(dt.getUTCDate() + days);
       return dt.toISOString().slice(0, 10);
     }
-    let day = startDate;
-    while (skipSet.has(day)) day = shift(day, 1);
-    let slot = 0;
-    let lastRoundId: string | null = null;
-    const [hh, mm] = startTime.split(":").map(Number);
-    const items: Array<{ id: string; date: string; time: string; label: string }> = [];
-    for (const m of remainingMatches.slice(0, 8)) {
+    function plan(total: number, perDay: number): number[] {
+      if (total <= 0) return [];
+      if (total < 3) return [total];
+      if (total <= perDay) return [total];
+      let days = Math.ceil(total / perDay);
+      while (days > 1 && Math.floor(total / days) < 3) days--;
+      const base = Math.floor(total / days);
+      const rem = total % days;
+      return Array.from({ length: days }, (_, i) => (i < rem ? base + 1 : base));
+    }
+
+    // Bucket into pools (group + one per knockout round).
+    type Pool = { matches: any[] };
+    const groupPool: Pool = { matches: [] };
+    const knockoutPools = new Map<string, Pool>();
+    const knockoutOrder: string[] = [];
+    for (const m of remainingMatches) {
       const stage = m.round?.stage ?? "group";
       const roundId = m.round?.id ?? m.round_id;
-      const enteredNewKnockoutRound =
-        lastRoundId !== null && roundId !== lastRoundId && stage === "knockout";
-      if (slot >= maxPerDay || enteredNewKnockoutRound) {
-        slot = 0;
+      if (stage === "knockout") {
+        if (!knockoutPools.has(roundId)) {
+          knockoutPools.set(roundId, { matches: [] });
+          knockoutOrder.push(roundId);
+        }
+        knockoutPools.get(roundId)!.matches.push(m);
+      } else {
+        groupPool.matches.push(m);
+      }
+    }
+    const pools: Pool[] = [];
+    if (groupPool.matches.length > 0) pools.push(groupPool);
+    for (const rid of knockoutOrder) pools.push(knockoutPools.get(rid)!);
+
+    const [hh, mm] = startTime.split(":").map(Number);
+    let day = startDate;
+    while (skipSet.has(day)) day = shift(day, 1);
+    let firstPool = true;
+    const items: Array<{ id: string; date: string; time: string; label: string }> = [];
+
+    outer: for (const pool of pools) {
+      if (!firstPool) {
         day = shift(day, 1);
         while (skipSet.has(day)) day = shift(day, 1);
       }
-      const totalMin = (hh ?? 0) * 60 + (mm ?? 0) + slot * duration;
-      const h = Math.floor(totalMin / 60) % 24;
-      const min = totalMin % 60;
-      const time = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      items.push({
-        id: m.id,
-        date: day,
-        time,
-        label: `${m.home?.name ?? "?"} vs ${m.away?.name ?? "?"}`,
-      });
-      slot++;
-      lastRoundId = roundId;
+      firstPool = false;
+      const dailyPlan = plan(pool.matches.length, maxPerDay);
+      let matchIdx = 0;
+      for (let d = 0; d < dailyPlan.length; d++) {
+        if (d > 0) {
+          day = shift(day, 1);
+          while (skipSet.has(day)) day = shift(day, 1);
+        }
+        const dayCount = dailyPlan[d];
+        for (let slot = 0; slot < dayCount; slot++) {
+          if (items.length >= 8) break outer;
+          const m = pool.matches[matchIdx++];
+          const totalMin = (hh ?? 0) * 60 + (mm ?? 0) + slot * duration;
+          const h = Math.floor(totalMin / 60) % 24;
+          const min = totalMin % 60;
+          const time = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+          items.push({
+            id: m.id,
+            date: day,
+            time,
+            label: `${m.home?.name ?? "?"} vs ${m.away?.name ?? "?"}`,
+          });
+        }
+      }
     }
     return items;
   }, [remainingMatches, startDate, startTime, maxPerDay, duration, skipDates]);

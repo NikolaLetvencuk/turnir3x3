@@ -42,22 +42,55 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
   if (!profile) redirect("/auth/login?next=/fantasy/team");
 
   const today = belgradeTodayKey();
-  const tomorrow = shiftDayUTC(today, 1);
   const admin = createAdminClient();
 
   // ---- Determine the user's *editable* day --------------------------------
-  // If today's first match hasn't started yet → today is editable.
-  // If any of today's matches has left "scheduled" → editing moves to
-  // tomorrow. Past days are always view-only.
+  // Pick the next "active" day from today onwards:
+  //  1. If today has matches AND the first one hasn't started → today.
+  //  2. Otherwise look forward for the next day with at least one
+  //     scheduled match. We don't pre-pick "tomorrow" because the next
+  //     active day may be days/weeks away (pre-tournament use case).
+  //  3. If no future matches exist at all, fall back to tomorrow as a
+  //     placeholder so the picker is still usable.
   const todayRange = belgradeDayRange(today);
-  const { data: todayMatchesRaw } = await admin
-    .from("matches")
-    .select("status")
-    .gte("kickoff_at", todayRange.startUTC)
-    .lt("kickoff_at", todayRange.endUTC);
+  const [{ data: todayMatchesRaw }, { data: futureMatchesRaw }] = await Promise.all([
+    admin
+      .from("matches")
+      .select("status, kickoff_at")
+      .gte("kickoff_at", todayRange.startUTC)
+      .lt("kickoff_at", todayRange.endUTC),
+    admin
+      .from("matches")
+      .select("kickoff_at")
+      .gte("kickoff_at", todayRange.endUTC)
+      .order("kickoff_at", { ascending: true })
+      .limit(50),
+  ]);
   const todayMatches = (todayMatchesRaw ?? []) as Array<{ status: string }>;
+  const todayHasMatches = todayMatches.length > 0;
   const todayStarted = todayMatches.some((m) => m.status && m.status !== "scheduled");
-  const editableDay = todayStarted ? tomorrow : today;
+
+  function belgradeKeyOf(iso: string): string {
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Belgrade",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return fmt.format(new Date(iso));
+  }
+  const futureDays = Array.from(
+    new Set(((futureMatchesRaw ?? []) as Array<{ kickoff_at: string | null }>)
+      .filter((r) => r.kickoff_at)
+      .map((r) => belgradeKeyOf(r.kickoff_at!))),
+  ).sort();
+  const nextFutureDay = futureDays[0] ?? null;
+
+  const editableDay = todayHasMatches && !todayStarted
+    ? today
+    : nextFutureDay
+    ? nextFutureDay
+    : shiftDayUTC(today, 1);
 
   // ---- Resolve requested day, clamp to allowed range ----------------------
   let day = searchParams.day && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.day) ? searchParams.day : editableDay;
