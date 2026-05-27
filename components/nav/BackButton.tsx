@@ -3,15 +3,18 @@
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+/**
+ * Inline back button rendered at the top of every non-home page. Lives in the
+ * page content (not in the sticky navbar) so clicking it doesn't cause the
+ * navbar to flicker / reflow during navigation.
+ */
 export function BackButton() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Don't show on root — there's nowhere to go back to.
   if (pathname === "/") return null;
 
   function onClick() {
-    // Browser back. If history is empty (deep link), fall back to home.
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
@@ -24,10 +27,10 @@ export function BackButton() {
       type="button"
       onClick={onClick}
       aria-label="Nazad"
-      className="-ml-1 inline-flex items-center gap-1 px-2 h-9 rounded-md text-zinc-300 hover:bg-zinc-800 active:bg-zinc-700"
+      className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-blue-300 mb-3 -ml-1 px-2 py-1 rounded-md hover:bg-zinc-800"
     >
-      <ChevronLeft className="w-5 h-5" />
-      <span className="hidden sm:inline text-sm">Nazad</span>
+      <ChevronLeft className="w-4 h-4" />
+      <span>Nazad</span>
     </button>
   );
 }

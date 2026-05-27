@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { BackButton } from "./BackButton";
 
 type Profile = { email: string; role: string } | null;
 
@@ -10,7 +9,6 @@ export function TopNav({ profile }: { profile: Profile }) {
     <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1 min-w-0">
-          <BackButton />
           <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
             <Image
               src="/logo/logomkpetrovskibela_pozadina.png"

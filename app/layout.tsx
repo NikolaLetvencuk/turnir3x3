@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { TopNav } from "@/components/nav/TopNav";
 import { BottomNav } from "@/components/nav/BottomNav";
+import { BackButton } from "@/components/nav/BackButton";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getCurrentProfile } from "@/lib/auth";
 
@@ -55,6 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ToastProvider>
           <TopNav profile={profile} />
           <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-4 pb-24 pt-4">
+            <BackButton />
             {children}
           </main>
           <BottomNav isAuthed={!!profile} isAdmin={profile?.role === "admin"} />
