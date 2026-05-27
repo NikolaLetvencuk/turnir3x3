@@ -22,8 +22,8 @@ import {
 import type { Database } from "@/types/database";
 
 type Match = Database["public"]["Tables"]["matches"]["Row"] & {
-  home_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null } | null;
-  away_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null } | null;
+  home_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null } | null;
+  away_team: { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null } | null;
   round?: { stage: string; name: string } | null;
 };
 type Ev = Database["public"]["Tables"]["match_events"]["Row"];
@@ -331,13 +331,13 @@ export function LiveEventEntry({ matchInit, eventsInit, players }: { matchInit: 
       <div className="card">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="text-center min-w-0">
-            <TeamCrest name={m.home_team?.name ?? "?"} shortName={m.home_team?.short_name} primaryColor={m.home_team?.primary_color} secondaryColor={m.home_team?.secondary_color} size={48} className="mx-auto" />
+            <TeamCrest name={m.home_team?.name ?? "?"} shortName={m.home_team?.short_name} primaryColor={m.home_team?.primary_color} secondaryColor={m.home_team?.secondary_color} logoUrl={m.home_team?.logo_url} size={48} className="mx-auto" />
             <div className="font-semibold mt-1 text-xs sm:text-sm break-words leading-tight">{m.home_team?.name}</div>
             <div className="text-2xl font-bold tabular-nums">{m.home_score}</div>
           </div>
           <LiveClock match={m} />
           <div className="text-center min-w-0">
-            <TeamCrest name={m.away_team?.name ?? "?"} shortName={m.away_team?.short_name} primaryColor={m.away_team?.primary_color} secondaryColor={m.away_team?.secondary_color} size={48} className="mx-auto" />
+            <TeamCrest name={m.away_team?.name ?? "?"} shortName={m.away_team?.short_name} primaryColor={m.away_team?.primary_color} secondaryColor={m.away_team?.secondary_color} logoUrl={m.away_team?.logo_url} size={48} className="mx-auto" />
             <div className="font-semibold mt-1 text-xs sm:text-sm break-words leading-tight">{m.away_team?.name}</div>
             <div className="text-2xl font-bold tabular-nums">{m.away_score}</div>
           </div>

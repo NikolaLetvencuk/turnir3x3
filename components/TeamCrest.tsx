@@ -5,6 +5,7 @@ type Props = {
   shortName?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
+  logoUrl?: string | null;
   size?: number;
   className?: string;
 };
@@ -35,12 +36,47 @@ export const TeamCrest = memo(function TeamCrest({
   shortName,
   primaryColor = "#1f2937",
   secondaryColor = "#f3f4f6",
+  logoUrl = null,
   size = 32,
   className,
 }: Props) {
   const primary = primaryColor || "#1f2937";
   const secondary = secondaryColor || "#f3f4f6";
   const initials = initialsFor(name, shortName);
+
+  // Uploaded crest takes precedence — show the image clipped to the same
+  // shield silhouette, with the primary colour as a fallback background so
+  // PNGs with transparency don't bleed.
+  if (logoUrl) {
+    const idSafe = name.replace(/[^a-zA-Z0-9]/g, "_");
+    const clipId = `clip-logo-${idSafe}`;
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 64 64"
+        className={className}
+        aria-label={`Grb tima ${name}`}
+        role="img"
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <path d="M8 6 H56 V36 Q56 50 32 60 Q8 50 8 36 Z" />
+          </clipPath>
+        </defs>
+        <g clipPath={`url(#${clipId})`}>
+          <rect x="0" y="0" width="64" height="64" fill={primary} />
+          <image href={logoUrl} x="6" y="4" width="52" height="56" preserveAspectRatio="xMidYMid meet" />
+        </g>
+        <path
+          d="M8 6 H56 V36 Q56 50 32 60 Q8 50 8 36 Z"
+          fill="none"
+          stroke="rgba(0,0,0,0.45)"
+          strokeWidth={1.5}
+        />
+      </svg>
+    );
+  }
   const idSafe = name.replace(/[^a-zA-Z0-9]/g, "_");
   const clipId = `clip-${idSafe}`;
   const textColor = contrastText(primary);
@@ -97,6 +133,7 @@ export type TeamLite = {
   short_name?: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
+  logo_url?: string | null;
 };
 
 export function TeamLabel({ team, size = 24, className }: { team: TeamLite | null | undefined; size?: number; className?: string }) {
@@ -108,6 +145,7 @@ export function TeamLabel({ team, size = 24, className }: { team: TeamLite | nul
         shortName={team.short_name}
         primaryColor={team.primary_color}
         secondaryColor={team.secondary_color}
+        logoUrl={team.logo_url}
         size={size}
       />
       <span className="truncate">{team.name}</span>

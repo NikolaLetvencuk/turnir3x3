@@ -377,7 +377,7 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
                             name={m.home?.name ?? "?"}
                             shortName={m.home?.short_name}
                             primaryColor={m.home?.primary_color}
-                            secondaryColor={m.home?.secondary_color}
+                            secondaryColor={m.home?.secondary_color} logoUrl={m.home?.logo_url}
                             size={18}
                           />
                           <span className="truncate flex-1">{m.home?.name}</span>
@@ -388,7 +388,7 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
                             name={m.away?.name ?? "?"}
                             shortName={m.away?.short_name}
                             primaryColor={m.away?.primary_color}
-                            secondaryColor={m.away?.secondary_color}
+                            secondaryColor={m.away?.secondary_color} logoUrl={m.away?.logo_url}
                             size={18}
                           />
                           <span className="truncate flex-1">{m.away?.name}</span>

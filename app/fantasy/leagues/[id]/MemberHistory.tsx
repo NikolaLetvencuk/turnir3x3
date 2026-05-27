@@ -63,7 +63,7 @@ export function MemberHistory({
         supabase.from("rounds").select("id, name, status, display_order").order("display_order"),
         supabase.from("fantasy_team_snapshots").select("round_id, player1_id, player2_id, player3_id, transfer_penalty").eq("user_id", userId),
         supabase.from("players").select("id, name, photo_url, team_id"),
-        supabase.from("teams").select("id, name, short_name, primary_color, secondary_color"),
+        supabase.from("teams").select("id, name, short_name, primary_color, secondary_color, logo_url"),
         supabase.from("fantasy_player_points").select("player_id, round_id, goals, assists, wins, draws, losses, clean_sheets, yellow_cards, red_cards, own_goals, total_points"),
         supabase.from("fantasy_round_points").select("round_id, total_points").eq("user_id", userId),
         supabase.from("matches").select("round_id, home_team_id, away_team_id, status"),

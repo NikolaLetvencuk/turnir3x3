@@ -9,6 +9,7 @@ export type TeamLite = {
   short_name: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  logo_url?: string | null;
 };
 
 export type BracketMatchView = {
@@ -59,7 +60,7 @@ function Slot({
           name={team.name}
           shortName={team.short_name}
           primaryColor={team.primary_color}
-          secondaryColor={team.secondary_color}
+          secondaryColor={team.secondary_color} logoUrl={team.logo_url}
           size={20}
         />
         <span className="text-sm truncate">{team.name}</span>

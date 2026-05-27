@@ -1,4 +1,4 @@
-export type DrawTeam = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null };
+export type DrawTeam = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null };
 export type Fixture<T> = { round: number; home: T; away: T };
 
 export function distributeTeams<T>(teams: T[], groupCount: number): T[][] {

@@ -33,9 +33,9 @@ export default async function HomePage() {
   if (!hasGroups) {
     const { data: teamsRows } = await supabase
       .from("teams")
-      .select("id, name, short_name, primary_color, secondary_color")
+      .select("id, name, short_name, primary_color, secondary_color, logo_url")
       .order("name");
-    const teams = (teamsRows ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null }>;
+    const teams = (teamsRows ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null }>;
 
     return (
       <div className="space-y-6">
@@ -88,7 +88,7 @@ export default async function HomePage() {
                       name={t.name}
                       shortName={t.short_name}
                       primaryColor={t.primary_color}
-                      secondaryColor={t.secondary_color}
+                      secondaryColor={t.secondary_color} logoUrl={t.logo_url}
                       size={32}
                     />
                     <span className="font-medium truncate flex-1 min-w-0">{t.name}</span>
@@ -105,9 +105,9 @@ export default async function HomePage() {
 
   // Post-draw view: full homepage
   const [liveRes, upcomingRes, recentRes, groups, scorers] = await Promise.all([
-    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "live").order("started_at", { ascending: false }),
-    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "scheduled").order("kickoff_at").limit(5),
-    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color)").eq("status", "finished").order("finished_at", { ascending: false }).limit(5),
+    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url)").eq("status", "live").order("started_at", { ascending: false }),
+    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url)").eq("status", "scheduled").order("kickoff_at").limit(5),
+    supabase.from("matches").select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url)").eq("status", "finished").order("finished_at", { ascending: false }).limit(5),
     getGroupStandings(),
     getTopScorers(5),
   ]);

@@ -43,7 +43,7 @@ export default async function PlayerPage({ params }: { params: { id: string } })
           <p className="text-sm text-zinc-500 inline-flex items-center gap-2">
             {player.team ? (
               <>
-                <TeamCrest name={player.team.name} shortName={player.team.short_name} primaryColor={player.team.primary_color} secondaryColor={player.team.secondary_color} size={20} />
+                <TeamCrest name={player.team.name} shortName={player.team.short_name} primaryColor={player.team.primary_color} secondaryColor={player.team.secondary_color} logoUrl={player.team.logo_url} size={20} />
                 <span>{player.team.name}</span>
               </>
             ) : "Bez tima"}

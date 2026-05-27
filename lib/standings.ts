@@ -6,6 +6,7 @@ export type StandingRow = {
   short_name: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  logo_url?: string | null;
   played: number;
   won: number;
   drawn: number;
@@ -27,12 +28,12 @@ export async function getGroupStandings(): Promise<GroupStandings[]> {
   const supabase = createClient();
   const [groupsRes, teamsRes, gtRes, sviewRes] = await Promise.all([
     supabase.from("groups").select("id, name, display_order").order("display_order"),
-    supabase.from("teams").select("id, name, short_name, primary_color, secondary_color"),
+    supabase.from("teams").select("id, name, short_name, primary_color, secondary_color, logo_url"),
     supabase.from("group_teams").select("group_id, team_id"),
     supabase.from("standings").select("*"),
   ]);
   const groups = (groupsRes.data ?? []) as Array<{ id: string; name: string; display_order: number }>;
-  const teams = (teamsRes.data ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null }>;
+  const teams = (teamsRes.data ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null }>;
   const gt = (gtRes.data ?? []) as Array<{ group_id: string; team_id: string }>;
   const sv = (sviewRes.data ?? []) as Array<{ team_id: string; group_id: string | null; played: number; wins: number; draws: number; losses: number; goals_for: number; goals_against: number; goal_diff: number; points: number }>;
 
@@ -50,6 +51,7 @@ export async function getGroupStandings(): Promise<GroupStandings[]> {
         short_name: t?.short_name ?? null,
         primary_color: t?.primary_color ?? null,
         secondary_color: t?.secondary_color ?? null,
+        logo_url: (t as any)?.logo_url ?? null,
         played: stat?.played ?? 0,
         won: stat?.wins ?? 0,
         drawn: stat?.draws ?? 0,

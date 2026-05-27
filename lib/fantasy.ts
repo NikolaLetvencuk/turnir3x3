@@ -179,7 +179,7 @@ export async function getPlayersForPicker(): Promise<PlayerForPicker[]> {
   const supabase = createClient();
   const [playersRes, teamsRes, priceRes, fppRes, fppAllRes, ftRes, roundsRes, upcomingRes] = await Promise.all([
     supabase.from("players").select("id, name, team_id, photo_url").order("name"),
-    supabase.from("teams").select("id, name, short_name, primary_color, secondary_color"),
+    supabase.from("teams").select("id, name, short_name, primary_color, secondary_color, logo_url"),
     supabase.from("player_prices").select("player_id, price, round_id, round:rounds(display_order)"),
     supabase.from("fantasy_player_points").select("player_id, round_id, total_points, round:rounds(display_order, status)"),
     supabase.from("fantasy_player_points").select("player_id, total_points"),
@@ -187,13 +187,13 @@ export async function getPlayersForPicker(): Promise<PlayerForPicker[]> {
     supabase.from("rounds").select("id, status, display_order").order("display_order"),
     supabase
       .from("matches")
-      .select("id, home_team_id, away_team_id, kickoff_at, phase, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color)")
+      .select("id, home_team_id, away_team_id, kickoff_at, phase, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url)")
       .eq("phase", "scheduled")
       .order("kickoff_at", { ascending: true, nullsFirst: false }),
   ]);
 
   const players = (playersRes.data ?? []) as Array<{ id: string; name: string; team_id: string | null; photo_url: string | null }>;
-  const teams = (teamsRes.data ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null }>;
+  const teams = (teamsRes.data ?? []) as Array<{ id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null }>;
   const teamMap = new Map(teams.map((t) => [t.id, t]));
 
   // Next 3 scheduled fixtures per team

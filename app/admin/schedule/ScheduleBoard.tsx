@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { moveMatchToRound } from "../actions";
 import { formatDateTime } from "@/lib/utils";
 
-type Team = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null };
+type Team = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null };
 type Match = {
   id: string;
   round_id: string;
@@ -32,11 +32,11 @@ function MatchCard({ match, disabled }: { match: Match; disabled: boolean }) {
     >
       <div className="text-[10px] text-zinc-500 mb-1">{formatDateTime(match.kickoff_at)}</div>
       <div className="flex items-center gap-1 mb-1">
-        <TeamCrest name={match.home?.name ?? "?"} shortName={match.home?.short_name} primaryColor={match.home?.primary_color} secondaryColor={match.home?.secondary_color} size={18} />
+        <TeamCrest name={match.home?.name ?? "?"} shortName={match.home?.short_name} primaryColor={match.home?.primary_color} secondaryColor={match.home?.secondary_color} logoUrl={match.home?.logo_url} size={18} />
         <span className="truncate">{match.home?.name ?? "?"}</span>
       </div>
       <div className="flex items-center gap-1">
-        <TeamCrest name={match.away?.name ?? "?"} shortName={match.away?.short_name} primaryColor={match.away?.primary_color} secondaryColor={match.away?.secondary_color} size={18} />
+        <TeamCrest name={match.away?.name ?? "?"} shortName={match.away?.short_name} primaryColor={match.away?.primary_color} secondaryColor={match.away?.secondary_color} logoUrl={match.away?.logo_url} size={18} />
         <span className="truncate">{match.away?.name ?? "?"}</span>
       </div>
     </div>
@@ -112,11 +112,11 @@ export function ScheduleBoard({ rounds, matches }: { rounds: Round[]; matches: M
         {activeMatch ? (
           <div className="bg-zinc-900 border border-blue-400 shadow-lg rounded-md p-2 text-xs w-52">
             <div className="flex items-center gap-1 mb-1">
-              <TeamCrest name={activeMatch.home?.name ?? "?"} shortName={activeMatch.home?.short_name} primaryColor={activeMatch.home?.primary_color} secondaryColor={activeMatch.home?.secondary_color} size={18} />
+              <TeamCrest name={activeMatch.home?.name ?? "?"} shortName={activeMatch.home?.short_name} primaryColor={activeMatch.home?.primary_color} secondaryColor={activeMatch.home?.secondary_color} logoUrl={activeMatch.home?.logo_url} size={18} />
               <span className="truncate">{activeMatch.home?.name ?? "?"}</span>
             </div>
             <div className="flex items-center gap-1">
-              <TeamCrest name={activeMatch.away?.name ?? "?"} shortName={activeMatch.away?.short_name} primaryColor={activeMatch.away?.primary_color} secondaryColor={activeMatch.away?.secondary_color} size={18} />
+              <TeamCrest name={activeMatch.away?.name ?? "?"} shortName={activeMatch.away?.short_name} primaryColor={activeMatch.away?.primary_color} secondaryColor={activeMatch.away?.secondary_color} logoUrl={activeMatch.away?.logo_url} size={18} />
               <span className="truncate">{activeMatch.away?.name ?? "?"}</span>
             </div>
           </div>

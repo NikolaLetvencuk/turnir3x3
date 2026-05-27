@@ -8,6 +8,7 @@ type Team = {
   short_name: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
+  logo_url?: string | null;
 };
 type Match = {
   id: string;
@@ -41,7 +42,7 @@ export function MatchCard({ match }: { match: Match }) {
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="shrink-0">
-            <TeamCrest name={match.home_team?.name ?? "?"} shortName={match.home_team?.short_name} primaryColor={match.home_team?.primary_color} secondaryColor={match.home_team?.secondary_color} size={28} />
+            <TeamCrest name={match.home_team?.name ?? "?"} shortName={match.home_team?.short_name} primaryColor={match.home_team?.primary_color} secondaryColor={match.home_team?.secondary_color} logoUrl={match.home_team?.logo_url} size={28} />
           </span>
           <span className="font-medium truncate">{match.home_team?.name ?? "?"}</span>
         </div>
@@ -60,7 +61,7 @@ export function MatchCard({ match }: { match: Match }) {
         <div className="flex items-center gap-2 min-w-0 justify-end">
           <span className="font-medium truncate text-right">{match.away_team?.name ?? "?"}</span>
           <span className="shrink-0">
-            <TeamCrest name={match.away_team?.name ?? "?"} shortName={match.away_team?.short_name} primaryColor={match.away_team?.primary_color} secondaryColor={match.away_team?.secondary_color} size={28} />
+            <TeamCrest name={match.away_team?.name ?? "?"} shortName={match.away_team?.short_name} primaryColor={match.away_team?.primary_color} secondaryColor={match.away_team?.secondary_color} logoUrl={match.away_team?.logo_url} size={28} />
           </span>
         </div>
       </div>

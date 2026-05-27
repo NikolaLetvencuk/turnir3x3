@@ -16,7 +16,7 @@ async function withAdmin<T>(fn: () => Promise<T>): Promise<T | { ok: false; erro
 // TEAMS
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Nevažeća hex boja");
 
-export async function createTeam(formData: FormData): Promise<ActionResult> {
+export async function createTeam(formData: FormData): Promise<ActionResult<{ id: string }>> {
   return withAdmin(async () => {
     const name = (formData.get("name") as string ?? "").trim();
     const short_name = (formData.get("short_name") as string ?? "").trim() || null;
@@ -27,11 +27,16 @@ export async function createTeam(formData: FormData): Promise<ActionResult> {
       return { ok: false, error: "Nevažeća boja" };
     }
     const admin = createAdminClient();
-    const { error } = await admin.from("teams").insert({ name, short_name, primary_color, secondary_color });
-    if (error) return { ok: false, error: error.message };
+    const { data, error } = await admin
+      .from("teams")
+      .insert({ name, short_name, primary_color, secondary_color })
+      .select("id")
+      .single();
+    if (error || !data) return { ok: false, error: error?.message ?? "Greška" };
     revalidatePath("/admin/teams");
-    return { ok: true };
-  }) as Promise<ActionResult>;
+    revalidatePath("/admin/players");
+    return { ok: true, data: { id: data.id as string } };
+  }) as Promise<ActionResult<{ id: string }>>;
 }
 
 export async function updateTeam(formData: FormData): Promise<ActionResult> {
@@ -59,6 +64,56 @@ export async function deleteTeam(formData: FormData): Promise<ActionResult> {
     const { error } = await admin.from("teams").delete().eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/admin/teams");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+// TEAM CRESTS — optional uploaded crest image. Stored at team-crests/<team_id>/<ts>.jpg.
+export async function uploadTeamCrest(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const team_id = formData.get("team_id") as string;
+    const file = formData.get("file") as File | null;
+    if (!team_id || !file) return { ok: false, error: "Nedostaje fajl ili tim" };
+    if (file.size > 300 * 1024) return { ok: false, error: "Fajl je veći od 300KB" };
+    const admin = createAdminClient();
+
+    const path = `${team_id}/${Date.now()}.jpg`;
+    const buf = Buffer.from(await file.arrayBuffer());
+    const { error: upErr } = await admin.storage
+      .from("team-crests")
+      .upload(path, buf, { contentType: "image/jpeg", upsert: true });
+    if (upErr) return { ok: false, error: upErr.message };
+
+    const { data: pub } = admin.storage.from("team-crests").getPublicUrl(path);
+    const logo_url = pub.publicUrl;
+
+    // Cleanup older uploads for the same team
+    const { data: prior } = await admin.storage.from("team-crests").list(team_id, { limit: 100 });
+    const toDelete = (prior ?? [])
+      .filter((f) => f.name !== path.split("/")[1])
+      .map((f) => `${team_id}/${f.name}`);
+    if (toDelete.length) await admin.storage.from("team-crests").remove(toDelete);
+
+    const { error } = await admin.from("teams").update({ logo_url }).eq("id", team_id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/teams");
+    revalidatePath("/admin/players");
+    return { ok: true };
+  }) as Promise<ActionResult>;
+}
+
+export async function removeTeamCrest(formData: FormData): Promise<ActionResult> {
+  return withAdmin(async () => {
+    const team_id = formData.get("team_id") as string;
+    if (!team_id) return { ok: false, error: "Nedostaje tim" };
+    const admin = createAdminClient();
+    const { data: prior } = await admin.storage.from("team-crests").list(team_id, { limit: 100 });
+    const paths = (prior ?? []).map((f) => `${team_id}/${f.name}`);
+    if (paths.length) await admin.storage.from("team-crests").remove(paths);
+    const { error } = await admin.from("teams").update({ logo_url: null }).eq("id", team_id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/teams");
+    revalidatePath("/admin/players");
     return { ok: true };
   }) as Promise<ActionResult>;
 }
@@ -756,7 +811,7 @@ export async function triggerDrawIfDue(): Promise<ActionResult> {
 
   const { data: teams } = await admin
     .from("teams")
-    .select("id, name, short_name, primary_color, secondary_color");
+    .select("id, name, short_name, primary_color, secondary_color, logo_url");
   const teamList = ((teams ?? []) as any[]).map((t) => ({
     id: t.id, name: t.name, short_name: t.short_name,
     primary_color: t.primary_color, secondary_color: t.secondary_color,

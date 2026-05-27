@@ -4,7 +4,7 @@ import { LiveMatchView, type FormEntry, type StandingRow } from "./LiveMatchView
 
 export const revalidate = 0;
 
-type TeamLite = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null };
+type TeamLite = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null };
 
 type FinishedMatchRow = {
   id: string;
@@ -75,7 +75,7 @@ export default async function MatchDetailPage({ params }: { params: { id: string
       supabase.from("standings").select("*").eq("group_id", m.group_id),
       supabase
         .from("group_teams")
-        .select("team_id, team:teams(id, name, short_name, primary_color, secondary_color)")
+        .select("team_id, team:teams(id, name, short_name, primary_color, secondary_color, logo_url)")
         .eq("group_id", m.group_id),
     ]);
     const sv = (sview ?? []) as any[];
@@ -108,7 +108,7 @@ export default async function MatchDetailPage({ params }: { params: { id: string
     const teamIds = [m.home_team_id, m.away_team_id].filter(Boolean) as string[];
     const { data: finished } = await supabase
       .from("matches")
-      .select("id, home_team_id, away_team_id, home_score, away_score, knockout_winner_id, finished_at, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color)")
+      .select("id, home_team_id, away_team_id, home_score, away_score, knockout_winner_id, finished_at, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url)")
       .eq("phase", "finished")
       .or(teamIds.map((id) => `home_team_id.eq.${id},away_team_id.eq.${id}`).join(","));
     const rows = (finished ?? []) as unknown as FinishedMatchRow[];

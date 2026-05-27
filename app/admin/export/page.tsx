@@ -16,8 +16,8 @@ export default async function AdminExportPage() {
         id, round_id, status, phase, home_score, away_score, home_pen, away_pen,
         kickoff_at, finished_at, bracket_position,
         home_placeholder, away_placeholder, knockout_winner_id,
-        home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color),
-        away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color)
+        home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url),
+        away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url)
       `)
       .order("kickoff_at"),
     getGroupStandings(),

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { User, Pencil, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search, User, Pencil, Trash2, X } from "lucide-react";
 import { useActionRunner } from "@/components/admin/FormButton";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -71,7 +71,18 @@ function PhotoUploader({ playerId, hasPhoto, run }: { playerId: string; hasPhoto
 export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Team[] }) {
   const run = useActionRunner();
   const [editing, setEditing] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [teamFilter, setTeamFilter] = useState<string>("");
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  const filteredPlayers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return players.filter((p) => {
+      if (teamFilter === "__none__" ? p.team_id : teamFilter ? p.team_id !== teamFilter : false) return false;
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [players, search, teamFilter]);
 
   async function onCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,11 +110,58 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
           <button className="btn-primary">+ Dodaj</button>
         </div>
       </form>
+      <div className="card space-y-2">
+        <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Pretraži igrače po imenu…"
+              className="input !pl-9"
+            />
+          </div>
+          <select
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+            className="input sm:w-auto"
+          >
+            <option value="">Svi timovi ({players.length})</option>
+            {teams.map((t) => {
+              const c = players.filter((p) => p.team_id === t.id).length;
+              return (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({c})
+                </option>
+              );
+            })}
+            {players.some((p) => !p.team_id) && (
+              <option value="__none__">Bez tima ({players.filter((p) => !p.team_id).length})</option>
+            )}
+          </select>
+        </div>
+        {(search || teamFilter) && (
+          <div className="flex items-center gap-2 text-xs text-zinc-400">
+            <span>
+              Prikazano <b>{filteredPlayers.length}</b> od {players.length}
+            </span>
+            <button
+              onClick={() => {
+                setSearch("");
+                setTeamFilter("");
+              }}
+              className="inline-flex items-center gap-1 text-blue-300 hover:underline"
+            >
+              <X className="w-3 h-3" /> Poništi filtere
+            </button>
+          </div>
+        )}
+      </div>
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="text-xs text-zinc-500"><th className="text-left py-2 w-12"></th><th className="text-left">Ime</th><th className="text-left">Tim</th><th></th></tr></thead>
           <tbody>
-            {players.map((p) => (
+            {filteredPlayers.map((p) => (
               <tr key={p.id} className="border-t border-zinc-800">
                 {editing === p.id ? (
                   <td colSpan={4} className="py-2">
@@ -159,10 +217,12 @@ export function PlayersAdmin({ players, teams }: { players: Player[]; teams: Tea
                 )}
               </tr>
             ))}
-            {players.length === 0 && (
+            {filteredPlayers.length === 0 && (
               <tr>
                 <td colSpan={4} className="py-6 text-center text-zinc-500 text-sm">
-                  Još nema igrača. Popuni formu iznad.
+                  {players.length === 0
+                    ? "Još nema igrača. Popuni formu iznad."
+                    : "Nema igrača za izabrane filtere."}
                 </td>
               </tr>
             )}

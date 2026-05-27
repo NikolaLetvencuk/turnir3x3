@@ -220,7 +220,7 @@ function FinalGroups({ result }: { result: DrawResult }) {
           <ul className="space-y-1 text-sm">
             {g.teams.map((t) => (
               <li key={t.id} className="flex items-center gap-2 min-w-0">
-                <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} size={24} />
+                <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} logoUrl={t.logo_url} size={24} />
                 <span className="truncate">{t.name}</span>
               </li>
             ))}

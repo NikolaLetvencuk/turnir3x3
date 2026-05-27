@@ -12,7 +12,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: { ro
     supabase.from("rounds").select("id, name, status, display_order, stage").order("display_order"),
     supabase
       .from("matches")
-      .select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color), round:rounds(id,name,status,display_order)")
+      .select("*, home_team:teams!matches_home_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url), away_team:teams!matches_away_team_id_fkey(id,name,short_name,primary_color,secondary_color,logo_url), round:rounds(id,name,status,display_order)")
       .order("kickoff_at", { ascending: true }),
   ]);
   const rounds = (roundsRes.data ?? []) as Array<{ id: string; name: string }>;

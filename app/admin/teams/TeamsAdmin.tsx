@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Plus, Pencil, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, Plus, Pencil, Trash2, X, UserPlus, ImageIcon } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { useActionRunner } from "@/components/admin/FormButton";
-import { createTeam, updateTeam, deleteTeam, setCaptainPhone } from "../actions";
+import { useToast } from "@/components/ui/Toast";
+import {
+  createPlayer,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  setCaptainPhone,
+  uploadTeamCrest,
+  removeTeamCrest,
+} from "../actions";
 
 type Team = {
   id: string;
@@ -13,18 +23,52 @@ type Team = {
   short_name: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  logo_url?: string | null;
   captain_name?: string | null;
   captain_phone?: string | null;
   players?: Array<{ id: string; name: string }>;
 };
 
-function CrestPreview({ name, shortName, primary, secondary }: { name: string; shortName: string; primary: string; secondary: string }) {
+async function resizeToJpegBlob(file: File, maxSize = 512, quality = 0.9): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas nije podržan");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Konverzija nije uspela"))),
+      "image/jpeg",
+      quality,
+    );
+  });
+}
+
+function CrestPreview({
+  name,
+  shortName,
+  primary,
+  secondary,
+  logoUrl,
+}: {
+  name: string;
+  shortName: string;
+  primary: string;
+  secondary: string;
+  logoUrl?: string | null;
+}) {
   return (
     <TeamCrest
       name={name || "Tim"}
       shortName={shortName}
       primaryColor={primary}
       secondaryColor={secondary}
+      logoUrl={logoUrl}
       size={48}
     />
   );
@@ -41,10 +85,14 @@ function TeamForm({
   onCancel?: () => void;
   submitLabel: string;
 }) {
+  const { push } = useToast();
+  const router = useRouter();
   const [name, setName] = useState(initial?.name ?? "");
   const [shortName, setShortName] = useState(initial?.short_name ?? "");
   const [primary, setPrimary] = useState(initial?.primary_color ?? "#1f2937");
   const [secondary, setSecondary] = useState(initial?.secondary_color ?? "#f3f4f6");
+  const [logoUrl, setLogoUrl] = useState<string | null>(initial?.logo_url ?? null);
+  const [uploadingCrest, setUploadingCrest] = useState(false);
   const [captainName, setCaptainName] = useState(initial?.captain_name ?? "");
   const [captainPhone, setCaptainPhone] = useState(initial?.captain_phone ?? "");
   const sameColors = primary.toLowerCase() === secondary.toLowerCase();
@@ -56,13 +104,90 @@ function TeamForm({
     await onSubmit(fd, { name: captainName.trim(), phone: captainPhone.trim() });
   }
 
+  async function onCrestFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!initial?.id) {
+      push("Prvo sačuvaj tim, pa dodaj sliku.", "error");
+      return;
+    }
+    setUploadingCrest(true);
+    try {
+      const blob = await resizeToJpegBlob(f);
+      const fd = new FormData();
+      fd.set("team_id", initial.id);
+      fd.set("file", new File([blob], "crest.jpg", { type: "image/jpeg" }));
+      const res = await uploadTeamCrest(fd);
+      if (!res.ok) {
+        push(res.error, "error");
+        return;
+      }
+      push("Slika tima sačuvana", "success");
+      // Optimistic: use local blob URL so the preview updates immediately;
+      // the real URL lands on next router.refresh().
+      setLogoUrl(URL.createObjectURL(blob));
+      router.refresh();
+    } catch (err: any) {
+      push(err?.message ?? "Greška pri uploadu", "error");
+    } finally {
+      setUploadingCrest(false);
+    }
+  }
+
+  async function onCrestRemove() {
+    if (!initial?.id) return;
+    if (!confirm("Obrisati sliku grba (boje ostaju)?")) return;
+    const fd = new FormData();
+    fd.set("team_id", initial.id);
+    const res = await removeTeamCrest(fd);
+    if (!res.ok) {
+      push(res.error, "error");
+      return;
+    }
+    push("Slika obrisana", "success");
+    setLogoUrl(null);
+    router.refresh();
+  }
+
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="grid sm:grid-cols-[auto_1fr_1fr] gap-2 items-center">
-        <CrestPreview name={name} shortName={shortName} primary={primary} secondary={secondary} />
+        <CrestPreview name={name} shortName={shortName} primary={primary} secondary={secondary} logoUrl={logoUrl} />
         <input name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Naziv tima" required className="input" />
         <input name="short_name" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="Skraćeno (npr. KUL)" maxLength={4} className="input" />
       </div>
+
+      {/* Optional uploaded crest image. Boje i dalje stoje kao fallback i
+          podloga ispod prozirne slike. */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label className="btn-secondary !py-1.5 !px-3 text-xs cursor-pointer inline-flex items-center gap-1.5">
+          <ImageIcon className="w-3.5 h-3.5" />
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onCrestFile}
+            disabled={uploadingCrest || !initial?.id}
+          />
+          {uploadingCrest ? "..." : logoUrl ? "Promeni sliku grba" : "Dodaj sliku grba"}
+        </label>
+        {logoUrl && initial?.id && (
+          <button
+            type="button"
+            onClick={onCrestRemove}
+            className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1 text-red-300"
+          >
+            <X className="w-3 h-3" /> Vrati na boje
+          </button>
+        )}
+        {!initial?.id && (
+          <span className="text-[11px] text-zinc-500 italic">
+            Prvo sačuvaj tim, pa ovde upload-uj sliku grba (PNG/JPG, max 300KB).
+          </span>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <label className="flex items-center gap-2 text-sm">
           <input type="color" name="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="h-9 w-12 border border-zinc-800 rounded" />
@@ -126,17 +251,28 @@ function TeamForm({
 
 export function TeamsAdmin({ teams }: { teams: Team[] }) {
   const run = useActionRunner();
+  const router = useRouter();
+  const { push } = useToast();
   const [editing, setEditing] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(teams.length === 0);
+  const [addPlayersFor, setAddPlayersFor] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="space-y-4">
       <PageHeader
         icon={Users}
         title="Timovi"
-        hint="Dodaj sve ekipe koje učestvuju. Zatim u Igračima upiši njihove igrače."
+        hint="Dodaj ekipe i odmah upiši njihove igrače. Boje, kapitena i ostalo prilagodi naknadno."
         tone="blue"
       />
+
+      {addPlayersFor && (
+        <AddPlayersForTeam
+          teamId={addPlayersFor.id}
+          teamName={addPlayersFor.name}
+          onDone={() => setAddPlayersFor(null)}
+        />
+      )}
 
       {!showNew ? (
         <button
@@ -163,14 +299,18 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
           </div>
           <TeamForm
             submitLabel="Dodaj"
-              onSubmit={async (fd, captain) => {
-              const ok = await run(createTeam, fd);
-              if (!ok) return false;
-              if (captain.name || captain.phone) {
-                // Captain save happens after team gets an id — admin can edit row.
+            onSubmit={async (fd) => {
+              const res = await createTeam(fd);
+              if (!res.ok) {
+                push(res.error, "error");
+                return false;
               }
+              push("Tim dodat", "success");
+              router.refresh();
+              const newName = String(fd.get("name") ?? "").trim();
+              setAddPlayersFor({ id: res.data!.id, name: newName });
               setShowNew(false);
-              return ok;
+              return true;
             }}
             onCancel={() => setShowNew(false)}
           />
@@ -199,7 +339,7 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
               />
             ) : (
               <div className="flex items-center gap-3">
-                <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} size={40} />
+                <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} logoUrl={t.logo_url} size={40} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{t.name}</div>
                   <div className="text-xs text-zinc-500 truncate">
@@ -243,6 +383,104 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Inline mini-form shown right after a team is created so the admin can keep
+ * typing player names without leaving the page. Each Enter adds a player
+ * straight to the new team and clears the input.
+ */
+function AddPlayersForTeam({
+  teamId,
+  teamName,
+  onDone,
+}: {
+  teamId: string;
+  teamName: string;
+  onDone: () => void;
+}) {
+  const { push } = useToast();
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [added, setAdded] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  async function addOne(e: React.FormEvent) {
+    e.preventDefault();
+    const n = name.trim();
+    if (!n) return;
+    setBusy(true);
+    const fd = new FormData();
+    fd.set("name", n);
+    fd.set("team_id", teamId);
+    const res = await createPlayer(fd);
+    setBusy(false);
+    if (!res.ok) {
+      push(res.error, "error");
+      return;
+    }
+    setAdded((arr) => [...arr, n]);
+    setName("");
+  }
+
+  return (
+    <div className="card border-2 border-emerald-500/40 bg-emerald-500/[0.06]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="font-semibold">Dodaj igrače u &bdquo;{teamName}&rdquo;</div>
+            <div className="text-xs text-zinc-400">
+              Otkucaj ime i pritisni <b>Enter</b> ili dugme. Nastavi dok ne uneseš ceo sastav.
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            router.refresh();
+            onDone();
+          }}
+          className="btn-secondary !py-1.5 !px-3 text-xs"
+        >
+          Gotovo
+        </button>
+      </div>
+
+      <form onSubmit={addOne} className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ime i prezime"
+          className="input flex-1"
+          autoFocus
+          disabled={busy}
+        />
+        <button className="btn-primary inline-flex items-center gap-1.5" disabled={busy || !name.trim()}>
+          <Plus className="w-4 h-4" /> Dodaj
+        </button>
+      </form>
+
+      {added.length > 0 && (
+        <div className="mt-3">
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1">
+            Dodato u sastav ({added.length})
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {added.map((n, i) => (
+              <span
+                key={`${n}-${i}`}
+                className="inline-flex items-center gap-1 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-xs text-zinc-200"
+              >
+                {n}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

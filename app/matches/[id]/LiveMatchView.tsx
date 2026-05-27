@@ -9,7 +9,7 @@ import { formatKickoff } from "@/lib/utils";
 import { getCurrentMinute, phaseLabel } from "@/lib/matchClock";
 import type { Database } from "@/types/database";
 
-type TeamMeta = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null };
+type TeamMeta = { id: string; name: string; short_name: string | null; primary_color: string | null; secondary_color: string | null; logo_url?: string | null };
 
 type Match = Database["public"]["Tables"]["matches"]["Row"] & {
   home_team: TeamMeta | null;
@@ -92,7 +92,7 @@ function FormCard({ team, entries }: { team: TeamMeta | null; entries: FormEntry
   return (
     <Link href={`/teams/${team.id}`} className="card block hover:border-blue-300 transition">
       <div className="flex items-center gap-2 mb-3">
-        <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={28} />
+        <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} logoUrl={team.logo_url} size={28} />
         <h3 className="font-semibold">{team.name}</h3>
       </div>
       {entries.length === 0 ? (
@@ -112,7 +112,7 @@ function RosterCard({ team, players }: { team: TeamMeta | null; players: PlayerL
   return (
     <div className="card">
       <Link href={`/teams/${team.id}`} className="flex items-center gap-2 mb-2 hover:text-blue-300">
-        <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={28} />
+        <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} logoUrl={team.logo_url} size={28} />
         <h3 className="font-semibold">{team.name}</h3>
         <span className="text-xs text-zinc-500 ml-auto">{roster.length} {roster.length === 1 ? "igrač" : "igrača"}</span>
       </Link>
@@ -159,7 +159,7 @@ function GroupStandingsCard({ rows, homeTeamId, awayTeamId }: { rows: StandingRo
                 <td className="py-1 text-zinc-500">{i + 1}.</td>
                 <td className={`py-1 ${highlight ? "font-semibold" : ""}`}>
                   <span className="inline-flex items-center gap-1.5">
-                    <TeamCrest name={r.team.name} shortName={r.team.short_name} primaryColor={r.team.primary_color} secondaryColor={r.team.secondary_color} size={18} />
+                    <TeamCrest name={r.team.name} shortName={r.team.short_name} primaryColor={r.team.primary_color} secondaryColor={r.team.secondary_color} logoUrl={r.team.logo_url} size={18} />
                     {r.team.name}
                   </span>
                 </td>
@@ -215,7 +215,7 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
           <div className="text-center min-w-0">
             {m.home_team ? (
               <Link href={`/teams/${m.home_team.id}`} className="block hover:opacity-80">
-                <TeamCrest name={m.home_team.name} shortName={m.home_team.short_name} primaryColor={m.home_team.primary_color} secondaryColor={m.home_team.secondary_color} size={56} className="mx-auto" />
+                <TeamCrest name={m.home_team.name} shortName={m.home_team.short_name} primaryColor={m.home_team.primary_color} secondaryColor={m.home_team.secondary_color} logoUrl={m.home_team.logo_url} size={56} className="mx-auto" />
                 <div className="font-semibold mt-1 hover:text-blue-300 text-sm sm:text-base break-words leading-tight">{m.home_team.name}</div>
               </Link>
             ) : (
@@ -228,7 +228,7 @@ export function LiveMatchView({ matchInit, eventsInit, players, groupStandings, 
           <div className="text-center min-w-0">
             {m.away_team ? (
               <Link href={`/teams/${m.away_team.id}`} className="block hover:opacity-80">
-                <TeamCrest name={m.away_team.name} shortName={m.away_team.short_name} primaryColor={m.away_team.primary_color} secondaryColor={m.away_team.secondary_color} size={56} className="mx-auto" />
+                <TeamCrest name={m.away_team.name} shortName={m.away_team.short_name} primaryColor={m.away_team.primary_color} secondaryColor={m.away_team.secondary_color} logoUrl={m.away_team.logo_url} size={56} className="mx-auto" />
                 <div className="font-semibold mt-1 hover:text-blue-300 text-sm sm:text-base break-words leading-tight">{m.away_team.name}</div>
               </Link>
             ) : (

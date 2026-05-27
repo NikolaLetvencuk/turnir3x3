@@ -12,6 +12,7 @@ type TeamMeta = {
   short_name: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  logo_url?: string | null;
 };
 
 export type TeamMatchRow = {
@@ -110,7 +111,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
     <div className="space-y-4">
       <div className="card flex items-center gap-3 sm:gap-4">
         <div className="shrink-0">
-          <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} size={56} />
+          <TeamCrest name={team.name} shortName={team.short_name} primaryColor={team.primary_color} secondaryColor={team.secondary_color} logoUrl={team.logo_url} size={56} />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold break-words leading-tight">{team.name}</h1>
@@ -158,7 +159,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                             <span className="tabular-nums font-semibold shrink-0">{us} : {them}</span>
                             {opp && (
                               <span className="inline-flex items-center gap-1.5 text-sm min-w-0">
-                                <TeamCrest name={opp.name} shortName={opp.short_name} primaryColor={opp.primary_color} secondaryColor={opp.secondary_color} size={20} />
+                                <TeamCrest name={opp.name} shortName={opp.short_name} primaryColor={opp.primary_color} secondaryColor={opp.secondary_color} logoUrl={opp.logo_url} size={20} />
                                 <span className="truncate">{opp.name}</span>
                               </span>
                             )}
@@ -183,7 +184,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                             <span className="text-xs text-zinc-500 shrink-0">{m.round?.name}</span>
                             {opp && (
                               <span className="inline-flex items-center gap-1.5 text-sm min-w-0">
-                                <TeamCrest name={opp.name} shortName={opp.short_name} primaryColor={opp.primary_color} secondaryColor={opp.secondary_color} size={20} />
+                                <TeamCrest name={opp.name} shortName={opp.short_name} primaryColor={opp.primary_color} secondaryColor={opp.secondary_color} logoUrl={opp.logo_url} size={20} />
                                 <span className="truncate">{opp.name}</span>
                               </span>
                             )}
@@ -266,7 +267,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                     {stats.biggestWin.opp && (
                       <div className="text-sm text-zinc-400 inline-flex items-center gap-1.5 mt-1">
                         protiv
-                        <TeamCrest name={stats.biggestWin.opp.name} shortName={stats.biggestWin.opp.short_name} primaryColor={stats.biggestWin.opp.primary_color} secondaryColor={stats.biggestWin.opp.secondary_color} size={18} />
+                        <TeamCrest name={stats.biggestWin.opp.name} shortName={stats.biggestWin.opp.short_name} primaryColor={stats.biggestWin.opp.primary_color} secondaryColor={stats.biggestWin.opp.secondary_color} logoUrl={stats.biggestWin.opp.logo_url} size={18} />
                         {stats.biggestWin.opp.name}
                       </div>
                     )}
@@ -279,7 +280,7 @@ export function TeamDetail({ team, players, matches }: { team: TeamMeta; players
                     {stats.worstLoss.opp && (
                       <div className="text-sm text-zinc-400 inline-flex items-center gap-1.5 mt-1">
                         protiv
-                        <TeamCrest name={stats.worstLoss.opp.name} shortName={stats.worstLoss.opp.short_name} primaryColor={stats.worstLoss.opp.primary_color} secondaryColor={stats.worstLoss.opp.secondary_color} size={18} />
+                        <TeamCrest name={stats.worstLoss.opp.name} shortName={stats.worstLoss.opp.short_name} primaryColor={stats.worstLoss.opp.primary_color} secondaryColor={stats.worstLoss.opp.secondary_color} logoUrl={stats.worstLoss.opp.logo_url} size={18} />
                         {stats.worstLoss.opp.name}
                       </div>
                     )}

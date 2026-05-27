@@ -49,7 +49,7 @@ export default async function StandingsPage() {
                       <td className="py-2 text-zinc-500">{i + 1}.</td>
                       <td className="font-medium">
                         <Link href={`/teams/${r.team_id}`} className="inline-flex items-center gap-2 hover:text-blue-300">
-                          <TeamCrest name={r.team_name} shortName={r.short_name} primaryColor={r.primary_color} secondaryColor={r.secondary_color} size={24} />
+                          <TeamCrest name={r.team_name} shortName={r.short_name} primaryColor={r.primary_color} secondaryColor={r.secondary_color} logoUrl={r.logo_url} size={24} />
                           {r.team_name}
                         </Link>
                       </td>

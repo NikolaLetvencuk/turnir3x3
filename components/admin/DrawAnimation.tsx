@@ -307,7 +307,7 @@ function PicksStage({
                         name={p.team.name}
                         shortName={p.team.short_name}
                         primaryColor={p.team.primary_color}
-                        secondaryColor={p.team.secondary_color}
+                        secondaryColor={p.team.secondary_color} logoUrl={p.team.logo_url}
                         size={32}
                       />
                       <span className="font-medium truncate">{p.team.name}</span>
@@ -365,7 +365,7 @@ function SpotlightCard({
             name={pick.team.name}
             shortName={pick.team.short_name}
             primaryColor={pick.team.primary_color}
-            secondaryColor={pick.team.secondary_color}
+            secondaryColor={pick.team.secondary_color} logoUrl={pick.team.logo_url}
             size={120}
           />
         )}
@@ -491,7 +491,7 @@ function FinaleScreen({ result, stillVisible = false }: { result: DrawResult; st
             <ul className="space-y-1.5">
               {g.teams.map((t) => (
                 <li key={t.id} className="flex items-center gap-2 text-sm text-white">
-                  <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} size={28} />
+                  <TeamCrest name={t.name} shortName={t.short_name} primaryColor={t.primary_color} secondaryColor={t.secondary_color} logoUrl={t.logo_url} size={28} />
                   <span className="font-medium truncate">{t.name}</span>
                 </li>
               ))}

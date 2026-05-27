@@ -11,7 +11,7 @@ export default async function TeamPage({ params }: { params: { id: string } }) {
     supabase.from("players").select("id, name, team_id, photo_url").eq("team_id", params.id),
     supabase
       .from("matches")
-      .select("id, round_id, home_team_id, away_team_id, home_score, away_score, phase, kickoff_at, finished_at, knockout_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color), round:rounds(id, name, stage, display_order)")
+      .select("id, round_id, home_team_id, away_team_id, home_score, away_score, phase, kickoff_at, finished_at, knockout_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url), away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, secondary_color, logo_url), round:rounds(id, name, stage, display_order)")
       .or(`home_team_id.eq.${params.id},away_team_id.eq.${params.id}`)
       .order("kickoff_at", { ascending: true, nullsFirst: false }),
   ]);
