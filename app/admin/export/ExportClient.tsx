@@ -33,42 +33,16 @@ export type ExportMatch = {
   kickoff_at: string | null;
   finished_at: string | null;
   bracket_position: string | null;
+  home_placeholder?: string | null;
+  away_placeholder?: string | null;
+  knockout_winner_id?: string | null;
   home_team: TeamLite | null;
   away_team: TeamLite | null;
 };
 
-export type DrawGroup = {
-  group_id: string;
-  group_name: string;
-  teams: TeamLite[];
-};
-
 type Format = "story" | "post";
-type PosterKind = "results" | "standings" | "scorers" | "draw";
+type PosterKind = "results" | "standings" | "scorers" | "bracket";
 type ResultsMode = "round" | "day";
-
-// Bin-packing budget for draw poster (team rows + 1 header per group).
-// Same budgets as standings since the layout is similar.
-const DRAW_BUDGET = { story: 20, post: 14 } as const;
-
-function chunkDrawByBudget(groups: DrawGroup[], budget: number): DrawGroup[][] {
-  const chunks: DrawGroup[][] = [];
-  let current: DrawGroup[] = [];
-  let currentSize = 0;
-  for (const g of groups) {
-    const cost = g.teams.length + GROUP_HEADER_COST;
-    if (current.length > 0 && currentSize + cost > budget) {
-      chunks.push(current);
-      current = [g];
-      currentSize = cost;
-    } else {
-      current.push(g);
-      currentSize += cost;
-    }
-  }
-  if (current.length) chunks.push(current);
-  return chunks;
-}
 
 const RESULTS_MAX = { story: 9, post: 6 } as const;
 
@@ -104,13 +78,11 @@ export function ExportClient({
   matches,
   standings,
   scorers,
-  drawGroups,
 }: {
   rounds: ExportRound[];
   matches: ExportMatch[];
   standings: GroupStandings[];
   scorers: TopScorerRow[];
-  drawGroups: DrawGroup[];
 }) {
   const roundsById = useMemo(() => new Map(rounds.map((r) => [r.id, r])), [rounds]);
 
@@ -138,20 +110,24 @@ export function ExportClient({
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(
     () => new Set(standings.map((g) => g.group_id)),
   );
-  const [selectedDrawGroupIds, setSelectedDrawGroupIds] = useState<Set<string>>(
-    () => new Set(drawGroups.map((g) => g.group_id)),
-  );
+  const [includeThirdPlaceBracket, setIncludeThirdPlaceBracket] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
 
-  const exportDraw = drawGroups.filter((g) => selectedDrawGroupIds.has(g.group_id));
-  function toggleDrawGroup(id: string) {
-    setSelectedDrawGroupIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  // Bracket data — knockout matches with full slot info for the poster.
+  const knockoutRounds = useMemo(
+    () => rounds.filter((r) => r.stage === "knockout").sort((a, b) => a.display_order - b.display_order),
+    [rounds],
+  );
+  const knockoutRoundIndex = useMemo(() => {
+    const map = new Map<string, number>();
+    knockoutRounds.forEach((r, i) => map.set(r.id, i));
+    return map;
+  }, [knockoutRounds]);
+  const bracketMatches = useMemo(
+    () => matches.filter((m) => m.bracket_position && knockoutRoundIndex.has(m.round_id)),
+    [matches, knockoutRoundIndex],
+  );
+  const hasBracket = bracketMatches.length > 0;
 
   const round = rounds.find((r) => r.id === selectedRoundId) ?? null;
 
@@ -370,33 +346,33 @@ export function ExportClient({
           if (!ok) break;
           if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
         }
-      } else if (kind === "draw") {
-        const chunks = chunkDrawByBudget(exportDraw, DRAW_BUDGET[format]);
-        const total = chunks.length;
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          const payload = {
-            kind,
-            format,
-            draw: chunk.map((g) => ({
-              group_id: g.group_id,
-              group_name: g.group_name,
-              teams: g.teams.map((t) => ({
-                id: t.id,
-                name: t.name,
-                short_name: t.short_name,
-                primary_color: t.primary_color,
-                secondary_color: t.secondary_color,
-              })),
+      } else if (kind === "bracket") {
+        const payload = {
+          kind,
+          format,
+          bracket: {
+            rounds: knockoutRounds.map((r) => ({
+              name: r.name,
+              round_index: knockoutRoundIndex.get(r.id) ?? 0,
             })),
-          };
-          const groupNames = chunk.map((g) => g.group_name).join("-");
-          const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
-          const slug = `draw-${format}-${groupNames}${partSuffix}`;
-          const ok = await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
-          if (!ok) break;
-          if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
-        }
+            matches: bracketMatches.map((m) => ({
+              id: m.id,
+              bracket_position: m.bracket_position!,
+              round_name: knockoutRounds.find((r) => r.id === m.round_id)?.name ?? "",
+              round_index: knockoutRoundIndex.get(m.round_id) ?? 0,
+              home_team: m.home_team,
+              away_team: m.away_team,
+              home_placeholder: m.home_placeholder ?? null,
+              away_placeholder: m.away_placeholder ?? null,
+              home_score: m.status === "finished" || m.status === "live" ? m.home_score : null,
+              away_score: m.status === "finished" || m.status === "live" ? m.away_score : null,
+              status: m.status,
+              winner_team_id: m.knockout_winner_id ?? null,
+            })),
+            include_third_place: includeThirdPlaceBracket,
+          },
+        };
+        await fetchAndDownloadPng(payload, `turnir-kula-bracket-${format}.png`);
       } else {
         const payload = {
           kind,
@@ -433,20 +409,6 @@ export function ExportClient({
   const resultsChunkPost = Math.ceil(exportMatches.length / RESULTS_MAX.post) || 0;
   const resultsWillSplit = resultsChunkStory > 1 || resultsChunkPost > 1;
 
-  const drawChunkStory = useMemo(
-    () => chunkDrawByBudget(exportDraw, DRAW_BUDGET.story).length,
-    [exportDraw],
-  );
-  const drawChunkPost = useMemo(
-    () => chunkDrawByBudget(exportDraw, DRAW_BUDGET.post).length,
-    [exportDraw],
-  );
-  const drawWillSplit = drawChunkStory > 1 || drawChunkPost > 1;
-  const drawTotalUnits = useMemo(
-    () => exportDraw.reduce((acc, g) => acc + g.teams.length + GROUP_HEADER_COST, 0),
-    [exportDraw],
-  );
-
   return (
     <div className="space-y-4">
       <PageHeader
@@ -456,310 +418,218 @@ export function ExportClient({
         tone="blue"
       />
 
-      {/* Filters for Rezultati */}
-      <div className="card space-y-3">
-        <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Rezultati&quot;</div>
-
-        {/* Mode toggle */}
-        <div>
-          <div className="text-xs text-zinc-400 mb-1">Filtriraj po</div>
-          <div className="inline-flex rounded-md border border-zinc-700 overflow-hidden">
-            <button
-              onClick={() => changeMode("round")}
-              className={`px-3 py-1.5 text-sm ${resultsMode === "round" ? "bg-blue-600 text-white" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}
-            >
-              Kolu
-            </button>
-            <button
-              onClick={() => changeMode("day")}
-              disabled={allDates.length === 0}
-              className={`px-3 py-1.5 text-sm border-l border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed ${resultsMode === "day" ? "bg-blue-600 text-white" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}
-            >
-              Danu
-            </button>
-          </div>
-          {allDates.length === 0 && (
-            <div className="text-[11px] text-zinc-500 italic mt-1">
-              Filter po danu je nedostupan dok nijedan meč nema postavljen termin početka.
-            </div>
-          )}
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-3">
-          {resultsMode === "round" ? (
-            <label className="block">
-              <span className="text-xs text-zinc-400">Kolo</span>
-              <select className="input" value={selectedRoundId} onChange={(e) => changeRound(e.target.value)}>
-                {rounds.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} {r.status === "finished" ? "✓" : r.status === "active" ? "(uživo)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <label className="block">
-              <span className="text-xs text-zinc-400">Dan</span>
-              <select className="input" value={selectedDay} onChange={(e) => changeDay(e.target.value)}>
-                {allDates.map((d) => {
-                  const count = matches.filter((m) => belgradeDateKey(m.kickoff_at) === d).length;
-                  return (
-                    <option key={d} value={d}>
-                      {formatDateLabel(d)} ({count} mečeva)
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
-          )}
-          <label className="block">
-            <span className="text-xs text-zinc-400">Naslov (opciono)</span>
-            <input
-              className="input"
-              placeholder={effectiveTitle()}
-              value={resultsTitle}
-              onChange={(e) => setResultsTitle(e.target.value)}
-            />
-          </label>
-        </div>
-
-        {/* Round mode: date pills inside the round */}
-        {resultsMode === "round" && candidateMatches.length > 0 && (
-          <div>
-            <div className="text-xs text-zinc-400 mb-1">Brzo filtriranje po danu (unutar kola)</div>
-            {sortedRoundDateKeys.length === 1 && sortedRoundDateKeys[0] === "__no_date__" ? (
-              <div className="text-xs text-zinc-500 italic">
-                Mečevi u ovom kolu nemaju postavljene termine. Idi na <code>/admin/matches</code>
-                i unesi vreme početka da bi filter po danu radio.
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
-                  className="text-xs px-2.5 py-1 rounded-full border border-zinc-700 hover:bg-zinc-800"
-                >
-                  Sve ({candidateMatches.length})
-                </button>
-                {sortedRoundDateKeys.map((k) => {
-                  const list = roundMatchesByDate.get(k) ?? [];
-                  const label = k === "__no_date__" ? "Bez termina" : formatDateLabel(k);
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => selectOnlyDateInRound(k)}
-                      className="text-xs px-2.5 py-1 rounded-full border border-zinc-700 hover:bg-zinc-800"
-                    >
-                      {label} ({list.length})
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Match list */}
-        {candidateMatches.length > 0 ? (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-400">
-                Mečevi ({selectedMatchIds.size} / {candidateMatches.length})
-              </span>
-              <div className="text-xs flex gap-2">
-                <button
-                  onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
-                  className="text-blue-300 hover:underline"
-                >
-                  Sve
-                </button>
-                <span className="text-zinc-300">·</span>
-                <button onClick={() => setSelectedMatchIds(new Set())} className="text-blue-300 hover:underline">
-                  Nijedan
-                </button>
-              </div>
-            </div>
-            <ul className="space-y-1 max-h-64 overflow-y-auto border border-zinc-800 rounded-md p-2 bg-zinc-900">
-              {resultsMode === "round"
-                ? sortedRoundDateKeys.map((dateKey) => {
-                    const list = roundMatchesByDate.get(dateKey) ?? [];
-                    const label = dateKey === "__no_date__" ? "Bez termina" : formatDateLabel(dateKey);
-                    return (
-                      <li key={dateKey} className="space-y-0.5">
-                        {sortedRoundDateKeys.length > 1 && (
-                          <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 pt-1">
-                            {label}
-                          </div>
-                        )}
-                        {list.map((m) => (
-                          <MatchCheckRow
-                            key={m.id}
-                            match={m}
-                            checked={selectedMatchIds.has(m.id)}
-                            onChange={() => toggleMatch(m.id)}
-                          />
-                        ))}
-                      </li>
-                    );
-                  })
-                : sortedDayRoundIds.map((roundId) => {
-                    const list = dayMatchesByRound.get(roundId) ?? [];
-                    const roundName = roundsById.get(roundId)?.name ?? "?";
-                    return (
-                      <li key={roundId} className="space-y-0.5">
-                        {sortedDayRoundIds.length > 1 && (
-                          <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 pt-1">
-                            {roundName}
-                          </div>
-                        )}
-                        {list.map((m) => (
-                          <MatchCheckRow
-                            key={m.id}
-                            match={m}
-                            checked={selectedMatchIds.has(m.id)}
-                            onChange={() => toggleMatch(m.id)}
-                            roundBadge={sortedDayRoundIds.length === 1 ? roundName : undefined}
-                          />
-                        ))}
-                      </li>
-                    );
-                  })}
-            </ul>
-          </div>
-        ) : (
-          <div className="text-xs text-zinc-500 italic">Nema mečeva za izabrani filter.</div>
-        )}
-
-        {resultsWillSplit && (
-          <InfoBox>
-            Izabrano je <b>{exportMatches.length} mečeva</b>. Maks po slici je{" "}
-            <b>{RESULTS_MAX.story} za Stori</b> i <b>{RESULTS_MAX.post} za Objavu</b>, pa će se
-            download automatski podeliti (Stori: <b>{resultsChunkStory} fajla</b>, Objava:{" "}
-            <b>{resultsChunkPost} fajla</b>).
-          </InfoBox>
-        )}
-      </div>
-
-      {/* Filters for Tabele */}
-      {standings.length > 1 && (
-        <div className="card space-y-3">
-          <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Tabele&quot;</div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-400">Grupe ({selectedGroupIds.size} / {standings.length})</span>
-              <div className="text-xs flex gap-2">
-                <button onClick={() => setSelectedGroupIds(new Set(standings.map((g) => g.group_id)))} className="text-blue-300 hover:underline">Sve</button>
-                <span className="text-zinc-300">·</span>
-                <button onClick={() => setSelectedGroupIds(new Set())} className="text-blue-300 hover:underline">Nijedna</button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 border border-zinc-800 rounded-md p-2 bg-zinc-900">
-              {standings.map((g) => (
-                <label key={g.group_id} className="flex items-center gap-2 text-sm hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedGroupIds.has(g.group_id)}
-                    onChange={() => toggleGroup(g.group_id)}
-                  />
-                  <span className="truncate">{g.group_name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          {standingsWillSplit && (
-            <InfoBox>
-              Izabrano je <b>{exportStandings.length} grupa</b> ({standingsTotalUnits} ukupno
-              jedinica — svaki tim 1 + naziv grupe 1). Maks po slici:{" "}
-              <b>{STANDINGS_BUDGET.story} jedinica za Stori</b>,{" "}
-              <b>{STANDINGS_BUDGET.post} za Objavu</b>. Sa trenutnom selekcijom dobićeš:{" "}
-              <b>{standingsChunkStory} fajla za Stori</b>, <b>{standingsChunkPost} fajla za Objavu</b>.
-            </InfoBox>
-          )}
-        </div>
-      )}
-
-      {/* Filters for Žreb */}
-      {drawGroups.length > 1 && (
-        <div className="card space-y-3">
-          <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Filteri za &quot;Žreb&quot;</div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-400">
-                Grupe ({selectedDrawGroupIds.size} / {drawGroups.length})
-              </span>
-              <div className="text-xs flex gap-2">
-                <button onClick={() => setSelectedDrawGroupIds(new Set(drawGroups.map((g) => g.group_id)))} className="text-blue-300 hover:underline">Sve</button>
-                <span className="text-zinc-300">·</span>
-                <button onClick={() => setSelectedDrawGroupIds(new Set())} className="text-blue-300 hover:underline">Nijedna</button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 border border-zinc-800 rounded-md p-2 bg-zinc-900">
-              {drawGroups.map((g) => (
-                <label key={g.group_id} className="flex items-center gap-2 text-sm hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedDrawGroupIds.has(g.group_id)}
-                    onChange={() => toggleDrawGroup(g.group_id)}
-                  />
-                  <span className="truncate">
-                    {g.group_name}
-                    <span className="text-[10px] text-zinc-500 ml-1">· {g.teams.length}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-          {drawWillSplit && (
-            <InfoBox>
-              Izabrano je <b>{exportDraw.length} grupa</b> ({drawTotalUnits} ukupno jedinica).
-              Maks po slici: <b>{DRAW_BUDGET.story} jedinica za Stori</b>,{" "}
-              <b>{DRAW_BUDGET.post} za Objavu</b>. Sa trenutnom selekcijom dobićeš:{" "}
-              <b>{drawChunkStory} fajla za Stori</b>, <b>{drawChunkPost} fajla za Objavu</b>.
-            </InfoBox>
-          )}
-        </div>
-      )}
-
-      {/* Four poster cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DownloadCard
+      {/* Self-contained download cards: each one has its own filters folded
+          inside a collapsible "Podesi" panel so the screen stays compact
+          unless the user explicitly opens settings. */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* === Rezultati === */}
+        <ExportCard
           title="Rezultati"
-          subtitle={`${exportMatches.length} mečeva`}
+          subtitle={`${exportMatches.length} mečeva izabrano`}
           disabled={exportMatches.length === 0}
           downloading={downloading}
           kind="results"
           onDownload={downloadPoster}
-          exceedPost={false}
-          exceedStory={false}
-        />
-        <DownloadCard
+        >
+          <details>
+            <summary className="cursor-pointer text-xs text-blue-300 hover:text-blue-200 select-none">
+              Podesi filtere
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div>
+                <div className="text-xs text-zinc-400 mb-1">Filtriraj po</div>
+                <div className="inline-flex rounded-md border border-zinc-700 overflow-hidden">
+                  <button
+                    onClick={() => changeMode("round")}
+                    className={`px-3 py-1.5 text-sm ${resultsMode === "round" ? "bg-blue-600 text-white" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}
+                  >
+                    Kolu
+                  </button>
+                  <button
+                    onClick={() => changeMode("day")}
+                    disabled={allDates.length === 0}
+                    className={`px-3 py-1.5 text-sm border-l border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed ${resultsMode === "day" ? "bg-blue-600 text-white" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}
+                  >
+                    Danu
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-2">
+                {resultsMode === "round" ? (
+                  <label className="block">
+                    <span className="text-xs text-zinc-400">Kolo</span>
+                    <select className="input" value={selectedRoundId} onChange={(e) => changeRound(e.target.value)}>
+                      {rounds.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} {r.status === "finished" ? "✓" : r.status === "active" ? "(uživo)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label className="block">
+                    <span className="text-xs text-zinc-400">Dan</span>
+                    <select className="input" value={selectedDay} onChange={(e) => changeDay(e.target.value)}>
+                      {allDates.map((d) => {
+                        const count = matches.filter((m) => belgradeDateKey(m.kickoff_at) === d).length;
+                        return (
+                          <option key={d} value={d}>
+                            {formatDateLabel(d)} ({count} mečeva)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                )}
+                <label className="block">
+                  <span className="text-xs text-zinc-400">Naslov (opciono)</span>
+                  <input
+                    className="input"
+                    placeholder={effectiveTitle()}
+                    value={resultsTitle}
+                    onChange={(e) => setResultsTitle(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              {candidateMatches.length > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-zinc-400">
+                      Mečevi ({selectedMatchIds.size} / {candidateMatches.length})
+                    </span>
+                    <div className="text-xs flex gap-2">
+                      <button
+                        onClick={() => setSelectedMatchIds(new Set(candidateMatches.map((m) => m.id)))}
+                        className="text-blue-300 hover:underline"
+                      >
+                        Sve
+                      </button>
+                      <span className="text-zinc-300">·</span>
+                      <button onClick={() => setSelectedMatchIds(new Set())} className="text-blue-300 hover:underline">
+                        Nijedan
+                      </button>
+                    </div>
+                  </div>
+                  <ul className="space-y-1 max-h-48 overflow-y-auto border border-zinc-800 rounded-md p-2 bg-zinc-900">
+                    {(resultsMode === "round" ? sortedRoundDateKeys : sortedDayRoundIds).map((key) => {
+                      const list =
+                        resultsMode === "round"
+                          ? roundMatchesByDate.get(key) ?? []
+                          : dayMatchesByRound.get(key) ?? [];
+                      const label =
+                        resultsMode === "round"
+                          ? key === "__no_date__"
+                            ? "Bez termina"
+                            : formatDateLabel(key)
+                          : roundsById.get(key)?.name ?? "?";
+                      return (
+                        <li key={key} className="space-y-0.5">
+                          {(resultsMode === "round" ? sortedRoundDateKeys.length : sortedDayRoundIds.length) > 1 && (
+                            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-2 pt-1">
+                              {label}
+                            </div>
+                          )}
+                          {list.map((m) => (
+                            <MatchCheckRow
+                              key={m.id}
+                              match={m}
+                              checked={selectedMatchIds.has(m.id)}
+                              onChange={() => toggleMatch(m.id)}
+                            />
+                          ))}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : (
+                <div className="text-xs text-zinc-500 italic">Nema mečeva za izabrani filter.</div>
+              )}
+
+              {resultsWillSplit && (
+                <InfoBox>
+                  Selekcija premašuje 1 sliku — biće podeljeno na{" "}
+                  <b>{resultsChunkStory} fajla za Stori</b> i <b>{resultsChunkPost} za Objavu</b>.
+                </InfoBox>
+              )}
+            </div>
+          </details>
+        </ExportCard>
+
+        {/* === Tabele === */}
+        <ExportCard
           title="Tabele"
           subtitle={`${exportStandings.length} / ${standings.length} grupa`}
           disabled={exportStandings.length === 0}
           downloading={downloading}
           kind="standings"
           onDownload={downloadPoster}
-          exceedPost={false}
-          exceedStory={false}
-        />
-        <DownloadCard
-          title="Žreb"
-          subtitle={drawGroups.length === 0 ? "nema žreba" : `${exportDraw.length} / ${drawGroups.length} grupa`}
-          disabled={exportDraw.length === 0}
+        >
+          {standings.length > 1 && (
+            <details>
+              <summary className="cursor-pointer text-xs text-blue-300 hover:text-blue-200 select-none">
+                Izaberi grupe ({selectedGroupIds.size} / {standings.length})
+              </summary>
+              <div className="mt-3 space-y-2">
+                <div className="text-xs flex gap-2 justify-end">
+                  <button onClick={() => setSelectedGroupIds(new Set(standings.map((g) => g.group_id)))} className="text-blue-300 hover:underline">Sve</button>
+                  <span className="text-zinc-300">·</span>
+                  <button onClick={() => setSelectedGroupIds(new Set())} className="text-blue-300 hover:underline">Nijedna</button>
+                </div>
+                <div className="grid grid-cols-2 gap-1 border border-zinc-800 rounded-md p-2 bg-zinc-900">
+                  {standings.map((g) => (
+                    <label key={g.group_id} className="flex items-center gap-2 text-sm hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedGroupIds.has(g.group_id)}
+                        onChange={() => toggleGroup(g.group_id)}
+                      />
+                      <span className="truncate">{g.group_name}</span>
+                    </label>
+                  ))}
+                </div>
+                {standingsWillSplit && (
+                  <InfoBox>
+                    Selekcija premašuje 1 sliku — biće podeljeno na{" "}
+                    <b>{standingsChunkStory} fajla za Stori</b>, <b>{standingsChunkPost} za Objavu</b>.
+                  </InfoBox>
+                )}
+              </div>
+            </details>
+          )}
+        </ExportCard>
+
+        {/* === Eliminacije === */}
+        <ExportCard
+          title="Eliminacije"
+          subtitle={hasBracket ? `${bracketMatches.length} meča u kosturu` : "nema kostura"}
+          disabled={!hasBracket}
           downloading={downloading}
-          kind="draw"
+          kind="bracket"
           onDownload={downloadPoster}
-          exceedPost={false}
-          exceedStory={false}
-        />
-        <DownloadCard
+        >
+          {hasBracket && (
+            <label className="flex items-center gap-2 text-sm cursor-pointer text-zinc-300">
+              <input
+                type="checkbox"
+                checked={includeThirdPlaceBracket}
+                onChange={(e) => setIncludeThirdPlaceBracket(e.target.checked)}
+              />
+              Uključi meč za 3. mesto
+            </label>
+          )}
+        </ExportCard>
+
+        {/* === Strelci === */}
+        <ExportCard
           title="Strelci"
           subtitle={`Top ${Math.min(10, scorers.length)}`}
           disabled={scorers.length === 0}
           downloading={downloading}
           kind="scorers"
           onDownload={downloadPoster}
-          exceedPost={false}
-          exceedStory={false}
         />
       </div>
     </div>
@@ -844,15 +714,14 @@ function InfoBox({ children }: { children: React.ReactNode }) {
   );
 }
 
-function DownloadCard({
+function ExportCard({
   title,
   subtitle,
   disabled,
   downloading,
   kind,
   onDownload,
-  exceedStory,
-  exceedPost,
+  children,
 }: {
   title: string;
   subtitle: string;
@@ -860,34 +729,29 @@ function DownloadCard({
   downloading: string | null;
   kind: PosterKind;
   onDownload: (kind: PosterKind, format: Format) => void;
-  exceedStory: boolean;
-  exceedPost: boolean;
+  children?: React.ReactNode;
 }) {
   return (
-    <div className="card flex flex-col">
-      <div className="flex items-baseline justify-between mb-1">
+    <div className="card flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-2">
         <h2 className="font-semibold">{title}</h2>
         <span className="text-xs text-zinc-500">{subtitle}</span>
       </div>
-      <p className="text-xs text-zinc-500 mb-3">
-        Generiše se na serveru. Klikni dugme za preuzimanje.
-      </p>
+      {children}
       <div className="mt-auto grid grid-cols-2 gap-2">
         <button
           onClick={() => onDownload(kind, "story")}
           disabled={disabled || !!downloading}
           className="btn-primary !py-2 text-sm"
-          title={exceedStory ? "Selekcija je velika — možda neće stati u sliku" : undefined}
         >
-          {downloading === `${kind}-story` ? "..." : exceedStory ? "Stori ⚠" : "Stori 1080×1920"}
+          {downloading === `${kind}-story` ? "..." : "Stori 1080×1920"}
         </button>
         <button
           onClick={() => onDownload(kind, "post")}
           disabled={disabled || !!downloading}
           className="btn-secondary !py-2 text-sm"
-          title={exceedPost ? "Selekcija je velika — možda neće stati u sliku" : undefined}
         >
-          {downloading === `${kind}-post` ? "..." : exceedPost ? "Objava ⚠" : "Objava 1080×1350"}
+          {downloading === `${kind}-post` ? "..." : "Objava 1080×1350"}
         </button>
       </div>
     </div>

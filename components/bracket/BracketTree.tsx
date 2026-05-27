@@ -168,7 +168,7 @@ function BracketColumn({
     side === "left" ? "left" : side === "right" ? "right" : "none";
 
   return (
-    <div className="w-56 shrink-0 flex flex-col">
+    <div className="w-28 sm:w-32 md:w-36 lg:w-40 xl:w-44 shrink-0 flex flex-col">
       <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{title}</h3>
       <div className="flex flex-col justify-around" style={{ minHeight: `${minHeight}px` }}>
         {matches.map((m, i) => {
@@ -185,7 +185,7 @@ function BracketColumn({
               {!isOutermost && incomingDir !== "none" && (
                 <span
                   aria-hidden
-                  className={`absolute top-1/2 w-4 h-px ${incomingDir === "left" ? "-left-4" : "-right-4"}`}
+                  className={`absolute top-1/2 w-3 h-px ${incomingDir === "left" ? "-left-3" : "-right-3"}`}
                   style={{ background: LINE }}
                 />
               )}
@@ -193,29 +193,29 @@ function BracketColumn({
               {outgoingDir !== "both" && (
                 <span
                   aria-hidden
-                  className={`absolute top-1/2 w-4 h-px ${outgoingDir === "right" ? "-right-4" : "-left-4"}`}
+                  className={`absolute top-1/2 w-3 h-px ${outgoingDir === "right" ? "-right-3" : "-left-3"}`}
                   style={{ background: LINE }}
                 />
               )}
               {/* Center column has stubs on both sides (the final) */}
               {outgoingDir === "both" && (
                 <>
-                  <span aria-hidden className="absolute top-1/2 -left-4 w-4 h-px" style={{ background: LINE }} />
-                  <span aria-hidden className="absolute top-1/2 -right-4 w-4 h-px" style={{ background: LINE }} />
+                  <span aria-hidden className="absolute top-1/2 -left-3 w-3 h-px" style={{ background: LINE }} />
+                  <span aria-hidden className="absolute top-1/2 -right-3 w-3 h-px" style={{ background: LINE }} />
                 </>
               )}
               {/* Vertical connector joining a pair to their midpoint */}
               {showVerticalTop && (
                 <span
                   aria-hidden
-                  className={`absolute top-1/2 w-px ${outgoingDir === "right" ? "-right-4" : "-left-4"}`}
+                  className={`absolute top-1/2 w-px ${outgoingDir === "right" ? "-right-3" : "-left-3"}`}
                   style={{ background: LINE, height: "calc(100% + 1rem)" }}
                 />
               )}
               {showVerticalBottom && (
                 <span
                   aria-hidden
-                  className={`absolute bottom-1/2 w-px ${outgoingDir === "right" ? "-right-4" : "-left-4"}`}
+                  className={`absolute bottom-1/2 w-px ${outgoingDir === "right" ? "-right-3" : "-left-3"}`}
                   style={{ background: LINE, height: "calc(100% + 1rem)" }}
                 />
               )}
@@ -291,7 +291,7 @@ export function BracketTree({
     return (
       <div className="overflow-x-auto py-2">
         <div className="flex justify-center min-w-fit">
-          <div className="w-56 shrink-0 flex flex-col">
+          <div className="w-28 sm:w-32 md:w-36 lg:w-40 xl:w-44 shrink-0 flex flex-col">
             <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{finalRound.name}</h3>
             <div className="flex flex-col justify-around" style={{ minHeight: "240px" }}>
               {finalMatches.map((m) => (
@@ -316,7 +316,7 @@ export function BracketTree({
 
   return (
     <div className="overflow-x-auto py-2">
-      <div className="flex gap-8 min-w-fit items-stretch justify-center">
+      <div className="flex gap-6 min-w-fit items-stretch justify-center">
         {/* Left half: outermost round on the left, innermost just before center */}
         {sides.map((s, idx) => (
           <BracketColumn
@@ -332,13 +332,13 @@ export function BracketTree({
         ))}
 
         {/* Center: final + 3rd place playoff */}
-        <div className="w-56 shrink-0 flex flex-col">
+        <div className="w-28 sm:w-32 md:w-36 lg:w-40 xl:w-44 shrink-0 flex flex-col">
           <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{finalRound.name}</h3>
           <div className="flex flex-col justify-around" style={{ minHeight: `${minColHeight}px` }}>
             {finalMatches.map((m) => (
               <div key={m.id} className="relative">
-                <span aria-hidden className="absolute top-1/2 -left-4 w-4 h-px" style={{ background: LINE }} />
-                <span aria-hidden className="absolute top-1/2 -right-4 w-4 h-px" style={{ background: LINE }} />
+                <span aria-hidden className="absolute top-1/2 -left-3 w-3 h-px" style={{ background: LINE }} />
+                <span aria-hidden className="absolute top-1/2 -right-3 w-3 h-px" style={{ background: LINE }} />
                 <MatchCard m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
               </div>
             ))}

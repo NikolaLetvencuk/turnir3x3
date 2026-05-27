@@ -52,8 +52,29 @@ type DrawGroupBlock = {
   teams: Team[];
 };
 
+type BracketMatchEntry = {
+  id: string;
+  bracket_position: string;
+  round_name: string;
+  round_index: number;
+  home_team: Team | null;
+  away_team: Team | null;
+  home_placeholder: string | null;
+  away_placeholder: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  status: string;
+  winner_team_id: string | null;
+};
+
+type BracketPayload = {
+  rounds: Array<{ name: string; round_index: number }>;
+  matches: BracketMatchEntry[];
+  include_third_place: boolean;
+};
+
 type PosterRequest = {
-  kind: "results" | "standings" | "scorers" | "draw";
+  kind: "results" | "standings" | "scorers" | "draw" | "bracket";
   format: "story" | "post";
   title?: string;
   subtitle?: string;
@@ -61,6 +82,7 @@ type PosterRequest = {
   standings?: GroupBlock[];
   scorers?: ScorerEntry[];
   draw?: DrawGroupBlock[];
+  bracket?: BracketPayload;
 };
 
 const C = {
@@ -108,6 +130,15 @@ export async function POST(request: Request) {
     } else if (kind === "draw") {
       content = (
         <DrawPoster draw={body.draw ?? []} width={width} height={height} logoUrl={logoUrl} />
+      );
+    } else if (kind === "bracket") {
+      content = (
+        <BracketPoster
+          payload={body.bracket ?? { rounds: [], matches: [], include_third_place: false }}
+          width={width}
+          height={height}
+          logoUrl={logoUrl}
+        />
       );
     } else {
       content = (
@@ -855,6 +886,332 @@ function DrawGroupCard({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ============================ BRACKET ============================ */
+
+function BracketPoster({
+  payload,
+  width,
+  height,
+  logoUrl,
+}: {
+  payload: BracketPayload;
+  width: number;
+  height: number;
+  logoUrl?: string;
+}) {
+  const { rounds, matches, include_third_place } = payload;
+  if (rounds.length === 0 || matches.length === 0) {
+    return (
+      <PosterFrame heading="ELIMINACIJE" subheading="Nokaut faza" width={width} height={height} logoUrl={logoUrl}>
+        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 32 }}>
+          Eliminacioni kostur još nije postavljen.
+        </div>
+      </PosterFrame>
+    );
+  }
+
+  const byRound = new Map<number, BracketMatchEntry[]>();
+  const thirdPlace: BracketMatchEntry[] = [];
+  for (const m of matches) {
+    if (m.bracket_position === "TP") {
+      thirdPlace.push(m);
+      continue;
+    }
+    const arr = byRound.get(m.round_index) ?? [];
+    arr.push(m);
+    byRound.set(m.round_index, arr);
+  }
+  for (const list of byRound.values()) {
+    list.sort((a, b) => {
+      const am = a.bracket_position.match(/_(\d+)$/);
+      const bm = b.bracket_position.match(/_(\d+)$/);
+      if (am && bm) return parseInt(am[1], 10) - parseInt(bm[1], 10);
+      return a.bracket_position.localeCompare(b.bracket_position);
+    });
+  }
+
+  const sortedRounds = [...rounds].sort((a, b) => a.round_index - b.round_index);
+  const finalRoundIdx = sortedRounds[sortedRounds.length - 1]?.round_index ?? 0;
+  const nonFinal = sortedRounds.slice(0, -1);
+  const finalMatches = byRound.get(finalRoundIdx) ?? [];
+
+  const sides = nonFinal.map((r) => {
+    const list = byRound.get(r.round_index) ?? [];
+    const half = Math.ceil(list.length / 2);
+    return { round: r, left: list.slice(0, half), right: list.slice(half) };
+  });
+
+  const totalColumns = sides.length * 2 + 1;
+  const horizontalBudget = width - 120;
+  const colGap = 14;
+  const colWidth = Math.floor((horizontalBudget - colGap * (totalColumns - 1)) / totalColumns);
+
+  return (
+    <PosterFrame heading="ELIMINACIJE" subheading="Nokaut faza" width={width} height={height} logoUrl={logoUrl}>
+      <div
+        style={{
+          display: "flex",
+          gap: colGap,
+          flexGrow: 1,
+          alignItems: "stretch",
+          justifyContent: "center",
+        }}
+      >
+        {sides.map((s, idx) => (
+          <BracketPosterColumn
+            key={`L-${s.round.round_index}`}
+            title={s.round.name}
+            matches={s.left}
+            colWidth={colWidth}
+            side="left"
+            isOutermost={idx === 0}
+          />
+        ))}
+
+        <BracketPosterColumn
+          title={sortedRounds[sortedRounds.length - 1].name}
+          matches={finalMatches}
+          colWidth={colWidth}
+          side="center"
+          isOutermost={false}
+        />
+
+        {sides
+          .slice()
+          .reverse()
+          .map((s, idx) => (
+            <BracketPosterColumn
+              key={`R-${s.round.round_index}`}
+              title={s.round.name}
+              matches={s.right}
+              colWidth={colWidth}
+              side="right"
+              isOutermost={idx === sides.length - 1}
+            />
+          ))}
+      </div>
+
+      {include_third_place && thirdPlace.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginTop: 12,
+            paddingTop: 12,
+            borderTop: `1px dashed ${C.cardBorder}`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: 18,
+              color: C.textDim,
+              textTransform: "uppercase",
+              letterSpacing: 4,
+              marginBottom: 8,
+            }}
+          >
+            Utakmica za 3. mesto
+          </div>
+          <div style={{ display: "flex", width: colWidth * 2 }}>
+            <BracketPosterMatch match={thirdPlace[0]} />
+          </div>
+        </div>
+      )}
+    </PosterFrame>
+  );
+}
+
+function BracketPosterColumn({
+  title,
+  matches,
+  colWidth,
+  side,
+  isOutermost,
+}: {
+  title: string;
+  matches: BracketMatchEntry[];
+  colWidth: number;
+  side: "left" | "right" | "center";
+  isOutermost: boolean;
+}) {
+  const outgoingRight = side === "left";
+  const isCenter = side === "center";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: colWidth,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          fontSize: 16,
+          color: C.accent,
+          fontWeight: 700,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+          justifyContent: "center",
+          marginBottom: 10,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-around",
+          flexGrow: 1,
+        }}
+      >
+        {matches.map((m, i) => {
+          const isPairTop = i % 2 === 0;
+          const hasPairBelow = i + 1 < matches.length;
+          const showVerticalTop = !isCenter && isPairTop && hasPairBelow;
+          const showVerticalBottom = !isCenter && !isPairTop;
+          const outgoingSide = outgoingRight ? "right" : "left";
+          return (
+            <div
+              key={m.id}
+              style={{
+                display: "flex",
+                position: "relative",
+                flexDirection: "column",
+              }}
+            >
+              {!isOutermost && !isCenter && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    [outgoingSide === "right" ? "left" : "right"]: -7,
+                    width: 7,
+                    height: 1,
+                    background: C.cardBorder,
+                  }}
+                />
+              )}
+              {!isCenter && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    [outgoingSide]: -7,
+                    width: 7,
+                    height: 1,
+                    background: C.cardBorder,
+                  }}
+                />
+              )}
+              {isCenter && (
+                <>
+                  <div style={{ position: "absolute", top: "50%", left: -7, width: 7, height: 1, background: C.cardBorder }} />
+                  <div style={{ position: "absolute", top: "50%", right: -7, width: 7, height: 1, background: C.cardBorder }} />
+                </>
+              )}
+              {showVerticalTop && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    [outgoingSide]: -7,
+                    width: 1,
+                    height: "100%",
+                    background: C.cardBorder,
+                  }}
+                />
+              )}
+              {showVerticalBottom && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "50%",
+                    [outgoingSide]: -7,
+                    width: 1,
+                    height: "100%",
+                    background: C.cardBorder,
+                  }}
+                />
+              )}
+              <BracketPosterMatch match={m} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BracketPosterMatch({ match: m }: { match: BracketMatchEntry }) {
+  const isFinished = m.status === "finished" || m.status === "live";
+  const winnerId = m.winner_team_id;
+  const homeWin = winnerId && m.home_team && m.home_team.id === winnerId;
+  const awayWin = winnerId && m.away_team && m.away_team.id === winnerId;
+  const homeText = m.home_team?.name ?? m.home_placeholder ?? "—";
+  const awayText = m.away_team?.name ?? m.away_placeholder ?? "—";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        background: C.cardBg,
+        border: `1px solid ${C.cardBorder}`,
+        borderRadius: 10,
+        padding: "8px 10px",
+        width: "100%",
+      }}
+    >
+      <SlotRow text={homeText} highlighted={!!homeWin} placeholder={!m.home_team} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          fontSize: 14,
+          color: C.textDim,
+          fontWeight: 700,
+          padding: "2px 0",
+        }}
+      >
+        {isFinished
+          ? `${m.home_score ?? 0} : ${m.away_score ?? 0}`
+          : "vs"}
+      </div>
+      <SlotRow text={awayText} highlighted={!!awayWin} placeholder={!m.away_team} />
+    </div>
+  );
+}
+
+function SlotRow({
+  text,
+  highlighted,
+  placeholder,
+}: {
+  text: string;
+  highlighted: boolean;
+  placeholder: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        fontSize: 14,
+        fontWeight: highlighted ? 900 : 600,
+        color: highlighted ? C.accent : placeholder ? C.textFaint : C.text,
+        padding: "3px 2px",
+        fontStyle: placeholder ? "italic" : "normal",
+      }}
+    >
+      {text}
     </div>
   );
 }
