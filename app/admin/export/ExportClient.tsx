@@ -503,7 +503,7 @@ export function ExportClient({
       />
 
       {/* Quick downloads — big buttons, no filter UI */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <QuickDownloadCard
           title="Utakmice juče"
           subtitle={`${yesterdayCount} mečeva · ${yesterdayKey ? formatDateLabel(yesterdayKey) : ""}`}
@@ -940,23 +940,23 @@ function QuickDownloadCard({
   const storiTag = `${tagBase}-story`;
   const postTag = `${tagBase}-post`;
   return (
-    <div className="card flex flex-col gap-3">
+    <div className="card flex flex-col gap-4 !p-5 sm:!p-6">
       <div>
-        <h3 className="font-bold text-base">{title}</h3>
-        <div className="text-xs text-zinc-500">{subtitle}</div>
+        <h3 className="font-bold text-2xl leading-tight">{title}</h3>
+        <div className="text-sm text-zinc-400 mt-1">{subtitle}</div>
       </div>
-      <div className="grid grid-cols-2 gap-2 mt-auto">
+      <div className="grid grid-cols-2 gap-3 mt-auto">
         <button
           onClick={onStori}
           disabled={disabled || !!downloading}
-          className="btn-primary !py-3 text-sm font-semibold"
+          className="btn-primary !py-5 text-lg font-bold"
         >
           {downloading === storiTag ? "..." : "Stori"}
         </button>
         <button
           onClick={onPost}
           disabled={disabled || !!downloading}
-          className="btn-secondary !py-3 text-sm font-semibold"
+          className="btn-secondary !py-5 text-lg font-bold"
         >
           {downloading === postTag ? "..." : "Objava"}
         </button>
