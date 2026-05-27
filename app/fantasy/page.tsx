@@ -52,7 +52,6 @@ export default async function FantasyLandingPage() {
 
   const dpRows = (dayPoints ?? []) as Array<{ day: string; total_points: number }>;
   const totalPoints = dpRows.reduce((acc, r) => acc + (r.total_points ?? 0), 0);
-  const daysPlayed = dpRows.length;
   const lastDay = dpRows[0] ?? null;
   const teamName = ((teamRow ?? null) as any)?.name ?? null;
   const leagues = ((memberships ?? []) as any[]).map((m) => m.league).filter(Boolean) as Array<{
@@ -77,10 +76,6 @@ export default async function FantasyLandingPage() {
             <div className="text-2xl font-bold tabular-nums">
               {lastDay ? lastDay.total_points : <span className="text-blue-50/70 text-sm">—</span>}
             </div>
-          </div>
-          <div>
-            <div className="text-xs text-blue-50/80">Dana sa bodovima</div>
-            <div className="text-2xl font-bold tabular-nums">{daysPlayed}</div>
           </div>
         </div>
         <div className="mt-4 flex gap-2 flex-wrap">
