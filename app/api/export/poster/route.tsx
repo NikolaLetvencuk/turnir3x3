@@ -71,6 +71,10 @@ type BracketPayload = {
   rounds: Array<{ name: string; round_index: number }>;
   matches: BracketMatchEntry[];
   include_third_place: boolean;
+  /** "full" → mirror bracket in one image.  "left"/"right" → only that half
+   *  plus the final and (optionally) 3rd-place match, for splitting a
+   *  16-team bracket across two posters. */
+  layout?: "full" | "left" | "right";
 };
 
 type PosterRequest = {
@@ -903,7 +907,7 @@ function BracketPoster({
   height: number;
   logoUrl?: string;
 }) {
-  const { rounds, matches, include_third_place } = payload;
+  const { rounds, matches, include_third_place, layout = "full" } = payload;
   if (rounds.length === 0 || matches.length === 0) {
     return (
       <PosterFrame heading="ELIMINACIJE" subheading="Nokaut faza" width={width} height={height} logoUrl={logoUrl}>
@@ -936,6 +940,7 @@ function BracketPoster({
 
   const sortedRounds = [...rounds].sort((a, b) => a.round_index - b.round_index);
   const finalRoundIdx = sortedRounds[sortedRounds.length - 1]?.round_index ?? 0;
+  const finalRoundName = sortedRounds[sortedRounds.length - 1]?.name ?? "Finale";
   const nonFinal = sortedRounds.slice(0, -1);
   const finalMatches = byRound.get(finalRoundIdx) ?? [];
 
@@ -945,10 +950,81 @@ function BracketPoster({
     return { round: r, left: list.slice(0, half), right: list.slice(half) };
   });
 
-  const totalColumns = sides.length * 2 + 1;
+  type Col = {
+    key: string;
+    title: string;
+    matches: BracketMatchEntry[];
+    side: "left" | "right" | "center";
+    isOutermost: boolean;
+  };
+
+  let columns: Col[];
+  if (layout === "left") {
+    columns = [
+      ...sides.map<Col>((s, i) => ({
+        key: `L-${s.round.round_index}`,
+        title: s.round.name,
+        matches: s.left,
+        side: "left",
+        isOutermost: i === 0,
+      })),
+      { key: "F", title: finalRoundName, matches: finalMatches, side: "center", isOutermost: false },
+    ];
+  } else if (layout === "right") {
+    columns = [
+      { key: "F", title: finalRoundName, matches: finalMatches, side: "center", isOutermost: false },
+      ...sides
+        .slice()
+        .reverse()
+        .map<Col>((s, i) => ({
+          key: `R-${s.round.round_index}`,
+          title: s.round.name,
+          matches: s.right,
+          side: "right",
+          isOutermost: i === sides.length - 1,
+        })),
+    ];
+  } else {
+    columns = [
+      ...sides.map<Col>((s, i) => ({
+        key: `L-${s.round.round_index}`,
+        title: s.round.name,
+        matches: s.left,
+        side: "left",
+        isOutermost: i === 0,
+      })),
+      { key: "F", title: finalRoundName, matches: finalMatches, side: "center", isOutermost: false },
+      ...sides
+        .slice()
+        .reverse()
+        .map<Col>((s, i) => ({
+          key: `R-${s.round.round_index}`,
+          title: s.round.name,
+          matches: s.right,
+          side: "right",
+          isOutermost: i === sides.length - 1,
+        })),
+    ];
+  }
+
+  const totalColumns = columns.length;
   const horizontalBudget = width - 120;
   const colGap = 14;
   const colWidth = Math.floor((horizontalBudget - colGap * (totalColumns - 1)) / totalColumns);
+
+  // Explicit bracket grid height so we can compute exact slot positions.
+  const headingArea = 240;
+  const footerArea = 80;
+  const thirdPlaceArea = include_third_place && thirdPlace.length > 0 ? 200 : 0;
+  const bracketHeight = Math.max(360, height - 80 * 2 - headingArea - footerArea - thirdPlaceArea);
+
+  // Slot height per column = bracketHeight divided by match count. Using
+  // justify-content: space-around puts every match's vertical center at
+  // (i + 0.5) * slotHeight, so the distance between adjacent centers in the
+  // same column equals slotHeight — exactly what the vertical connector
+  // needs to span.
+  const COLUMN_HEADER_HEIGHT = 36;
+  const innerHeight = Math.max(120, bracketHeight - COLUMN_HEADER_HEIGHT);
 
   return (
     <PosterFrame heading="ELIMINACIJE" subheading="Nokaut faza" width={width} height={height} logoUrl={logoUrl}>
@@ -956,43 +1032,27 @@ function BracketPoster({
         style={{
           display: "flex",
           gap: colGap,
-          flexGrow: 1,
+          height: bracketHeight,
           alignItems: "stretch",
           justifyContent: "center",
         }}
       >
-        {sides.map((s, idx) => (
-          <BracketPosterColumn
-            key={`L-${s.round.round_index}`}
-            title={s.round.name}
-            matches={s.left}
-            colWidth={colWidth}
-            side="left"
-            isOutermost={idx === 0}
-          />
-        ))}
-
-        <BracketPosterColumn
-          title={sortedRounds[sortedRounds.length - 1].name}
-          matches={finalMatches}
-          colWidth={colWidth}
-          side="center"
-          isOutermost={false}
-        />
-
-        {sides
-          .slice()
-          .reverse()
-          .map((s, idx) => (
+        {columns.map((c) => {
+          const n = Math.max(1, c.matches.length);
+          const slotHeight = Math.floor(innerHeight / n);
+          return (
             <BracketPosterColumn
-              key={`R-${s.round.round_index}`}
-              title={s.round.name}
-              matches={s.right}
+              key={c.key}
+              title={c.title}
+              matches={c.matches}
               colWidth={colWidth}
-              side="right"
-              isOutermost={idx === sides.length - 1}
+              slotHeight={slotHeight}
+              columnHeight={bracketHeight}
+              side={c.side}
+              isOutermost={c.isOutermost}
             />
-          ))}
+          );
+        })}
       </div>
 
       {include_third_place && thirdPlace.length > 0 && (
@@ -1001,8 +1061,8 @@ function BracketPoster({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            marginTop: 12,
-            paddingTop: 12,
+            marginTop: 16,
+            paddingTop: 16,
             borderTop: `1px dashed ${C.cardBorder}`,
           }}
         >
@@ -1013,12 +1073,12 @@ function BracketPoster({
               color: C.textDim,
               textTransform: "uppercase",
               letterSpacing: 4,
-              marginBottom: 8,
+              marginBottom: 10,
             }}
           >
             Utakmica za 3. mesto
           </div>
-          <div style={{ display: "flex", width: colWidth * 2 }}>
+          <div style={{ display: "flex", width: Math.min(colWidth * 3 + colGap * 2, width - 200) }}>
             <BracketPosterMatch match={thirdPlace[0]} />
           </div>
         </div>
@@ -1031,17 +1091,22 @@ function BracketPosterColumn({
   title,
   matches,
   colWidth,
+  slotHeight,
+  columnHeight,
   side,
   isOutermost,
 }: {
   title: string;
   matches: BracketMatchEntry[];
   colWidth: number;
+  slotHeight: number;
+  columnHeight: number;
   side: "left" | "right" | "center";
   isOutermost: boolean;
 }) {
   const outgoingRight = side === "left";
   const isCenter = side === "center";
+  const outgoingSide = outgoingRight ? "right" : "left";
 
   return (
     <div
@@ -1049,6 +1114,7 @@ function BracketPosterColumn({
         display: "flex",
         flexDirection: "column",
         width: colWidth,
+        height: columnHeight,
       }}
     >
       <div
@@ -1061,6 +1127,7 @@ function BracketPosterColumn({
           textTransform: "uppercase",
           justifyContent: "center",
           marginBottom: 10,
+          height: 26,
         }}
       >
         {title}
@@ -1076,9 +1143,9 @@ function BracketPosterColumn({
         {matches.map((m, i) => {
           const isPairTop = i % 2 === 0;
           const hasPairBelow = i + 1 < matches.length;
-          const showVerticalTop = !isCenter && isPairTop && hasPairBelow;
-          const showVerticalBottom = !isCenter && !isPairTop;
-          const outgoingSide = outgoingRight ? "right" : "left";
+          // One vertical connector per pair, drawn from the TOP match's
+          // center down to its partner's center. Skip on center column.
+          const showVertical = !isCenter && isPairTop && hasPairBelow;
           return (
             <div
               key={m.id}
@@ -1088,6 +1155,7 @@ function BracketPosterColumn({
                 flexDirection: "column",
               }}
             >
+              {/* Incoming horizontal stub (from previous round on the outer side) */}
               {!isOutermost && !isCenter && (
                 <div
                   style={{
@@ -1100,6 +1168,7 @@ function BracketPosterColumn({
                   }}
                 />
               )}
+              {/* Outgoing horizontal stub (toward the next inner round / center) */}
               {!isCenter && (
                 <div
                   style={{
@@ -1112,32 +1181,23 @@ function BracketPosterColumn({
                   }}
                 />
               )}
+              {/* Center column stubs on both sides */}
               {isCenter && (
                 <>
                   <div style={{ position: "absolute", top: "50%", left: -7, width: 7, height: 1, background: C.cardBorder }} />
                   <div style={{ position: "absolute", top: "50%", right: -7, width: 7, height: 1, background: C.cardBorder }} />
                 </>
               )}
-              {showVerticalTop && (
+              {/* Vertical connector — height equals slot distance so the line
+                  reaches exactly to the next match's center. */}
+              {showVertical && (
                 <div
                   style={{
                     position: "absolute",
                     top: "50%",
                     [outgoingSide]: -7,
                     width: 1,
-                    height: "100%",
-                    background: C.cardBorder,
-                  }}
-                />
-              )}
-              {showVerticalBottom && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "50%",
-                    [outgoingSide]: -7,
-                    width: 1,
-                    height: "100%",
+                    height: slotHeight,
                     background: C.cardBorder,
                   }}
                 />

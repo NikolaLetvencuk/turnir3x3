@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Share2 } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import type { GroupStandings, TopScorerRow } from "@/lib/standings";
@@ -128,6 +128,24 @@ export function ExportClient({
     [matches, knockoutRoundIndex],
   );
   const hasBracket = bracketMatches.length > 0;
+
+  // Detect R16 round (first round with > 4 matches — i.e. 16-team start).
+  // We use round_index to be order-independent of round naming.
+  const firstRoundId = knockoutRounds[0]?.id ?? null;
+  const firstRoundMatches = useMemo(
+    () => (firstRoundId ? bracketMatches.filter((m) => m.round_id === firstRoundId && m.bracket_position !== "TP") : []),
+    [bracketMatches, firstRoundId],
+  );
+  const has16Teams = firstRoundMatches.length === 8; // 8 R16 matches = 16 teams
+  const allR16Finished = has16Teams && firstRoundMatches.every((m) => m.status === "finished");
+
+  // "Include R16" toggle:
+  //  - When R16 hasn't started or is in progress, must include it (no choice).
+  //  - When all R16 finished, default to false (abbreviated bracket from QF).
+  const [includeR16, setIncludeR16] = useState<boolean>(true);
+  useEffect(() => {
+    setIncludeR16(!allR16Finished);
+  }, [allR16Finished]);
 
   const round = rounds.find((r) => r.id === selectedRoundId) ?? null;
 
@@ -347,19 +365,28 @@ export function ExportClient({
           if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
         }
       } else if (kind === "bracket") {
-        const payload = {
+        // Filter out R16 round when admin chose abbreviated mode and we have
+        // 16 teams.  Re-index remaining rounds so the poster sees round 0 = QF.
+        const skipFirstRound = has16Teams && !includeR16;
+        const sourceRounds = skipFirstRound ? knockoutRounds.slice(1) : knockoutRounds;
+        const allowedRoundIds = new Set(sourceRounds.map((r) => r.id));
+        const sourceMatches = bracketMatches.filter((m) => allowedRoundIds.has(m.round_id));
+        const reindex = new Map<string, number>();
+        sourceRounds.forEach((r, i) => reindex.set(r.id, i));
+
+        const buildPayload = (l: "full" | "left" | "right") => ({
           kind,
           format,
           bracket: {
-            rounds: knockoutRounds.map((r) => ({
+            rounds: sourceRounds.map((r) => ({
               name: r.name,
-              round_index: knockoutRoundIndex.get(r.id) ?? 0,
+              round_index: reindex.get(r.id) ?? 0,
             })),
-            matches: bracketMatches.map((m) => ({
+            matches: sourceMatches.map((m) => ({
               id: m.id,
               bracket_position: m.bracket_position!,
-              round_name: knockoutRounds.find((r) => r.id === m.round_id)?.name ?? "",
-              round_index: knockoutRoundIndex.get(m.round_id) ?? 0,
+              round_name: sourceRounds.find((r) => r.id === m.round_id)?.name ?? "",
+              round_index: reindex.get(m.round_id) ?? 0,
               home_team: m.home_team,
               away_team: m.away_team,
               home_placeholder: m.home_placeholder ?? null,
@@ -370,9 +397,30 @@ export function ExportClient({
               winner_team_id: m.knockout_winner_id ?? null,
             })),
             include_third_place: includeThirdPlaceBracket,
+            layout: l,
           },
-        };
-        await fetchAndDownloadPng(payload, `turnir-kula-bracket-${format}.png`);
+        });
+
+        // Split into 2 images when the bracket we're rendering has 8 first-round
+        // matches (i.e. 16 teams from R16). Otherwise single mirror image.
+        const firstRoundCount =
+          sourceRounds.length > 0
+            ? sourceMatches.filter((m) => m.round_id === sourceRounds[0].id && m.bracket_position !== "TP").length
+            : 0;
+        const shouldSplit = firstRoundCount >= 8;
+
+        if (shouldSplit) {
+          for (const l of ["left", "right"] as const) {
+            const ok = await fetchAndDownloadPng(
+              buildPayload(l),
+              `turnir-kula-bracket-${format}-${l === "left" ? "leva-strana" : "desna-strana"}.png`,
+            );
+            if (!ok) break;
+            await new Promise((r) => setTimeout(r, 700));
+          }
+        } else {
+          await fetchAndDownloadPng(buildPayload("full"), `turnir-kula-bracket-${format}.png`);
+        }
       } else {
         const payload = {
           kind,
@@ -604,21 +652,44 @@ export function ExportClient({
         {/* === Eliminacije === */}
         <ExportCard
           title="Eliminacije"
-          subtitle={hasBracket ? `${bracketMatches.length} meča u kosturu` : "nema kostura"}
+          subtitle={
+            hasBracket
+              ? has16Teams && includeR16
+                ? "16 timova · 2 slike"
+                : "1 slika"
+              : "nema kostura"
+          }
           disabled={!hasBracket}
           downloading={downloading}
           kind="bracket"
           onDownload={downloadPoster}
         >
           {hasBracket && (
-            <label className="flex items-center gap-2 text-sm cursor-pointer text-zinc-300">
-              <input
-                type="checkbox"
-                checked={includeThirdPlaceBracket}
-                onChange={(e) => setIncludeThirdPlaceBracket(e.target.checked)}
-              />
-              Uključi meč za 3. mesto
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={includeThirdPlaceBracket}
+                  onChange={(e) => setIncludeThirdPlaceBracket(e.target.checked)}
+                />
+                Uključi meč za 3. mesto
+              </label>
+              {has16Teams && allR16Finished && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={includeR16}
+                    onChange={(e) => setIncludeR16(e.target.checked)}
+                  />
+                  Uključi osminu finala (sa rezultatima)
+                </label>
+              )}
+              {has16Teams && includeR16 && (
+                <p className="text-[11px] text-zinc-500">
+                  16 timova → automatski 2 slike (leva i desna strana, finale i 3. mesto u sredini).
+                </p>
+              )}
+            </div>
           )}
         </ExportCard>
 
