@@ -7,19 +7,21 @@ export const dynamic = "force-dynamic";
 export default async function AdminUsersPage() {
   const admin = createAdminClient();
 
-  const [{ data: profiles }, { data: fantasyTeams }, { data: roundPoints }, { data: players }] =
+  const [{ data: profiles }, { data: fantasyTeams }, { data: dayPoints }, { data: players }] =
     await Promise.all([
       admin.from("profiles").select("id, email, role, created_at").order("created_at", { ascending: false }),
       admin.from("fantasy_teams").select("user_id, name, player1_id, player2_id, player3_id, updated_at"),
-      admin.from("fantasy_round_points").select("user_id, round_id, total_points"),
+      (admin as any).from("fantasy_day_points").select("user_id, day, total_points"),
       admin.from("players").select("id, name"),
     ]);
 
   const playersById = new Map<string, string>(((players ?? []) as any[]).map((p) => [p.id, p.name]));
   const teamByUser = new Map<string, any>(((fantasyTeams ?? []) as any[]).map((t) => [t.user_id, t]));
 
+  // Sum points per user across every day they have an entry for. "rounds" in
+  // the row name is kept for the existing UI but now represents days played.
   const pointsByUser = new Map<string, { total: number; rounds: number }>();
-  for (const row of (roundPoints ?? []) as any[]) {
+  for (const row of (dayPoints ?? []) as any[]) {
     const cur = pointsByUser.get(row.user_id) ?? { total: 0, rounds: 0 };
     cur.total += row.total_points ?? 0;
     cur.rounds += 1;

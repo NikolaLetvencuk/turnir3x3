@@ -4,24 +4,15 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { BASE_PRICE } from "@/lib/fantasy-shared";
-import { getUserBudget } from "@/lib/fantasy";
+import { belgradeLocalToUTCISO } from "@/lib/utils";
 
 export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
 
-const saveSchema = z.object({
-  name: z.string().max(60).optional().nullable(),
-  player1_id: z.string().uuid(),
-  player2_id: z.string().uuid(),
-  player3_id: z.string().uuid(),
-});
-
-const initSchema = z.object({
-  name: z.string().min(2).max(60),
-});
+const initSchema = z.object({ name: z.string().min(2).max(60) });
 
 /**
- * Set the team name once — only allowed if it hasn't been set yet. Idempotent.
+ * Set the user's fantasy team name. One-shot — once set, stays put.
+ * (Used as the display label for leaderboards.)
  */
 export async function setTeamName(formData: FormData): Promise<ActionResult> {
   const supabase = createClient();
@@ -51,168 +42,133 @@ export async function setTeamName(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
-// All money values normalised to 1-decimal precision (matches stored player price
-// granularity); avoids FP junk like 29.700000000003 sneaking past the budget check.
-function round1(x: number): number {
-  return Math.round(x * 10) / 10;
+function shiftDayUTC(yyyymmdd: string, days: number): string {
+  const [y, m, d] = yyyymmdd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
 }
 
-// Validate the 3 picks against the user's dynamic budget (team-value-based).
-async function computeTeamCost(admin: ReturnType<typeof createAdminClient>, ids: string[]): Promise<number> {
-  if (ids.length === 0) return 0;
-  const { data: prices } = await admin
-    .from("player_prices")
-    .select("player_id, price, round_id, round:rounds(display_order)")
-    .in("player_id", ids);
-  const latestPrice = new Map<string, { price: number; order: number }>();
-  for (const p of ((prices ?? []) as any[])) {
-    const order = p.round?.display_order ?? 0;
-    const cur = latestPrice.get(p.player_id);
-    if (!cur || cur.order < order) latestPrice.set(p.player_id, { price: round1(Number(p.price)), order });
-  }
-  return round1(ids.reduce((acc, id) => acc + (latestPrice.get(id)?.price ?? BASE_PRICE), 0));
+function belgradeDayRange(day: string): { startUTC: string; endUTC: string } | null {
+  const startUTC = belgradeLocalToUTCISO(`${day}T00:00`);
+  if (!startUTC) return null;
+  const nextKey = shiftDayUTC(day, 1);
+  const endUTC = belgradeLocalToUTCISO(`${nextKey}T00:00`);
+  if (!endUTC) return null;
+  return { startUTC, endUTC };
 }
 
-async function validateBudget(admin: ReturnType<typeof createAdminClient>, user_id: string, ids: [string, string, string]): Promise<{ ok: true; total: number; budget: number; bank: number } | { ok: false; error: string }> {
-  const total = await computeTeamCost(admin, ids);
-  const { budget, bank } = await getUserBudget(user_id);
-  // Strict: at 1-decimal precision, no tolerance. Sum of three 1-decimal prices is
-  // exactly 1-decimal so any > budget is a real overdraft.
-  if (total > budget) {
-    return { ok: false, error: `Prekoračen budžet (${total.toFixed(1)} / ${budget.toFixed(1)})` };
-  }
-  return { ok: true, total, budget, bank };
-}
+const dayPicksSchema = z.object({
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  player1_id: z.string().uuid(),
+  player2_id: z.string().uuid(),
+  player3_id: z.string().uuid(),
+});
 
 /**
- * Save the user's working draft (fantasy_teams row). Name is never updated here —
- * it's set once via setTeamName when the user first creates their team.
+ * Save the user's fantasy picks for a given Belgrade-local day.
+ *
+ * - All 3 players must be distinct.
+ * - On a group/R16 day: the three players must come from 3 different teams.
+ * - On a QF+ day (any match's bracket_position is QF/SF/F/TP): at most 2 of
+ *   the 3 may share a team — i.e. distinct team count >= 2.
+ * - Picks are frozen the moment the day's first match leaves the
+ *   "scheduled" status. After that, save attempts are rejected with a
+ *   user-visible error.
  */
-export async function saveDraft(formData: FormData): Promise<ActionResult> {
+export async function savePicksForDay(input: {
+  day: string;
+  player1_id: string;
+  player2_id: string;
+  player3_id: string;
+}): Promise<ActionResult> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Nije prijavljen" };
 
-  const parsed = saveSchema.safeParse({
-    name: (formData.get("name") as string) || null,
-    player1_id: formData.get("player1_id"),
-    player2_id: formData.get("player2_id"),
-    player3_id: formData.get("player3_id"),
-  });
-  if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
-  const { player1_id, player2_id, player3_id } = parsed.data;
+  const parsed = dayPicksSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Neispravan format izbora" };
+  const { day, player1_id, player2_id, player3_id } = parsed.data;
+
   if (player1_id === player2_id || player1_id === player3_id || player2_id === player3_id) {
     return { ok: false, error: "Igrači moraju biti različiti" };
   }
 
   const admin = createAdminClient();
-  const budget = await validateBudget(admin, user.id, [player1_id, player2_id, player3_id]);
-  if (!budget.ok) return budget;
 
-  const { data: existing } = await admin.from("fantasy_teams").select("user_id, name").eq("user_id", user.id).maybeSingle();
-  const e = existing as any;
-  if (e) {
-    if (!e.name || !e.name.trim()) {
-      return { ok: false, error: "Prvo postavi ime tima" };
+  const { data: players, error: pErr } = await admin
+    .from("players")
+    .select("id, team_id")
+    .in("id", [player1_id, player2_id, player3_id]);
+  if (pErr) return { ok: false, error: pErr.message };
+  if (!players || players.length !== 3) return { ok: false, error: "Igrač nije pronađen" };
+
+  const range = belgradeDayRange(day);
+  if (!range) return { ok: false, error: "Neispravan datum" };
+
+  const { data: matchRows } = await admin
+    .from("matches")
+    .select("id, status, bracket_position")
+    .gte("kickoff_at", range.startUTC)
+    .lt("kickoff_at", range.endUTC);
+  const matches = (matchRows ?? []) as Array<{ id: string; status: string; bracket_position: string | null }>;
+
+  const started = matches.some((m) => m.status && m.status !== "scheduled");
+  if (started) {
+    return { ok: false, error: "Tim za ovaj dan je zaključan — prvi meč je već počeo." };
+  }
+
+  // QF+ day = any match in QF / SF / F / TP. R16 stays under the strict rule.
+  const isKnockoutPlus = matches.some(
+    (m) => m.bracket_position && !m.bracket_position.startsWith("R16"),
+  );
+
+  const teamIds = (players as Array<{ team_id: string | null }>)
+    .map((p) => p.team_id)
+    .filter((id): id is string => !!id);
+  const distinctTeams = new Set(teamIds).size;
+  if (isKnockoutPlus) {
+    if (distinctTeams < 2) {
+      return { ok: false, error: "Maksimalno 2 igrača iz istog tima (eliminacioni dan)." };
     }
-    const { error } = await admin
+  } else {
+    if (distinctTeams < 3) {
+      return { ok: false, error: "U grupnoj fazi sva 3 igrača moraju biti iz različitih timova." };
+    }
+  }
+
+  const { error: upErr } = await (admin as any)
+    .from("fantasy_day_picks")
+    .upsert(
+      { user_id: user.id, day, player1_id, player2_id, player3_id, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,day" },
+    );
+  if (upErr) return { ok: false, error: upErr.message };
+
+  // Keep the legacy fantasy_teams row in sync as the user's "most recent
+  // pick" so other surfaces (leaderboards, profile, etc.) still find it.
+  const { data: existingTeam } = await admin
+    .from("fantasy_teams")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (existingTeam) {
+    await admin
       .from("fantasy_teams")
       .update({ player1_id, player2_id, player3_id, updated_at: new Date().toISOString() })
       .eq("user_id", user.id);
-    if (error) return { ok: false, error: error.message };
   } else {
-    return { ok: false, error: "Prvo postavi ime tima" };
-  }
-
-  // Auto-lock the saved draft for the upcoming round so the team carries forward
-  // automatically. The lock_round() SQL fallback already propagates the previous
-  // snapshot to subsequent rounds — combining the two means the user only needs
-  // to edit the draft to have their team apply to every future round.
-  const { data: nextRound } = await admin
-    .from("rounds")
-    .select("id")
-    .eq("status", "upcoming")
-    .order("display_order")
-    .limit(1)
-    .maybeSingle();
-  const nr = nextRound as any;
-  if (nr) {
-    const leftover = round1(Math.max(0, budget.budget - budget.total));
     await admin
-      .from("fantasy_team_snapshots")
-      .upsert(
-        {
-          user_id: user.id,
-          round_id: nr.id,
-          player1_id, player2_id, player3_id,
-          transfers_used: 0,
-          transfer_penalty: 0,
-          bank: leftover,
-        },
-        { onConflict: "user_id,round_id" },
-      );
+      .from("fantasy_teams")
+      .insert({ user_id: user.id, player1_id, player2_id, player3_id });
   }
+
+  // Recompute points for the day (idempotent; covers re-saves after matches
+  // finish too, though normal updates flow through the SQL trigger).
+  await admin.rpc("recalculate_day_points" as any, { p_day: day });
 
   revalidatePath("/fantasy/team");
   revalidatePath("/fantasy");
+  revalidatePath("/admin/users");
   return { ok: true };
-}
-
-/**
- * Commit the current draft as the locked team for the upcoming round.
- * Can be re-called multiple times — overwrites the snapshot for the upcoming round.
- */
-export async function lockTeamForUpcomingRound(): Promise<ActionResult<{ round_name: string }>> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Nije prijavljen" };
-
-  const admin = createAdminClient();
-  const { data: nextRound } = await admin
-    .from("rounds")
-    .select("id, name, status, display_order")
-    .eq("status", "upcoming")
-    .order("display_order")
-    .limit(1)
-    .maybeSingle();
-  if (!nextRound) return { ok: false, error: "Nema predstojećeg kola za lock" };
-  const nr = nextRound as any;
-
-  const { data: draft } = await admin
-    .from("fantasy_teams")
-    .select("player1_id, player2_id, player3_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!draft) return { ok: false, error: "Prvo sastavi tim (3 igrača)" };
-  const d = draft as any;
-  if (!d.player1_id || !d.player2_id || !d.player3_id) {
-    return { ok: false, error: "Izaberi 3 igrača pre lock-a" };
-  }
-
-  // Budget check + capture bank (leftover after buying team)
-  const budget = await validateBudget(admin, user.id, [d.player1_id, d.player2_id, d.player3_id]);
-  if (!budget.ok) return budget;
-  const leftover = round1(Math.max(0, budget.budget - budget.total));
-
-  const { error } = await admin
-    .from("fantasy_team_snapshots")
-    .upsert(
-      {
-        user_id: user.id,
-        round_id: nr.id,
-        player1_id: d.player1_id,
-        player2_id: d.player2_id,
-        player3_id: d.player3_id,
-        transfers_used: 0,
-        transfer_penalty: 0,
-        bank: leftover,
-      },
-      { onConflict: "user_id,round_id" },
-    );
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/fantasy/team");
-  revalidatePath("/fantasy");
-  revalidatePath("/profile");
-  return { ok: true, data: { round_name: nr.name } };
 }
