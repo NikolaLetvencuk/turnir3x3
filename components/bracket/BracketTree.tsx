@@ -135,8 +135,98 @@ function MatchCard({
   );
 }
 
-// Color used for the connector lines between matches.
+// Gold-tinted connector color matching the brand accent.
 const LINE = "rgba(212,175,55,0.45)";
+
+type Side = "left" | "right" | "center";
+
+function BracketColumn({
+  title,
+  matches,
+  teamMap,
+  minHeight,
+  side,
+  isOutermost,
+  onSlotClick,
+}: {
+  title: string;
+  matches: BracketMatchView[];
+  teamMap: Map<string, TeamLite>;
+  minHeight: number;
+  side: Side;
+  /** True for the column that holds the very first round on this side (no
+   *  incoming connectors needed). */
+  isOutermost: boolean;
+  onSlotClick?: (match_id: string, slot: "home" | "away", currentTeamId: string | null) => void;
+}) {
+  // Left side: outgoing line points right (matches travel toward center).
+  // Right side: outgoing line points left.
+  // Center column (the final): receives lines on both sides.
+  const outgoingDir: "right" | "left" | "both" =
+    side === "left" ? "right" : side === "right" ? "left" : "both";
+  const incomingDir: "right" | "left" | "none" =
+    side === "left" ? "left" : side === "right" ? "right" : "none";
+
+  return (
+    <div className="w-56 shrink-0 flex flex-col">
+      <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{title}</h3>
+      <div className="flex flex-col justify-around" style={{ minHeight: `${minHeight}px` }}>
+        {matches.map((m, i) => {
+          const isPairTop = i % 2 === 0;
+          const hasPairBelow = i + 1 < matches.length;
+          // Vertical connector goes on the side opposite to the previous round
+          // (matches travel toward center): right side for left columns, left
+          // side for right columns. Center column doesn't pair-connect.
+          const showVerticalTop = side !== "center" && outgoingDir !== "both" && isPairTop && hasPairBelow;
+          const showVerticalBottom = side !== "center" && outgoingDir !== "both" && !isPairTop;
+          return (
+            <div key={m.id} className="relative">
+              {/* Incoming horizontal stub (from previous outer round) */}
+              {!isOutermost && incomingDir !== "none" && (
+                <span
+                  aria-hidden
+                  className={`absolute top-1/2 w-4 h-px ${incomingDir === "left" ? "-left-4" : "-right-4"}`}
+                  style={{ background: LINE }}
+                />
+              )}
+              {/* Outgoing horizontal stub (toward next inner round / center) */}
+              {outgoingDir !== "both" && (
+                <span
+                  aria-hidden
+                  className={`absolute top-1/2 w-4 h-px ${outgoingDir === "right" ? "-right-4" : "-left-4"}`}
+                  style={{ background: LINE }}
+                />
+              )}
+              {/* Center column has stubs on both sides (the final) */}
+              {outgoingDir === "both" && (
+                <>
+                  <span aria-hidden className="absolute top-1/2 -left-4 w-4 h-px" style={{ background: LINE }} />
+                  <span aria-hidden className="absolute top-1/2 -right-4 w-4 h-px" style={{ background: LINE }} />
+                </>
+              )}
+              {/* Vertical connector joining a pair to their midpoint */}
+              {showVerticalTop && (
+                <span
+                  aria-hidden
+                  className={`absolute top-1/2 w-px ${outgoingDir === "right" ? "-right-4" : "-left-4"}`}
+                  style={{ background: LINE, height: "calc(100% + 1rem)" }}
+                />
+              )}
+              {showVerticalBottom && (
+                <span
+                  aria-hidden
+                  className={`absolute bottom-1/2 w-px ${outgoingDir === "right" ? "-right-4" : "-left-4"}`}
+                  style={{ background: LINE, height: "calc(100% + 1rem)" }}
+                />
+              )}
+              <MatchCard m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function BracketTree({
   rounds,
@@ -151,9 +241,8 @@ export function BracketTree({
 }) {
   const teamMap = new Map(teams.map((t) => [t.id, t]));
 
-  // Split matches by round, and pull out the 3rd-place match — it shares the
-  // final's round but isn't part of the elimination flow, so we render it on
-  // the side without connector lines.
+  // Group matches by round, peeling off the 3rd-place playoff which renders
+  // under the final column without connectors.
   const byRound = new Map<string, BracketMatchView[]>();
   const thirdPlace: BracketMatchView[] = [];
   for (const m of matches) {
@@ -166,86 +255,123 @@ export function BracketTree({
     byRound.set(m.round_id, arr);
   }
 
-  // Vertical layout: matches in each column use justify-around so their
-  // midpoints line up across rounds. Stretching every column to the same
-  // height keeps the bracket math automatic regardless of how many matches
-  // the first round has.
-  const firstRoundCount = (byRound.get(rounds[0]?.id) ?? []).length;
-  const minColHeight = Math.max(280, firstRoundCount * 96);
+  // Sort each round's matches by bracket_position so R16_1..R16_8 land in
+  // order. This is the same order pairBracketSlots produces.
+  for (const list of byRound.values()) {
+    list.sort((a, b) => {
+      const ap = a.bracket_position ?? "";
+      const bp = b.bracket_position ?? "";
+      // Compare numeric suffix when prefixes match (R16_1 < R16_10)
+      const aMatch = ap.match(/^(.+?)_(\d+)$/);
+      const bMatch = bp.match(/^(.+?)_(\d+)$/);
+      if (aMatch && bMatch && aMatch[1] === bMatch[1]) {
+        return parseInt(aMatch[2], 10) - parseInt(bMatch[2], 10);
+      }
+      return ap.localeCompare(bp);
+    });
+  }
+
+  const finalRound = rounds[rounds.length - 1];
+  const nonFinalRounds = rounds.slice(0, -1);
+  const finalMatches = (byRound.get(finalRound?.id ?? "") ?? []);
+
+  // Split each non-final round into left/right halves.
+  const sides = nonFinalRounds.map((r) => {
+    const list = byRound.get(r.id) ?? [];
+    const half = Math.ceil(list.length / 2);
+    return { round: r, left: list.slice(0, half), right: list.slice(half) };
+  });
+
+  // Column height is driven by the outermost round (most matches).
+  const firstRoundCount = sides[0]?.left.length ?? 0;
+  const minColHeight = Math.max(280, firstRoundCount * 2 * 96);
+
+  // If only a final exists, render just the center column.
+  if (sides.length === 0) {
+    return (
+      <div className="overflow-x-auto py-2">
+        <div className="flex justify-center min-w-fit">
+          <div className="w-56 shrink-0 flex flex-col">
+            <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{finalRound.name}</h3>
+            <div className="flex flex-col justify-around" style={{ minHeight: "240px" }}>
+              {finalMatches.map((m) => (
+                <MatchCard key={m.id} m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
+              ))}
+            </div>
+            {thirdPlace.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-dashed border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2 text-center">
+                  Utakmica za 3. mesto
+                </div>
+                {thirdPlace.map((m) => (
+                  <MatchCard key={m.id} m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto py-2">
-      <div className="flex gap-8 min-w-fit items-stretch">
-        {rounds.map((r, roundIdx) => {
-          const isFirst = roundIdx === 0;
-          const isLast = roundIdx === rounds.length - 1;
-          const list = byRound.get(r.id) ?? [];
-          return (
-            <div key={r.id} className="w-60 shrink-0 flex flex-col">
-              <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{r.name}</h3>
-              <div
-                className="flex flex-col justify-around"
-                style={{ minHeight: `${minColHeight}px` }}
-              >
-                {list.map((m, i) => {
-                  // For even pairs in non-first rounds, the connector going out
-                  // to the right needs to drop down to meet its sibling; for
-                  // odd ones it goes up. We draw that with absolute lines.
-                  const isPairTop = i % 2 === 0;
-                  const isPairBottom = i % 2 === 1;
-                  return (
-                    <div key={m.id} className="relative">
-                      {/* Incoming line from previous round (left stub) */}
-                      {!isFirst && (
-                        <span
-                          aria-hidden
-                          className="absolute -left-4 top-1/2 w-4 h-px"
-                          style={{ background: LINE }}
-                        />
-                      )}
-                      {/* Outgoing line to next round (right horizontal stub) */}
-                      {!isLast && (
-                        <span
-                          aria-hidden
-                          className="absolute -right-4 top-1/2 w-4 h-px"
-                          style={{ background: LINE }}
-                        />
-                      )}
-                      {/* Vertical bracket connector joining each pair to the
-                           midpoint between them on the right side */}
-                      {!isLast && isPairTop && list[i + 1] && (
-                        <span
-                          aria-hidden
-                          className="absolute -right-4 top-1/2 w-px"
-                          style={{ background: LINE, height: "calc(100% + 1rem)" }}
-                        />
-                      )}
-                      {!isLast && isPairBottom && (
-                        <span
-                          aria-hidden
-                          className="absolute -right-4 bottom-1/2 w-px"
-                          style={{ background: LINE, height: "calc(100% + 1rem)" }}
-                        />
-                      )}
-                      <MatchCard m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
-                    </div>
-                  );
-                })}
+      <div className="flex gap-8 min-w-fit items-stretch justify-center">
+        {/* Left half: outermost round on the left, innermost just before center */}
+        {sides.map((s, idx) => (
+          <BracketColumn
+            key={`L-${s.round.id}`}
+            title={s.round.name}
+            matches={s.left}
+            teamMap={teamMap}
+            minHeight={minColHeight}
+            side="left"
+            isOutermost={idx === 0}
+            onSlotClick={onSlotClick}
+          />
+        ))}
+
+        {/* Center: final + 3rd place playoff */}
+        <div className="w-56 shrink-0 flex flex-col">
+          <h3 className="font-medium text-sm text-zinc-300 mb-2 text-center">{finalRound.name}</h3>
+          <div className="flex flex-col justify-around" style={{ minHeight: `${minColHeight}px` }}>
+            {finalMatches.map((m) => (
+              <div key={m.id} className="relative">
+                <span aria-hidden className="absolute top-1/2 -left-4 w-4 h-px" style={{ background: LINE }} />
+                <span aria-hidden className="absolute top-1/2 -right-4 w-4 h-px" style={{ background: LINE }} />
+                <MatchCard m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
               </div>
-              {/* 3rd-place match rendered under the final column */}
-              {isLast && thirdPlace.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-dashed border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2 text-center">
-                    Utakmica za 3. mesto
-                  </div>
-                  {thirdPlace.map((m) => (
-                    <MatchCard key={m.id} m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
-                  ))}
-                </div>
-              )}
+            ))}
+          </div>
+          {thirdPlace.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-dashed border-zinc-800">
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2 text-center">
+                Utakmica za 3. mesto
+              </div>
+              {thirdPlace.map((m) => (
+                <MatchCard key={m.id} m={m} teamMap={teamMap} onSlotClick={onSlotClick} />
+              ))}
             </div>
-          );
-        })}
+          )}
+        </div>
+
+        {/* Right half: mirror of left — innermost round next to center,
+            outermost at far right. */}
+        {sides
+          .slice()
+          .reverse()
+          .map((s, idx) => (
+            <BracketColumn
+              key={`R-${s.round.id}`}
+              title={s.round.name}
+              matches={s.right}
+              teamMap={teamMap}
+              minHeight={minColHeight}
+              side="right"
+              isOutermost={idx === sides.length - 1}
+              onSlotClick={onSlotClick}
+            />
+          ))}
       </div>
     </div>
   );

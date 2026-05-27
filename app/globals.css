@@ -34,6 +34,19 @@ body {
   overflow-x: hidden;
 }
 
+/* Hide visible scrollbars everywhere while preserving scroll behaviour.
+   Applies to body and any nested scroll container (bracket tree, draw
+   animation team list, fantasy picker, modals, etc.). */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Old IE / Edge */
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 @supports (-webkit-touch-callout: none) {
   input[type="datetime-local"],
   input[type="date"],

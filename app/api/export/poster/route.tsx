@@ -751,22 +751,44 @@ function DrawPoster({
       </PosterFrame>
     );
   }
-  // Single column when 1-3 groups, 2 columns when 4+
+  // Split groups into two columns when 4+; otherwise stack in a single column.
+  // Using explicit left/right columns avoids Satori's spotty support for
+  // flex-wrap + calc() widths which produced corrupt PNGs.
   const useTwoColumns = draw.length >= 4;
   const compact = draw.length >= 5;
+  const gap = compact ? 14 : 22;
+
+  if (!useTwoColumns) {
+    return (
+      <PosterFrame heading="ŽREB" subheading="Grupna faza" width={width} height={height} logoUrl={logoUrl}>
+        <div style={{ display: "flex", flexDirection: "column", gap, flexGrow: 1 }}>
+          {draw.map((g) => (
+            <DrawGroupCard key={g.group_id} group={g} compact={compact} />
+          ))}
+        </div>
+      </PosterFrame>
+    );
+  }
+
+  // 2-column layout: alternate groups into left/right buckets so the columns
+  // stay balanced even when group sizes differ a bit.
+  const left: DrawGroupBlock[] = [];
+  const right: DrawGroupBlock[] = [];
+  draw.forEach((g, i) => (i % 2 === 0 ? left : right).push(g));
+
   return (
     <PosterFrame heading="ŽREB" subheading="Grupna faza" width={width} height={height} logoUrl={logoUrl}>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: compact ? 14 : 22,
-          flex: 1,
-        }}
-      >
-        {draw.map((g) => (
-          <DrawGroupCard key={g.group_id} group={g} compact={compact} two={useTwoColumns} />
-        ))}
+      <div style={{ display: "flex", gap, flexGrow: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap, flexGrow: 1, flexBasis: 0 }}>
+          {left.map((g) => (
+            <DrawGroupCard key={g.group_id} group={g} compact={compact} />
+          ))}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap, flexGrow: 1, flexBasis: 0 }}>
+          {right.map((g) => (
+            <DrawGroupCard key={g.group_id} group={g} compact={compact} />
+          ))}
+        </div>
       </div>
     </PosterFrame>
   );
@@ -775,11 +797,9 @@ function DrawPoster({
 function DrawGroupCard({
   group,
   compact,
-  two,
 }: {
   group: DrawGroupBlock;
   compact: boolean;
-  two: boolean;
 }) {
   const titleSize = compact ? 30 : 38;
   const rowFs = compact ? 24 : 30;
@@ -787,15 +807,11 @@ function DrawGroupCard({
   const rowH = compact ? 56 : 66;
   const padding = compact ? 22 : 28;
 
-  // Width: half-minus-gap when stacked side-by-side, full when single column
-  const widthStyle = two ? "calc(50% - 11px)" : "100%";
-
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        width: widthStyle,
         background: C.cardBg,
         border: `1px solid ${C.cardBorder}`,
         borderRadius: 20,
@@ -825,8 +841,7 @@ function DrawGroupCard({
                   marginLeft: 16,
                   fontSize: rowFs,
                   fontWeight: 700,
-                  flex: 1,
-                  minWidth: 0,
+                  flexGrow: 1,
                 }}
               >
                 {t.name}
