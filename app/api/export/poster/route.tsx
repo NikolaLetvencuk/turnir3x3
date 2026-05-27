@@ -1032,8 +1032,7 @@ function BracketPoster({
         style={{
           display: "flex",
           gap: colGap,
-          height: bracketHeight,
-          alignItems: "stretch",
+          alignItems: "flex-start",
           justifyContent: "center",
         }}
       >
@@ -1048,6 +1047,10 @@ function BracketPoster({
               : c.side === "center" && layout === "right"
               ? "away"
               : null;
+          // Attach the 3rd-place match to the center column so it renders
+          // directly underneath the F card at the same width.
+          const thirdPlaceForCol =
+            c.side === "center" && include_third_place && thirdPlace.length > 0 ? thirdPlace[0] : null;
           return (
             <BracketPosterColumn
               key={c.key}
@@ -1055,46 +1058,15 @@ function BracketPoster({
               matches={c.matches}
               colWidth={colWidth}
               slotHeight={slotHeight}
-              columnHeight={bracketHeight}
+              bracketHeight={bracketHeight}
               side={c.side}
               isOutermost={c.isOutermost}
               singleFinalSlot={singleFinalSlot}
+              thirdPlaceMatch={thirdPlaceForCol}
             />
           );
         })}
       </div>
-
-      {include_third_place && thirdPlace.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            marginTop: 16,
-            paddingTop: 16,
-            borderTop: `1px dashed ${C.cardBorder}`,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              fontSize: 18,
-              color: C.textDim,
-              textTransform: "uppercase",
-              letterSpacing: 4,
-              marginBottom: 10,
-            }}
-          >
-            Utakmica za 3. mesto
-          </div>
-          <div style={{ display: "flex", width: Math.min(colWidth * 3 + colGap * 2, width - 200) }}>
-            <BracketPosterMatch
-              match={thirdPlace[0]}
-              colWidth={Math.min(colWidth * 3 + colGap * 2, width - 200)}
-            />
-          </div>
-        </div>
-      )}
     </PosterFrame>
   );
 }
@@ -1104,20 +1076,23 @@ function BracketPosterColumn({
   matches,
   colWidth,
   slotHeight,
-  columnHeight,
+  bracketHeight,
   side,
   isOutermost,
   singleFinalSlot,
+  thirdPlaceMatch,
 }: {
   title: string;
   matches: BracketMatchEntry[];
   colWidth: number;
   slotHeight: number;
-  columnHeight: number;
+  bracketHeight: number;
   side: "left" | "right" | "center";
   isOutermost: boolean;
   /** Center column in split-mode renders only this side's finalist. */
   singleFinalSlot?: "home" | "away" | null;
+  /** Render the 3rd-place match directly below this column's matches grid. */
+  thirdPlaceMatch?: BracketMatchEntry | null;
 }) {
   const outgoingRight = side === "left";
   const isCenter = side === "center";
@@ -1129,7 +1104,6 @@ function BracketPosterColumn({
         display: "flex",
         flexDirection: "column",
         width: colWidth,
-        height: columnHeight,
       }}
     >
       <div
@@ -1152,7 +1126,7 @@ function BracketPosterColumn({
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-around",
-          flexGrow: 1,
+          height: bracketHeight,
         }}
       >
         {matches.map((m, i) => {
@@ -1226,6 +1200,32 @@ function BracketPosterColumn({
           );
         })}
       </div>
+      {thirdPlaceMatch && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            marginTop: 16,
+            paddingTop: 14,
+            borderTop: `1px dashed ${C.cardBorder}`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: 14,
+              color: C.textDim,
+              textTransform: "uppercase",
+              letterSpacing: 3,
+              justifyContent: "center",
+              marginBottom: 8,
+            }}
+          >
+            3. mesto
+          </div>
+          <BracketPosterMatch match={thirdPlaceMatch} colWidth={colWidth} />
+        </div>
+      )}
     </div>
   );
 }
