@@ -37,6 +37,44 @@ export type PlayerStats = {
   clean_sheets: number;
 };
 
+export type TeamMatchToday = {
+  opponent: {
+    id: string;
+    name: string;
+    short_name: string | null;
+    primary_color: string | null;
+    secondary_color: string | null;
+    logo_url: string | null;
+  };
+  kickoff_at: string | null;
+  status: string;
+  our_score: number | null;
+  their_score: number | null;
+  bracket_position: string | null;
+};
+
+export type PlayerMatchEntry = {
+  match_id: string;
+  kickoff_at: string | null;
+  opponent_name: string;
+  opponent_short: string | null;
+  opponent_primary: string | null;
+  opponent_secondary: string | null;
+  opponent_logo_url: string | null;
+  our_score: number | null;
+  their_score: number | null;
+  is_home: boolean;
+  goals: number;
+  assists: number;
+  yellow_cards: number;
+  red_cards: number;
+  own_goals: number;
+  won: boolean;
+  drew: boolean;
+  clean_sheet: boolean;
+  points: number;
+};
+
 function shiftDayUTC(yyyymmdd: string, days: number): string {
   const [y, m, d] = yyyymmdd.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -55,6 +93,19 @@ function formatSrDateShort(key: string): string {
   return `${d}. ${SR_MONTHS_SHORT[m - 1] ?? m}.`;
 }
 
+function kickoffShort(iso: string): string {
+  try {
+    const fmt = new Intl.DateTimeFormat("sr-Latn-RS", {
+      timeZone: "Europe/Belgrade",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return fmt.format(new Date(iso));
+  } catch {
+    return "";
+  }
+}
+
 export function DailyTeamEditor({
   day,
   today,
@@ -70,6 +121,8 @@ export function DailyTeamEditor({
   savedDays,
   matchCount,
   stats,
+  teamMatchToday,
+  matchHistory,
 }: {
   day: string;
   today: string;
@@ -85,6 +138,8 @@ export function DailyTeamEditor({
   savedDays: string[];
   matchCount: number;
   stats: Record<string, PlayerStats>;
+  teamMatchToday: Record<string, TeamMatchToday>;
+  matchHistory: Record<string, PlayerMatchEntry[]>;
 }) {
   const router = useRouter();
   const { push } = useToast();
@@ -362,6 +417,7 @@ export function DailyTeamEditor({
             const id = picks[idx];
             const player = id ? playerById.get(id) : null;
             const isPlaying = player?.team_id ? playingSet.has(player.team_id) : false;
+            const opponent = player?.team_id ? teamMatchToday[player.team_id]?.opponent ?? null : null;
             return (
               <JerseySlot
                 key={idx}
@@ -370,6 +426,8 @@ export function DailyTeamEditor({
                 onOpen={player ? () => setOpenPlayerId(player.id) : null}
                 isPlaying={isPlaying}
                 showPlayBadge={matchCount > 0}
+                opponent={opponent}
+                warnNoMatch={matchCount > 0 && !!player && !isPlaying}
               />
             );
           })}
@@ -422,14 +480,17 @@ export function DailyTeamEditor({
             {filteredPlayers.map((p) => {
               const picked = picks.includes(p.id);
               const isPlaying = p.team_id ? playingSet.has(p.team_id) : false;
+              const matchInfo = p.team_id ? teamMatchToday[p.team_id] ?? null : null;
+              const showNoMatch = matchCount > 0 && !isPlaying;
+              const rowBg = picked
+                ? "bg-emerald-500/10 border-emerald-500/40"
+                : showNoMatch
+                ? "bg-red-500/[0.07] border-red-500/30"
+                : "bg-zinc-900 border-zinc-800";
               return (
                 <div
                   key={p.id}
-                  className={`w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm border ${
-                    picked
-                      ? "bg-emerald-500/10 border-emerald-500/40"
-                      : "bg-zinc-900 border-zinc-800"
-                  }`}
+                  className={`w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm border ${rowBg}`}
                 >
                   <button
                     type="button"
@@ -458,15 +519,29 @@ export function DailyTeamEditor({
                         <span className="truncate">{p.team?.name ?? "Bez tima"}</span>
                       </div>
                     </div>
-                    {matchCount > 0 && (
-                      <span
-                        className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
-                          isPlaying ? "bg-emerald-500/15 text-emerald-300" : "bg-zinc-800 text-zinc-500"
-                        }`}
-                      >
-                        {isPlaying ? "Igra" : "Ne igra"}
-                      </span>
-                    )}
+                    {matchCount > 0 ? (
+                      isPlaying && matchInfo ? (
+                        <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-zinc-300 shrink-0">
+                          <span className="text-zinc-500">vs</span>
+                          <TeamCrest
+                            name={matchInfo.opponent.name}
+                            shortName={matchInfo.opponent.short_name}
+                            primaryColor={matchInfo.opponent.primary_color}
+                            secondaryColor={matchInfo.opponent.secondary_color}
+                            logoUrl={matchInfo.opponent.logo_url}
+                            size={14}
+                          />
+                          <span className="font-medium truncate max-w-[80px]">{matchInfo.opponent.short_name ?? matchInfo.opponent.name}</span>
+                          {matchInfo.kickoff_at && (
+                            <span className="text-zinc-500 tabular-nums">{kickoffShort(matchInfo.kickoff_at)}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30 shrink-0">
+                          Ne igra
+                        </span>
+                      )
+                    ) : null}
                     {picked && <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />}
                   </button>
                   <button
@@ -510,7 +585,8 @@ export function DailyTeamEditor({
         <PlayerDetailModal
           player={openPlayer}
           stats={stats[openPlayer.id] ?? null}
-          isPlayingToday={openPlayer.team_id ? playingSet.has(openPlayer.team_id) : false}
+          history={matchHistory[openPlayer.id] ?? []}
+          todayMatch={openPlayer.team_id ? teamMatchToday[openPlayer.team_id] ?? null : null}
           dayLabel={matchCount > 0 ? formatSrDate(day) : null}
           onClose={() => setOpenPlayerId(null)}
         />
@@ -525,12 +601,16 @@ function JerseySlot({
   onOpen,
   isPlaying,
   showPlayBadge,
+  opponent,
+  warnNoMatch,
 }: {
   player: PlayerForPicker | null;
   onRemove: (() => void) | null;
   onOpen: (() => void) | null;
   isPlaying: boolean;
   showPlayBadge: boolean;
+  opponent: { name: string; short_name: string | null } | null;
+  warnNoMatch: boolean;
 }) {
   if (!player) {
     return (
@@ -559,6 +639,16 @@ function JerseySlot({
             size={88}
           />
         </button>
+        {/* Red exclamation: warn that this player's team has no match on the
+            currently selected day. */}
+        {warnNoMatch && (
+          <div
+            className="absolute -top-1.5 -left-1.5 w-6 h-6 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-sm font-black shadow-md border border-red-300 z-10"
+            title="Tim nema meč ovog dana"
+          >
+            !
+          </div>
+        )}
         {onRemove && (
           <button
             type="button"
@@ -575,11 +665,13 @@ function JerseySlot({
       </div>
       {showPlayBadge && (
         <div
-          className={`mt-1 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold shadow-sm ${
-            isPlaying ? "bg-emerald-500/20 text-emerald-100 border border-emerald-400/50" : "bg-zinc-800 text-zinc-300"
+          className={`mt-1 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold shadow-sm whitespace-nowrap ${
+            isPlaying
+              ? "bg-emerald-500/20 text-emerald-100 border border-emerald-400/50"
+              : "bg-red-500/20 text-red-100 border border-red-400/50"
           }`}
         >
-          {isPlaying ? "Igra" : "Ne igra"}
+          {isPlaying && opponent ? `vs ${opponent.short_name ?? opponent.name.slice(0, 6)}` : "Ne igra"}
         </div>
       )}
     </div>
@@ -589,13 +681,15 @@ function JerseySlot({
 function PlayerDetailModal({
   player,
   stats,
-  isPlayingToday,
+  history,
+  todayMatch,
   dayLabel,
   onClose,
 }: {
   player: PlayerForPicker;
   stats: PlayerStats | null;
-  isPlayingToday: boolean;
+  history: PlayerMatchEntry[];
+  todayMatch: TeamMatchToday | null;
   dayLabel: string | null;
   onClose: () => void;
 }) {
@@ -610,6 +704,9 @@ function PlayerDetailModal({
     losses: 0,
     clean_sheets: 0,
   };
+  const totalPoints = history.reduce((acc, h) => acc + h.points, 0);
+  const finishedHistory = history.filter((h) => h.our_score != null && h.their_score != null);
+
   return (
     <div
       className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center p-2 sm:p-4"
@@ -619,16 +716,18 @@ function PlayerDetailModal({
         className="bg-zinc-900 rounded-xl max-w-md w-full p-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 mb-3">
-          <PlayerAvatar
-            name={player.name}
-            photoUrl={player.photo_url}
-            teamPrimary={player.team?.primary_color}
-            size={56}
-          />
+        {/* Header — bigger jersey + name + team */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="shrink-0">
+            <Jersey
+              primary={player.team?.primary_color || "#1f2937"}
+              shortName={player.team?.short_name}
+              size={64}
+            />
+          </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold truncate">{player.name}</div>
-            <div className="text-xs text-zinc-500 truncate flex items-center gap-1">
+            <div className="font-bold text-base truncate leading-tight">{player.name}</div>
+            <div className="text-xs text-zinc-400 truncate flex items-center gap-1 mt-0.5">
               {player.team && (
                 <TeamCrest
                   name={player.team.name}
@@ -636,41 +735,109 @@ function PlayerDetailModal({
                   primaryColor={player.team.primary_color}
                   secondaryColor={player.team.secondary_color}
                   logoUrl={player.team.logo_url}
-                  size={12}
+                  size={14}
                 />
               )}
               <span className="truncate">{player.team?.name ?? "Bez tima"}</span>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-300 text-2xl leading-none" aria-label="Zatvori">
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-300 text-2xl leading-none shrink-0" aria-label="Zatvori">
             ×
           </button>
         </div>
 
+        {/* Today's match callout */}
         {dayLabel && (
-          <div className={`card !p-3 mb-3 ${isPlayingToday ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-zinc-800"}`}>
+          <div
+            className={`card !p-3 mb-3 ${
+              todayMatch ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-red-500/30 bg-red-500/[0.06]"
+            }`}
+          >
             <div className="text-xs text-zinc-400">{dayLabel}</div>
-            <div className="text-sm font-semibold">
-              {isPlayingToday ? "Tim ima meč na ovaj dan." : "Tim nema meč na ovaj dan."}
-            </div>
+            {todayMatch ? (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm font-semibold">
+                  {todayMatch.kickoff_at && (
+                    <span className="text-zinc-300 mr-2">{kickoffShort(todayMatch.kickoff_at)}</span>
+                  )}
+                  vs
+                </span>
+                <TeamCrest
+                  name={todayMatch.opponent.name}
+                  shortName={todayMatch.opponent.short_name}
+                  primaryColor={todayMatch.opponent.primary_color}
+                  secondaryColor={todayMatch.opponent.secondary_color}
+                  logoUrl={todayMatch.opponent.logo_url}
+                  size={18}
+                />
+                <span className="font-medium truncate">{todayMatch.opponent.name}</span>
+                {todayMatch.our_score != null && todayMatch.their_score != null && (
+                  <span className="ml-auto text-sm font-bold tabular-nums">
+                    {todayMatch.our_score} : {todayMatch.their_score}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm font-semibold mt-1 text-red-200">Tim nema meč ovog dana.</div>
+            )}
           </div>
         )}
 
+        {/* Cumulative stat tiles */}
         <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
+          <Stat label="Bodovi" value={totalPoints} highlight />
           <Stat label="Golovi" value={s.goals} />
-          <Stat label="Asist." value={s.assists} />
-          <Stat label="Č. mr." value={s.clean_sheets} />
-          <Stat label="🟨" value={s.yellow_cards} />
-          <Stat label="🟥" value={s.red_cards} />
-          <Stat label="Autogol" value={s.own_goals} />
-          <Stat label="Pobede" value={s.wins} />
-          <Stat label="Nereš." value={s.draws} />
-          <Stat label="Porazi" value={s.losses} />
+          <Stat label="Asistencije" value={s.assists} />
+          <Stat label="Čista mreža" value={s.clean_sheets} />
+          <Stat label="🟨 Žuti" value={s.yellow_cards} />
+          <Stat label="🟥 Crveni" value={s.red_cards} />
         </div>
+
+        {/* Per-match breakdown */}
+        {finishedHistory.length > 0 && (
+          <div className="card !p-0 overflow-hidden mb-3">
+            <div className="px-3 py-2 border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center justify-between">
+              <span>Učinak po mečevima</span>
+              <span>{finishedHistory.length} {finishedHistory.length === 1 ? "meč" : "mečeva"}</span>
+            </div>
+            <ul className="divide-y divide-zinc-800 max-h-64 overflow-y-auto">
+              {finishedHistory.map((m) => (
+                <li key={m.match_id} className="px-3 py-2 flex items-center gap-2 text-xs">
+                  <span className="text-zinc-500 shrink-0">vs</span>
+                  <TeamCrest
+                    name={m.opponent_name}
+                    shortName={m.opponent_short}
+                    primaryColor={m.opponent_primary}
+                    secondaryColor={m.opponent_secondary}
+                    logoUrl={m.opponent_logo_url}
+                    size={14}
+                  />
+                  <span className="font-medium truncate flex-1">{m.opponent_name}</span>
+                  <span className="tabular-nums text-zinc-300 shrink-0">
+                    {m.our_score}:{m.their_score}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 shrink-0 hidden sm:inline">
+                    {m.goals > 0 && `${m.goals}G `}
+                    {m.assists > 0 && `${m.assists}A `}
+                    {m.yellow_cards > 0 && "🟨"}
+                    {m.red_cards > 0 && "🟥"}
+                  </span>
+                  <span
+                    className={`tabular-nums font-bold w-10 text-right shrink-0 ${
+                      m.points > 0 ? "text-emerald-300" : m.points < 0 ? "text-red-300" : "text-zinc-400"
+                    }`}
+                  >
+                    {m.points > 0 ? `+${m.points}` : m.points}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <Link
           href={`/players/${player.id}`}
-          className="btn-secondary w-full text-center text-sm mt-1 inline-block"
+          className="btn-secondary w-full text-center text-sm inline-block"
         >
           Ceo profil i istorija →
         </Link>
@@ -679,10 +846,10 @@ function PlayerDetailModal({
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div className="card !p-2">
-      <div className="text-lg font-bold tabular-nums">{value}</div>
+    <div className={`card !p-2 ${highlight ? "border-emerald-500/40 bg-emerald-500/[0.06]" : ""}`}>
+      <div className={`text-lg font-bold tabular-nums ${highlight ? "text-emerald-300" : ""}`}>{value}</div>
       <div className="text-[10px] text-zinc-500">{label}</div>
     </div>
   );

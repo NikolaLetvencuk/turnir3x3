@@ -2,7 +2,13 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
 import { belgradeLocalToUTCISO } from "@/lib/utils";
-import { DailyTeamEditor, type PlayerForPicker, type PlayerStats } from "./DailyTeamEditor";
+import {
+  DailyTeamEditor,
+  type PlayerForPicker,
+  type PlayerStats,
+  type TeamMatchToday,
+  type PlayerMatchEntry,
+} from "./DailyTeamEditor";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -78,7 +84,9 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
       .order("name"),
     admin
       .from("matches")
-      .select("id, status, bracket_position, kickoff_at, home_team_id, away_team_id")
+      .select(
+        "id, status, bracket_position, kickoff_at, home_team_id, away_team_id, home_score, away_score",
+      )
       .gte("kickoff_at", range.startUTC)
       .lt("kickoff_at", range.endUTC)
       .order("kickoff_at"),
@@ -102,11 +110,13 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
       .select("day")
       .eq("user_id", profile.id)
       .order("day", { ascending: false }),
-    admin.from("match_events").select("player_id, assist_player_id, event_type"),
+    admin.from("match_events").select("match_id, player_id, assist_player_id, event_type"),
     admin
       .from("matches")
-      .select("status, home_team_id, away_team_id, home_score, away_score")
-      .eq("status", "finished"),
+      .select(
+        "id, status, home_team_id, away_team_id, home_score, away_score, kickoff_at, bracket_position",
+      )
+      .order("kickoff_at", { ascending: false }),
   ]);
 
   const players = (playersRes.data ?? []) as PlayerForPicker[];
@@ -117,6 +127,8 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
     kickoff_at: string | null;
     home_team_id: string | null;
     away_team_id: string | null;
+    home_score: number | null;
+    away_score: number | null;
   }>;
   const dayPick = (dayPickRes.data ?? null) as any;
   const fallbackPick = (latestPickRes.data ?? null) as any;
@@ -133,12 +145,55 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
     ),
   );
 
-  // Cumulative per-player stats for the picker info popup.
   const events = (eventsRes.data ?? []) as Array<{
+    match_id: string;
     player_id: string | null;
     assist_player_id: string | null;
     event_type: string;
   }>;
+  const allMatches = (finishedMatchesRes.data ?? []) as Array<{
+    id: string;
+    status: string;
+    home_team_id: string | null;
+    away_team_id: string | null;
+    home_score: number | null;
+    away_score: number | null;
+    kickoff_at: string | null;
+    bracket_position: string | null;
+  }>;
+
+  // Team map for cheap lookups
+  const teamById = new Map<string, NonNullable<PlayerForPicker["team"]>>();
+  for (const p of players) if (p.team) teamById.set(p.team.id, p.team);
+
+  // ---- Per-team match for the selected day -------------------------------
+  // Each team plays at most once on a given day (usually). For info we just
+  // remember opponent + kickoff + score so the picker can render "vs X 15:30".
+  const teamMatchToday: Record<string, TeamMatchToday> = {};
+  for (const m of matches) {
+    if (!m.home_team_id || !m.away_team_id) continue;
+    const home = teamById.get(m.home_team_id);
+    const away = teamById.get(m.away_team_id);
+    if (!home || !away) continue;
+    teamMatchToday[m.home_team_id] = {
+      opponent: away,
+      kickoff_at: m.kickoff_at,
+      status: m.status,
+      our_score: m.home_score,
+      their_score: m.away_score,
+      bracket_position: m.bracket_position,
+    };
+    teamMatchToday[m.away_team_id] = {
+      opponent: home,
+      kickoff_at: m.kickoff_at,
+      status: m.status,
+      our_score: m.away_score,
+      their_score: m.home_score,
+      bracket_position: m.bracket_position,
+    };
+  }
+
+  // ---- Per-player cumulative stats (for popup top section) ---------------
   const stats = new Map<string, PlayerStats>();
   function bump(id: string, key: keyof PlayerStats) {
     const s = stats.get(id) ?? {
@@ -162,21 +217,14 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
     if (e.event_type === "red_card" && e.player_id) bump(e.player_id, "red_cards");
     if (e.event_type === "own_goal" && e.player_id) bump(e.player_id, "own_goals");
   }
-  // Team-level results aggregated and projected onto each player.
-  const finishedMatches = (finishedMatchesRes.data ?? []) as Array<{
-    status: string;
-    home_team_id: string | null;
-    away_team_id: string | null;
-    home_score: number | null;
-    away_score: number | null;
-  }>;
   const teamAgg = new Map<string, { wins: number; draws: number; losses: number; clean_sheets: number }>();
   function teamBump(tid: string, key: "wins" | "draws" | "losses" | "clean_sheets") {
     const t = teamAgg.get(tid) ?? { wins: 0, draws: 0, losses: 0, clean_sheets: 0 };
     t[key]++;
     teamAgg.set(tid, t);
   }
-  for (const m of finishedMatches) {
+  for (const m of allMatches) {
+    if (m.status !== "finished") continue;
     if (!m.home_team_id || !m.away_team_id) continue;
     const hs = m.home_score ?? 0;
     const as = m.away_score ?? 0;
@@ -219,6 +267,135 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
     statsObj[k] = v;
   });
 
+  // ---- Per-player per-match history (for popup detail table) -------------
+  // For each (player, match): goals/assists/cards + team_outcome + computed
+  // fantasy points for that match. Sorted by kickoff_at desc.
+  type PlayerMatchAcc = {
+    match_id: string;
+    kickoff_at: string | null;
+    status: string;
+    opponent: NonNullable<PlayerForPicker["team"]> | null;
+    is_home: boolean;
+    our_score: number | null;
+    their_score: number | null;
+    goals: number;
+    assists: number;
+    yellow_cards: number;
+    red_cards: number;
+    own_goals: number;
+    won: boolean;
+    drew: boolean;
+    clean_sheet: boolean;
+  };
+  const perPlayerMatch = new Map<string, Map<string, PlayerMatchAcc>>();
+  function ensure(playerId: string, m: typeof allMatches[number], teamId: string): PlayerMatchAcc {
+    const inner = perPlayerMatch.get(playerId) ?? new Map<string, PlayerMatchAcc>();
+    perPlayerMatch.set(playerId, inner);
+    if (!inner.has(m.id)) {
+      const isHome = m.home_team_id === teamId;
+      const oppId = isHome ? m.away_team_id : m.home_team_id;
+      const opponent = oppId ? teamById.get(oppId) ?? null : null;
+      inner.set(m.id, {
+        match_id: m.id,
+        kickoff_at: m.kickoff_at,
+        status: m.status,
+        opponent,
+        is_home: isHome,
+        our_score: isHome ? m.home_score : m.away_score,
+        their_score: isHome ? m.away_score : m.home_score,
+        goals: 0,
+        assists: 0,
+        yellow_cards: 0,
+        red_cards: 0,
+        own_goals: 0,
+        won: false,
+        drew: false,
+        clean_sheet: false,
+      });
+    }
+    return inner.get(m.id)!;
+  }
+  // Pre-seed entries for every finished match each player's team participated in.
+  for (const p of players) {
+    if (!p.team_id) continue;
+    for (const m of allMatches) {
+      if (m.status !== "finished") continue;
+      if (m.home_team_id !== p.team_id && m.away_team_id !== p.team_id) continue;
+      const acc = ensure(p.id, m, p.team_id);
+      const isHome = acc.is_home;
+      const hs = m.home_score ?? 0;
+      const as = m.away_score ?? 0;
+      if (hs > as) acc.won = isHome;
+      else if (as > hs) acc.won = !isHome;
+      acc.drew = hs === as;
+      acc.clean_sheet = isHome ? as === 0 : hs === 0;
+    }
+  }
+  // Layer in events.
+  const matchById = new Map(allMatches.map((m) => [m.id, m]));
+  for (const e of events) {
+    const m = matchById.get(e.match_id);
+    if (!m || m.status !== "finished") continue;
+    if (e.event_type === "goal" && e.player_id) {
+      const p = players.find((pp) => pp.id === e.player_id);
+      if (p?.team_id) ensure(e.player_id, m, p.team_id).goals++;
+    }
+    if (e.event_type === "goal" && e.assist_player_id) {
+      const p = players.find((pp) => pp.id === e.assist_player_id);
+      if (p?.team_id) ensure(e.assist_player_id, m, p.team_id).assists++;
+    }
+    if (e.event_type === "yellow_card" && e.player_id) {
+      const p = players.find((pp) => pp.id === e.player_id);
+      if (p?.team_id) ensure(e.player_id, m, p.team_id).yellow_cards++;
+    }
+    if (e.event_type === "red_card" && e.player_id) {
+      const p = players.find((pp) => pp.id === e.player_id);
+      if (p?.team_id) ensure(e.player_id, m, p.team_id).red_cards++;
+    }
+    if (e.event_type === "own_goal" && e.player_id) {
+      const p = players.find((pp) => pp.id === e.player_id);
+      if (p?.team_id) ensure(e.player_id, m, p.team_id).own_goals++;
+    }
+  }
+  // Convert to plain entries + compute fantasy points per match.
+  const matchHistory: Record<string, PlayerMatchEntry[]> = {};
+  perPlayerMatch.forEach((inner, playerId) => {
+    const arr: PlayerMatchEntry[] = [];
+    inner.forEach((acc) => {
+      const points =
+        acc.goals * 3
+        + acc.assists * 2
+        + (acc.won ? 1 : 0)
+        + (acc.clean_sheet ? 1 : 0)
+        - acc.yellow_cards
+        - acc.red_cards * 2
+        - acc.own_goals;
+      arr.push({
+        match_id: acc.match_id,
+        kickoff_at: acc.kickoff_at,
+        opponent_name: acc.opponent?.name ?? "?",
+        opponent_short: acc.opponent?.short_name ?? null,
+        opponent_primary: acc.opponent?.primary_color ?? null,
+        opponent_secondary: acc.opponent?.secondary_color ?? null,
+        opponent_logo_url: acc.opponent?.logo_url ?? null,
+        our_score: acc.our_score,
+        their_score: acc.their_score,
+        is_home: acc.is_home,
+        goals: acc.goals,
+        assists: acc.assists,
+        yellow_cards: acc.yellow_cards,
+        red_cards: acc.red_cards,
+        own_goals: acc.own_goals,
+        won: acc.won,
+        drew: acc.drew,
+        clean_sheet: acc.clean_sheet,
+        points,
+      });
+    });
+    arr.sort((a, b) => (b.kickoff_at ?? "").localeCompare(a.kickoff_at ?? ""));
+    matchHistory[playerId] = arr;
+  });
+
   // Days the user has saved a team for — used for the "Pogledaj prošli tim" list.
   const savedDays = ((daysWithPicksRes.data ?? []) as Array<{ day: string }>)
     .map((r) => r.day)
@@ -246,6 +423,8 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
       savedDays={savedDays}
       matchCount={matches.length}
       stats={statsObj}
+      teamMatchToday={teamMatchToday}
+      matchHistory={matchHistory}
     />
   );
 }
