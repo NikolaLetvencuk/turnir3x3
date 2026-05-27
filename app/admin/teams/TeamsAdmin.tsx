@@ -85,6 +85,7 @@ function TeamForm({
     fd: FormData,
     captain: { name: string; phone: string },
     stagedCrest: Blob | null,
+    stagedPlayers: string[],
   ) => Promise<boolean>;
   onCancel?: () => void;
   submitLabel: string;
@@ -102,19 +103,43 @@ function TeamForm({
   // after createTeam returns the new id.
   const [stagedCrest, setStagedCrest] = useState<Blob | null>(null);
   const [stagedPreview, setStagedPreview] = useState<string | null>(null);
+  // Player names typed in the form before the team is saved (create mode
+  // only). createPlayer fires for each after createTeam returns.
+  const [stagedPlayers, setStagedPlayers] = useState<string[]>([]);
+  const [playerInput, setPlayerInput] = useState("");
   const [captainName, setCaptainName] = useState(initial?.captain_name ?? "");
   const [captainPhone, setCaptainPhone] = useState(initial?.captain_phone ?? "");
   const sameColors = primary.toLowerCase() === secondary.toLowerCase();
+  const isCreate = !initial?.id;
 
   // Effective preview: staged (unsaved) image takes precedence over the
   // server URL while the form is open.
   const effectiveLogoUrl = stagedPreview ?? logoUrl;
 
+  function addStagedPlayer() {
+    const n = playerInput.trim();
+    if (!n) return;
+    if (stagedPlayers.includes(n)) {
+      setPlayerInput("");
+      return;
+    }
+    setStagedPlayers((arr) => [...arr, n]);
+    setPlayerInput("");
+  }
+  function removeStagedPlayer(idx: number) {
+    setStagedPlayers((arr) => arr.filter((_, i) => i !== idx));
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     if (initial?.id) fd.set("id", initial.id);
-    await onSubmit(fd, { name: captainName.trim(), phone: captainPhone.trim() }, stagedCrest);
+    // Pull any unsubmitted player from the input — easy to forget Enter.
+    const pending = playerInput.trim();
+    const players = pending && !stagedPlayers.includes(pending)
+      ? [...stagedPlayers, pending]
+      : stagedPlayers;
+    await onSubmit(fd, { name: captainName.trim(), phone: captainPhone.trim() }, stagedCrest, players);
   }
 
   async function onCrestFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -228,6 +253,62 @@ function TeamForm({
       </div>
       {sameColors && <p className="text-xs text-amber-700">Boje su iste — grb će biti slabo vidljiv.</p>}
 
+      {/* Staged player names — visible in create mode only. Edits use the
+          inline AddPlayersForTeam panel from the team row instead. */}
+      {isCreate && (
+        <div className="border-t border-zinc-800 pt-2 space-y-2">
+          <div className="flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-emerald-300" />
+            <span className="text-xs text-zinc-300 font-medium">Igrači u sastavu</span>
+            <span className="text-[11px] text-zinc-500">
+              (opciono — možeš ih dodati i posle pravljenja tima)
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={playerInput}
+              onChange={(e) => setPlayerInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addStagedPlayer();
+                }
+              }}
+              placeholder="Ime i prezime, pritisni Enter"
+              className="input flex-1"
+            />
+            <button
+              type="button"
+              onClick={addStagedPlayer}
+              disabled={!playerInput.trim()}
+              className="btn-secondary inline-flex items-center gap-1 !py-2 !px-3 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" /> Dodaj
+            </button>
+          </div>
+          {stagedPlayers.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {stagedPlayers.map((n, i) => (
+                <span
+                  key={`${n}-${i}`}
+                  className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 rounded-full pl-2.5 pr-1 py-1 text-xs text-emerald-100"
+                >
+                  + {n}
+                  <button
+                    type="button"
+                    onClick={() => removeStagedPlayer(i)}
+                    className="hover:bg-emerald-500/30 rounded-full p-0.5"
+                    title="Ukloni"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Kapiten — bira se iz liste igrača ovog tima */}
       <div className="grid sm:grid-cols-2 gap-2 border-t border-zinc-800 pt-2">
         <label className="block text-sm">
@@ -327,27 +408,43 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
           </div>
           <TeamForm
             submitLabel="Dodaj"
-            onSubmit={async (fd, _captain, stagedCrest) => {
+            onSubmit={async (fd, _captain, stagedCrest, stagedPlayers) => {
               const res = await createTeam(fd);
               if (!res.ok) {
                 push(res.error, "error");
                 return false;
               }
               const newName = String(fd.get("name") ?? "").trim();
-              // If admin picked a crest before saving, upload it now that we
-              // know the team_id.
+              const newId = res.data!.id;
+
+              // Optional crest — fire only when admin staged one.
               if (stagedCrest) {
                 const cfd = new FormData();
-                cfd.set("team_id", res.data!.id);
+                cfd.set("team_id", newId);
                 cfd.set("file", new File([stagedCrest], "crest.jpg", { type: "image/jpeg" }));
                 const up = await uploadTeamCrest(cfd);
-                if (!up.ok) {
-                  push(`Tim dodat, ali slika nije: ${up.error}`, "error");
-                }
+                if (!up.ok) push(`Tim dodat, ali slika nije: ${up.error}`, "error");
               }
-              push("Tim dodat", "success");
+
+              // Staged players — createPlayer for each, sequentially.
+              let playersAdded = 0;
+              for (const pname of stagedPlayers) {
+                const pfd = new FormData();
+                pfd.set("name", pname);
+                pfd.set("team_id", newId);
+                const pres = await createPlayer(pfd);
+                if (pres.ok) playersAdded++;
+                else push(`Igrač „${pname}" nije sačuvan: ${pres.error}`, "error");
+              }
+
+              push(
+                playersAdded > 0
+                  ? `Tim dodat (${playersAdded} igrača)`
+                  : "Tim dodat",
+                "success",
+              );
               router.refresh();
-              setAddPlayersFor({ id: res.data!.id, name: newName });
+              setAddPlayersFor({ id: newId, name: newName });
               setShowNew(false);
               return true;
             }}
