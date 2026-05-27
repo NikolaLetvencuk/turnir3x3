@@ -493,6 +493,10 @@ export function ExportClient({
   const todayCount = countForDay(todayKey);
   const tomorrowCount = countForDay(tomorrowKey);
 
+  // Free-form day picker (any tournament date, not just ±1 from today).
+  const [customDay, setCustomDay] = useState<string>(todayKey);
+  const customCount = countForDay(customDay);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -555,6 +559,47 @@ export function ExportClient({
             )
           }
         />
+        {/* Free-form date picker — admin selects any day and downloads
+            the slika za taj datum. Useful for past weekends or any single
+            date not covered by yesterday/today/tomorrow. */}
+        <div className="card flex flex-col gap-4 !p-5 sm:!p-6">
+          <div>
+            <h3 className="font-bold text-2xl leading-tight">Utakmice za datum</h3>
+            <div className="text-sm text-zinc-400 mt-1">
+              {customCount} mečeva {customDay ? `· ${formatDateLabel(customDay)}` : ""}
+            </div>
+          </div>
+          <input
+            type="date"
+            className="input"
+            value={customDay}
+            onChange={(e) => setCustomDay(e.target.value)}
+          />
+          <div className="grid grid-cols-2 gap-3 mt-auto">
+            <button
+              onClick={() =>
+                quickDownload("q-custom-story", () =>
+                  quickResultsByDay(customDay, `Utakmice ${formatDateLabel(customDay)}`, "story"),
+                )
+              }
+              disabled={customCount === 0 || !!downloading}
+              className="btn-primary !py-5 text-lg font-bold"
+            >
+              {downloading === "q-custom-story" ? "..." : "Stori"}
+            </button>
+            <button
+              onClick={() =>
+                quickDownload("q-custom-post", () =>
+                  quickResultsByDay(customDay, `Utakmice ${formatDateLabel(customDay)}`, "post"),
+                )
+              }
+              disabled={customCount === 0 || !!downloading}
+              className="btn-secondary !py-5 text-lg font-bold"
+            >
+              {downloading === "q-custom-post" ? "..." : "Objava"}
+            </button>
+          </div>
+        </div>
         <QuickDownloadCard
           title="Sve tabele"
           subtitle={`${standings.length} ${standings.length === 1 ? "grupa" : "grupa"}`}

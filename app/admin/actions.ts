@@ -355,6 +355,65 @@ export async function bulkAutoFillKickoffs(input: {
   }) as Promise<ActionResult>;
 }
 
+const shiftSchema = z.object({
+  off_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  create_news: z.boolean().optional(),
+});
+
+function formatSrDate(yyyymmdd: string): string {
+  const [y, m, d] = yyyymmdd.split("-");
+  return `${parseInt(d, 10)}.${parseInt(m, 10)}.${y}`;
+}
+
+/**
+ * Treat off_date as a no-play day after the schedule is already generated:
+ * every match whose kickoff_at falls on or after off_date is pushed forward
+ * by one day. Optionally posts a news item ("Sutra se ne igra") so the home
+ * page banner reflects the change. Cumulative — call it again for each new
+ * off-day; the helper math handles cascading shifts.
+ */
+export async function shiftScheduleFromDate(input: { off_date: string; create_news?: boolean }): Promise<ActionResult<{ shifted: number }>> {
+  return withAdmin(async () => {
+    const parsed = shiftSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
+    const { off_date, create_news } = parsed.data;
+
+    const admin = createAdminClient();
+    const offUtcIso = belgradeLocalToUTCISO(`${off_date}T00:00:00`);
+    if (!offUtcIso) return { ok: false, error: "Neispravan datum" };
+
+    const { data: matchesRaw, error: fetchErr } = await admin
+      .from("matches")
+      .select("id, kickoff_at")
+      .gte("kickoff_at", offUtcIso);
+    if (fetchErr) return { ok: false, error: fetchErr.message };
+
+    let shifted = 0;
+    for (const m of (matchesRaw ?? []) as Array<{ id: string; kickoff_at: string | null }>) {
+      if (!m.kickoff_at) continue;
+      const next = new Date(new Date(m.kickoff_at).getTime() + 86_400_000).toISOString();
+      const { error } = await admin.from("matches").update({ kickoff_at: next }).eq("id", m.id);
+      if (error) return { ok: false, error: error.message };
+      shifted++;
+    }
+
+    if (create_news) {
+      const human = formatSrDate(off_date);
+      await admin.from("news").insert({
+        title: `Sutra (${human}) se ne igra`,
+        body: `Mečevi planirani za ${human}. su pomereni za jedan dan kasnije. Termini se automatski osvežavaju na sajtu.`,
+      });
+    }
+
+    revalidatePath("/admin/matches");
+    revalidatePath("/admin/schedule");
+    revalidatePath("/matches");
+    revalidatePath("/vesti");
+    revalidatePath("/");
+    return { ok: true, data: { shifted } };
+  }) as Promise<ActionResult<{ shifted: number }>>;
+}
+
 export async function bulkSetMatchKickoffs(input: { ordered_match_ids: string[]; start: string; gap_minutes: number }): Promise<ActionResult> {
   return withAdmin(async () => {
     const parsed = bulkSchema.safeParse(input);

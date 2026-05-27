@@ -15,6 +15,7 @@ import {
   finishMatch,
   bulkSetMatchKickoffs,
   bulkAutoFillKickoffs,
+  shiftScheduleFromDate,
 } from "../actions";
 import { formatKickoff, toDatetimeLocalValue, toLocalDate } from "@/lib/utils";
 import { ScheduleBoard } from "../schedule/ScheduleBoard";
@@ -220,6 +221,8 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
               setAutoFillOpen(false);
             }}
           />
+
+          <ShiftSchedulePanel onSaved={() => router.refresh()} />
 
           {/* Round tabs */}
           <div className="card !p-2 overflow-x-auto">
@@ -520,6 +523,106 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
 }
 
 /* -------------------- Multi-day auto-fill panel -------------------- */
+
+/* -------------------- Shift schedule (no-play day) -------------------- */
+
+function ShiftSchedulePanel({ onSaved }: { onSaved: () => void }) {
+  const { push } = useToast();
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = (() => {
+    const dt = new Date();
+    dt.setUTCDate(dt.getUTCDate() + 1);
+    return dt.toISOString().slice(0, 10);
+  })();
+  const [open, setOpen] = useState(false);
+  const [offDate, setOffDate] = useState(tomorrow);
+  const [createNews, setCreateNews] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  // Recommend the news checkbox whenever the off-day is "tomorrow".
+  const isTomorrow = offDate === tomorrow;
+  useEffect(() => {
+    if (isTomorrow) setCreateNews(true);
+  }, [isTomorrow]);
+
+  async function onSubmit() {
+    if (!offDate) return;
+    if (
+      !confirm(
+        `Svi mečevi od ${offDate} (uključujući taj dan) biće pomereni za jedan dan kasnije. Nastaviti?`,
+      )
+    )
+      return;
+    setBusy(true);
+    const res = await shiftScheduleFromDate({ off_date: offDate, create_news: createNews });
+    setBusy(false);
+    if (!res.ok) {
+      push(res.error, "error");
+      return;
+    }
+    push(`Pomereno ${res.data?.shifted ?? 0} termina`, "success");
+    setOpen(false);
+    onSaved();
+  }
+
+  return (
+    <div className="card border-amber-500/40 bg-amber-500/[0.05]">
+      <button onClick={() => setOpen((s) => !s)} className="w-full flex items-center justify-between text-left">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-amber-300" />
+          <div>
+            <div className="font-semibold">Dodaj neradni dan (pomeri raspored)</div>
+            <div className="text-xs text-zinc-400">
+              Pošto su termini već popunjeni — odaberi dan kad se ne igra i svi mečevi od tog dana pomeraju se za jedan dan kasnije.
+            </div>
+          </div>
+        </div>
+        <span className="text-xs text-amber-300">{open ? "Sakri" : "Otvori"}</span>
+      </button>
+
+      {open && (
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+            <label className="block">
+              <span className="label">Neradni dan</span>
+              <input
+                type="date"
+                className="input"
+                min={today}
+                value={offDate}
+                onChange={(e) => setOffDate(e.target.value)}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer text-zinc-300">
+              <input
+                type="checkbox"
+                checked={createNews}
+                disabled={!isTomorrow}
+                onChange={(e) => setCreateNews(e.target.checked)}
+              />
+              <span>
+                Objavi vest &bdquo;Sutra se ne igra&rdquo;
+                {!isTomorrow && (
+                  <span className="block text-[11px] text-zinc-500">
+                    (dostupno samo kad je neradni dan tačno sutra)
+                  </span>
+                )}
+              </span>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setOpen(false)} disabled={busy} className="btn-secondary">
+              Otkaži
+            </button>
+            <button onClick={onSubmit} disabled={busy} className="btn-primary inline-flex items-center gap-2">
+              <Calendar className="w-4 h-4" /> {busy ? "Pomerim…" : "Pomeri termine"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AutoFillPanel({
   remainingMatches,
