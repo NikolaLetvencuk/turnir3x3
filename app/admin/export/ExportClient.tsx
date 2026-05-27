@@ -290,80 +290,104 @@ export function ExportClient({
     return true;
   }
 
+  async function postResultsList(
+    list: ExportMatch[],
+    format: Format,
+    title: string,
+    subtitle: string,
+    baseSlug: string,
+  ) {
+    const max = RESULTS_MAX[format];
+    const chunks: ExportMatch[][] = [];
+    for (let i = 0; i < list.length; i += max) chunks.push(list.slice(i, i + max));
+    const total = chunks.length;
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const payload = {
+        kind: "results" as const,
+        format,
+        title,
+        subtitle,
+        matches: chunk.map((m) => ({
+          id: m.id,
+          status: m.status,
+          home_score: m.home_score,
+          away_score: m.away_score,
+          home_pen: m.home_pen,
+          away_pen: m.away_pen,
+          kickoff_at: m.kickoff_at,
+          home_team: m.home_team,
+          away_team: m.away_team,
+        })),
+      };
+      const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
+      const ok = await fetchAndDownloadPng(payload, `turnir-kula-${baseSlug}-${format}${partSuffix}.png`);
+      if (!ok) break;
+      if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+
+  async function postStandingsList(list: GroupStandings[], format: Format, baseSlug: string) {
+    const chunks = chunkStandingsByBudget(list, STANDINGS_BUDGET[format]);
+    const total = chunks.length;
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const payload = {
+        kind: "standings" as const,
+        format,
+        standings: chunk.map((g) => ({
+          group_id: g.group_id,
+          group_name: g.group_name,
+          rows: g.rows.map((r) => ({
+            team_id: r.team_id,
+            team_name: r.team_name,
+            short_name: r.short_name,
+            primary_color: r.primary_color,
+            secondary_color: r.secondary_color,
+            played: r.played,
+            goal_diff: r.goal_diff,
+            points: r.points,
+          })),
+        })),
+      };
+      const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
+      const ok = await fetchAndDownloadPng(payload, `turnir-kula-${baseSlug}-${format}${partSuffix}.png`);
+      if (!ok) break;
+      if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+
+  // Quick downloads (don't touch the custom filter state) ---------------------
+  async function quickDownload(tag: string, fn: () => Promise<void>) {
+    setDownloading(tag);
+    try { await fn(); } finally { setDownloading(null); }
+  }
+
+  async function quickResultsByDay(dayKey: string, label: string, format: Format) {
+    const list = matches
+      .filter((m) => belgradeDateKey(m.kickoff_at) === dayKey)
+      .sort((a, b) => (a.kickoff_at ?? "").localeCompare(b.kickoff_at ?? ""));
+    if (list.length === 0) return;
+    await postResultsList(list, format, label.toUpperCase(), "Mečevi dana", `results-${dayKey}`);
+  }
+
+  async function quickAllStandings(format: Format) {
+    if (standings.length === 0) return;
+    await postStandingsList(standings, format, "tabele");
+  }
+
   async function downloadPoster(kind: PosterKind, format: Format) {
     const tag = `${kind}-${format}`;
     setDownloading(tag);
     try {
       if (kind === "results") {
-        // Auto-split into multiple posters if selection exceeds per-format cap.
-        const max = RESULTS_MAX[format];
-        const chunks: ExportMatch[][] = [];
-        for (let i = 0; i < exportMatches.length; i += max) {
-          chunks.push(exportMatches.slice(i, i + max));
-        }
-        const total = chunks.length;
         const baseSlug =
           resultsMode === "round"
-            ? `results-${format}-${round?.name ?? "export"}`
-            : `results-${format}-${selectedDay}`;
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          const payload = {
-            kind,
-            format,
-            title: effectiveTitle(),
-            subtitle: effectiveSubtitle(),
-            matches: chunk.map((m) => ({
-              id: m.id,
-              status: m.status,
-              home_score: m.home_score,
-              away_score: m.away_score,
-              home_pen: m.home_pen,
-              away_pen: m.away_pen,
-              kickoff_at: m.kickoff_at,
-              home_team: m.home_team,
-              away_team: m.away_team,
-            })),
-          };
-          const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
-          const ok = await fetchAndDownloadPng(payload, `turnir-kula-${baseSlug}${partSuffix}.png`);
-          if (!ok) break;
-          if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
-        }
+            ? `results-${round?.name ?? "export"}`
+            : `results-${selectedDay}`;
+        await postResultsList(exportMatches, format, effectiveTitle(), effectiveSubtitle(), baseSlug);
       } else if (kind === "standings") {
-        // Bin-pack groups by (teams + 1) units per group, with a budget of
-        // 12 for Objava and 18 for Stori. Each next group is added until
-        // budget would overflow, then a new image starts.
-        const chunks = chunkStandingsByBudget(exportStandings, STANDINGS_BUDGET[format]);
-
-        const total = chunks.length;
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          const payload = {
-            kind,
-            format,
-            standings: chunk.map((g) => ({
-              group_id: g.group_id,
-              group_name: g.group_name,
-              rows: g.rows.map((r) => ({
-                team_id: r.team_id,
-                team_name: r.team_name,
-                short_name: r.short_name,
-                primary_color: r.primary_color,
-                secondary_color: r.secondary_color,
-                played: r.played,
-                goal_diff: r.goal_diff,
-                points: r.points,
-              })),
-            })),
-          };
-          const groupNames = chunk.map((g) => g.group_name).join("-");
-          const partSuffix = total > 1 ? `-deo-${i + 1}-od-${total}` : "";
-          const slug = `standings-${format}-${groupNames}${partSuffix}`;
-          const ok = await fetchAndDownloadPng(payload, `turnir-kula-${slug}.png`);
-          if (!ok) break;
-          if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 800));
-        }
+        await postStandingsList(exportStandings, format, "standings");
       } else if (kind === "bracket") {
         // Filter out R16 round when admin chose abbreviated mode and we have
         // 16 teams.  Re-index remaining rounds so the poster sees round 0 = QF.
@@ -457,14 +481,114 @@ export function ExportClient({
   const resultsChunkPost = Math.ceil(exportMatches.length / RESULTS_MAX.post) || 0;
   const resultsWillSplit = resultsChunkStory > 1 || resultsChunkPost > 1;
 
+  // Belgrade-local "today" / "yesterday" / "tomorrow" — used for the quick
+  // day buttons. Shifting via UTC midnight keeps the result independent of
+  // the admin's local timezone.
+  const todayKey = useMemo(() => belgradeDateKey(new Date().toISOString()) ?? "", []);
+  const yesterdayKey = useMemo(() => shiftDayKey(todayKey, -1), [todayKey]);
+  const tomorrowKey = useMemo(() => shiftDayKey(todayKey, 1), [todayKey]);
+  const countForDay = (key: string) =>
+    matches.filter((m) => belgradeDateKey(m.kickoff_at) === key).length;
+  const yesterdayCount = countForDay(yesterdayKey);
+  const todayCount = countForDay(todayKey);
+  const tomorrowCount = countForDay(tomorrowKey);
+
   return (
     <div className="space-y-4">
       <PageHeader
         icon={Share2}
-        title="Export"
-        hint="Pravi gotove slike za Story (1080×1920) i Objavu (1080×1350). Klikni Generiši pa Preuzmi."
+        title="Slike za društvene mreže"
+        hint="Klikni Stori (1080×1920) ili Objava (1080×1350) i slika ti se preuzme. Po meri filteri su ispod."
         tone="blue"
       />
+
+      {/* Quick downloads — big buttons, no filter UI */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <QuickDownloadCard
+          title="Utakmice juče"
+          subtitle={`${yesterdayCount} mečeva · ${yesterdayKey ? formatDateLabel(yesterdayKey) : ""}`}
+          disabled={yesterdayCount === 0}
+          downloading={downloading}
+          tagBase={`q-yesterday`}
+          onStori={() =>
+            quickDownload(`q-yesterday-story`, () =>
+              quickResultsByDay(yesterdayKey, `Utakmice ${formatDateLabel(yesterdayKey)}`, "story"),
+            )
+          }
+          onPost={() =>
+            quickDownload(`q-yesterday-post`, () =>
+              quickResultsByDay(yesterdayKey, `Utakmice ${formatDateLabel(yesterdayKey)}`, "post"),
+            )
+          }
+        />
+        <QuickDownloadCard
+          title="Utakmice danas"
+          subtitle={`${todayCount} mečeva · ${todayKey ? formatDateLabel(todayKey) : ""}`}
+          disabled={todayCount === 0}
+          downloading={downloading}
+          tagBase={`q-today`}
+          onStori={() =>
+            quickDownload(`q-today-story`, () =>
+              quickResultsByDay(todayKey, `Utakmice ${formatDateLabel(todayKey)}`, "story"),
+            )
+          }
+          onPost={() =>
+            quickDownload(`q-today-post`, () =>
+              quickResultsByDay(todayKey, `Utakmice ${formatDateLabel(todayKey)}`, "post"),
+            )
+          }
+        />
+        <QuickDownloadCard
+          title="Utakmice sutra"
+          subtitle={`${tomorrowCount} mečeva · ${tomorrowKey ? formatDateLabel(tomorrowKey) : ""}`}
+          disabled={tomorrowCount === 0}
+          downloading={downloading}
+          tagBase={`q-tomorrow`}
+          onStori={() =>
+            quickDownload(`q-tomorrow-story`, () =>
+              quickResultsByDay(tomorrowKey, `Utakmice ${formatDateLabel(tomorrowKey)}`, "story"),
+            )
+          }
+          onPost={() =>
+            quickDownload(`q-tomorrow-post`, () =>
+              quickResultsByDay(tomorrowKey, `Utakmice ${formatDateLabel(tomorrowKey)}`, "post"),
+            )
+          }
+        />
+        <QuickDownloadCard
+          title="Sve tabele"
+          subtitle={`${standings.length} ${standings.length === 1 ? "grupa" : "grupa"}`}
+          disabled={standings.length === 0}
+          downloading={downloading}
+          tagBase={`q-tables`}
+          onStori={() => quickDownload(`q-tables-story`, () => quickAllStandings("story"))}
+          onPost={() => quickDownload(`q-tables-post`, () => quickAllStandings("post"))}
+        />
+        <QuickDownloadCard
+          title="Eliminacije"
+          subtitle={hasBracket ? (has16Teams && includeR16 ? "2 slike po formatu" : "1 slika") : "nema kostura"}
+          disabled={!hasBracket}
+          downloading={downloading}
+          tagBase={`bracket`}
+          onStori={() => downloadPoster("bracket", "story")}
+          onPost={() => downloadPoster("bracket", "post")}
+        />
+        <QuickDownloadCard
+          title="Strelci"
+          subtitle={`Top ${Math.min(10, scorers.length)}`}
+          disabled={scorers.length === 0}
+          downloading={downloading}
+          tagBase={`scorers`}
+          onStori={() => downloadPoster("scorers", "story")}
+          onPost={() => downloadPoster("scorers", "post")}
+        />
+      </div>
+
+      <div className="border-t border-zinc-800 pt-3 mt-2">
+        <div className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2">
+          Po meri (sa filterima)
+        </div>
+      </div>
 
       {/* Self-contained download cards: each one has its own filters folded
           inside a collapsible "Podesi" panel so the screen stays compact
@@ -769,6 +893,15 @@ function formatDateLabel(isoKey: string): string {
   return `${day}. ${SR_MONTHS_SHORT[monthIdx]}`;
 }
 
+function shiftDayKey(yyyymmdd: string, days: number): string {
+  if (!yyyymmdd) return "";
+  const [y, m, d] = yyyymmdd.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 function WarningBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="border border-amber-300 bg-amber-50 text-amber-900 text-xs rounded-md px-3 py-2">
@@ -781,6 +914,53 @@ function InfoBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="border border-blue-300 bg-blue-50 text-blue-900 text-xs rounded-md px-3 py-2">
       ℹ {children}
+    </div>
+  );
+}
+
+function QuickDownloadCard({
+  title,
+  subtitle,
+  disabled,
+  downloading,
+  tagBase,
+  onStori,
+  onPost,
+}: {
+  title: string;
+  subtitle: string;
+  disabled: boolean;
+  downloading: string | null;
+  /** Prefix matching the `tag` passed to setDownloading() so the right
+   *  button can show its loading state. */
+  tagBase: string;
+  onStori: () => void;
+  onPost: () => void;
+}) {
+  const storiTag = `${tagBase}-story`;
+  const postTag = `${tagBase}-post`;
+  return (
+    <div className="card flex flex-col gap-3">
+      <div>
+        <h3 className="font-bold text-base">{title}</h3>
+        <div className="text-xs text-zinc-500">{subtitle}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mt-auto">
+        <button
+          onClick={onStori}
+          disabled={disabled || !!downloading}
+          className="btn-primary !py-3 text-sm font-semibold"
+        >
+          {downloading === storiTag ? "..." : "Stori"}
+        </button>
+        <button
+          onClick={onPost}
+          disabled={disabled || !!downloading}
+          className="btn-secondary !py-3 text-sm font-semibold"
+        >
+          {downloading === postTag ? "..." : "Objava"}
+        </button>
+      </div>
     </div>
   );
 }
