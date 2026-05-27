@@ -258,7 +258,14 @@ const bulkSchema = z.object({
 });
 
 const bulkAutoFillSchema = z.object({
-  ordered_match_ids: z.array(z.string().uuid()).min(1),
+  ordered_matches: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        round_id: z.string().uuid(),
+      }),
+    )
+    .min(1),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start_time: z.string().regex(/^\d{1,2}:\d{2}$/),
   match_duration: z.number().int().min(5).max(24 * 60),
@@ -275,11 +282,17 @@ function shiftDayUTC(yyyymmdd: string, days: number): string {
 
 /**
  * Auto-fill kickoff times for a list of matches across multiple days.
- * Slots `max_per_day` matches per day starting at `start_time`, with each
- * match taking `match_duration` minutes. Skips days listed in `skip_dates`.
+ *
+ * - Slots `max_per_day` matches per day, starting at `start_time`, each
+ *   match taking `match_duration` minutes.
+ * - Skips days listed in `skip_dates`.
+ * - Forces a new day every time we cross into a different **knockout**
+ *   round, so the elimination rounds (R16, QF, SF, Final) never share a
+ *   day. The Final and the 3rd-place match share the same round_id, so
+ *   they remain on the same day.
  */
 export async function bulkAutoFillKickoffs(input: {
-  ordered_match_ids: string[];
+  ordered_matches: Array<{ id: string; round_id: string }>;
   start_date: string;
   start_time: string;
   match_duration: number;
@@ -289,16 +302,32 @@ export async function bulkAutoFillKickoffs(input: {
   return withAdmin(async () => {
     const parsed = bulkAutoFillSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: "Neispravni podaci" };
-    const { ordered_match_ids, start_date, start_time, match_duration, max_per_day, skip_dates } = parsed.data;
+    const { ordered_matches, start_date, start_time, match_duration, max_per_day, skip_dates } = parsed.data;
     const skipSet = new Set(skip_dates);
 
     const admin = createAdminClient();
+
+    // Fetch round stages so we know when to force a new day.
+    const uniqueRoundIds = Array.from(new Set(ordered_matches.map((m) => m.round_id)));
+    const { data: roundRows } = await admin
+      .from("rounds")
+      .select("id, stage")
+      .in("id", uniqueRoundIds);
+    const stageByRound = new Map<string, string>(
+      ((roundRows ?? []) as Array<{ id: string; stage: string }>).map((r) => [r.id, r.stage]),
+    );
+
     let day = start_date;
     let slot = 0;
     while (skipSet.has(day)) day = shiftDayUTC(day, 1);
+    let lastRoundId: string | null = null;
 
-    for (const matchId of ordered_match_ids) {
-      if (slot >= max_per_day) {
+    for (const m of ordered_matches) {
+      const stage = stageByRound.get(m.round_id) ?? "group";
+      const enteredNewKnockoutRound =
+        lastRoundId !== null && m.round_id !== lastRoundId && stage === "knockout";
+
+      if (slot >= max_per_day || enteredNewKnockoutRound) {
         slot = 0;
         day = shiftDayUTC(day, 1);
         while (skipSet.has(day)) day = shiftDayUTC(day, 1);
@@ -313,9 +342,10 @@ export async function bulkAutoFillKickoffs(input: {
       const kickoffMs = new Date(baseUtcIso).getTime() + slot * match_duration * 60_000;
       const kickoff_at = new Date(kickoffMs).toISOString();
 
-      const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", matchId);
+      const { error } = await admin.from("matches").update({ kickoff_at }).eq("id", m.id);
       if (error) return { ok: false, error: error.message };
       slot++;
+      lastRoundId = m.round_id;
     }
 
     revalidatePath("/admin/matches");

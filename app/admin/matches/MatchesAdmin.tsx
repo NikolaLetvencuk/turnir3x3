@@ -556,7 +556,8 @@ function AutoFillPanel({
     setSkipDates((arr) => arr.filter((x) => x !== d));
   }
 
-  // Live preview of first N kickoffs
+  // Live preview of first N kickoffs — mirrors the server's auto-fill rules
+  // exactly (incl. "elimination rounds never share a day").
   const preview = useMemo(() => {
     if (remainingMatches.length === 0) return [] as Array<{ id: string; date: string; time: string; label: string }>;
     const skipSet = new Set(skipDates);
@@ -569,10 +570,15 @@ function AutoFillPanel({
     let day = startDate;
     while (skipSet.has(day)) day = shift(day, 1);
     let slot = 0;
+    let lastRoundId: string | null = null;
     const [hh, mm] = startTime.split(":").map(Number);
     const items: Array<{ id: string; date: string; time: string; label: string }> = [];
     for (const m of remainingMatches.slice(0, 8)) {
-      if (slot >= maxPerDay) {
+      const stage = m.round?.stage ?? "group";
+      const roundId = m.round?.id ?? m.round_id;
+      const enteredNewKnockoutRound =
+        lastRoundId !== null && roundId !== lastRoundId && stage === "knockout";
+      if (slot >= maxPerDay || enteredNewKnockoutRound) {
         slot = 0;
         day = shift(day, 1);
         while (skipSet.has(day)) day = shift(day, 1);
@@ -588,6 +594,7 @@ function AutoFillPanel({
         label: `${m.home?.name ?? "?"} vs ${m.away?.name ?? "?"}`,
       });
       slot++;
+      lastRoundId = roundId;
     }
     return items;
   }, [remainingMatches, startDate, startTime, maxPerDay, duration, skipDates]);
@@ -605,7 +612,10 @@ function AutoFillPanel({
       return;
     setBusy(true);
     const res = await bulkAutoFillKickoffs({
-      ordered_match_ids: remainingMatches.map((m: any) => m.id),
+      ordered_matches: remainingMatches.map((m: any) => ({
+        id: m.id,
+        round_id: m.round?.id ?? m.round_id,
+      })),
       start_date: startDate,
       start_time: startTime,
       match_duration: duration,
@@ -632,7 +642,7 @@ function AutoFillPanel({
           <div>
             <div className="font-semibold">Auto-popuni sve preostale termine</div>
             <div className="text-xs text-zinc-400">
-              {remainingMatches.length} nezavršenih mečeva · raspoređuje preko više dana
+              {remainingMatches.length} nezavršenih mečeva · svaka eliminaciona faza dobija svoj dan
             </div>
           </div>
         </div>
