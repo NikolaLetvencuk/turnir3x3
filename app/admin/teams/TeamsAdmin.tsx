@@ -256,6 +256,7 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(teams.length === 0);
   const [addPlayersFor, setAddPlayersFor] = useState<{ id: string; name: string } | null>(null);
+  const teamForPanel = addPlayersFor ? teams.find((t) => t.id === addPlayersFor.id) : null;
 
   return (
     <div className="space-y-4">
@@ -270,6 +271,7 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
         <AddPlayersForTeam
           teamId={addPlayersFor.id}
           teamName={addPlayersFor.name}
+          existingPlayers={teamForPanel?.players ?? []}
           onDone={() => setAddPlayersFor(null)}
         />
       )}
@@ -350,7 +352,18 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
                       📱 {t.captain_name ?? "Kapiten"}{t.captain_phone ? ` · ${t.captain_phone}` : ""}
                     </div>
                   )}
+                  <div className="text-[11px] text-zinc-500 mt-0.5">
+                    Igrači: {(t.players?.length ?? 0)}
+                  </div>
                 </div>
+                <button
+                  onClick={() => setAddPlayersFor({ id: t.id, name: t.name })}
+                  className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 px-2 py-1.5 text-xs"
+                  aria-label="Dodaj igrače"
+                  title="Dodaj igrače"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                </button>
                 <button
                   onClick={() => setEditing(t.id)}
                   className="inline-flex items-center gap-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1.5 text-xs"
@@ -395,15 +408,19 @@ export function TeamsAdmin({ teams }: { teams: Team[] }) {
 function AddPlayersForTeam({
   teamId,
   teamName,
+  existingPlayers,
   onDone,
 }: {
   teamId: string;
   teamName: string;
+  existingPlayers: Array<{ id: string; name: string }>;
   onDone: () => void;
 }) {
   const { push } = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
+  // Just-added in this session — chips are highlighted differently from
+  // players already on the team so the admin sees what they just typed.
   const [added, setAdded] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -423,19 +440,29 @@ function AddPlayersForTeam({
     }
     setAdded((arr) => [...arr, n]);
     setName("");
+    // Refresh server data so the team's player count + Igrači admin both
+    // catch the change without waiting for the user to hit Gotovo.
+    router.refresh();
   }
+
+  // Existing names so we can de-dupe the "just-added" chips (after the
+  // router.refresh() they'll appear on existingPlayers too).
+  const existingNames = new Set(existingPlayers.map((p) => p.name));
+  const justAdded = added.filter((n) => !existingNames.has(n));
+  const totalCount = existingPlayers.length + justAdded.length;
 
   return (
     <div className="card border-2 border-emerald-500/40 bg-emerald-500/[0.06]">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+      <div className="flex items-center justify-between mb-2 gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center shrink-0">
             <UserPlus className="w-5 h-5" />
           </div>
-          <div>
-            <div className="font-semibold">Dodaj igrače u &bdquo;{teamName}&rdquo;</div>
+          <div className="min-w-0">
+            <div className="font-semibold truncate">Dodaj igrače u &bdquo;{teamName}&rdquo;</div>
             <div className="text-xs text-zinc-400">
-              Otkucaj ime i pritisni <b>Enter</b> ili dugme. Nastavi dok ne uneseš ceo sastav.
+              Otkucaj ime i pritisni <b>Enter</b>. Već u sastavu: <b>{existingPlayers.length}</b>
+              {justAdded.length > 0 && <> · upravo dodato: <b className="text-emerald-300">{justAdded.length}</b></>}
             </div>
           </div>
         </div>
@@ -444,7 +471,7 @@ function AddPlayersForTeam({
             router.refresh();
             onDone();
           }}
-          className="btn-secondary !py-1.5 !px-3 text-xs"
+          className="btn-secondary !py-1.5 !px-3 text-xs shrink-0"
         >
           Gotovo
         </button>
@@ -464,18 +491,28 @@ function AddPlayersForTeam({
         </button>
       </form>
 
-      {added.length > 0 && (
+      {totalCount > 0 && (
         <div className="mt-3">
           <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1">
-            Dodato u sastav ({added.length})
+            Sastav ({totalCount})
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {added.map((n, i) => (
+            {existingPlayers.map((p) => (
               <span
-                key={`${n}-${i}`}
+                key={p.id}
                 className="inline-flex items-center gap-1 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1 text-xs text-zinc-200"
+                title="Već u timu"
               >
-                {n}
+                {p.name}
+              </span>
+            ))}
+            {justAdded.map((n, i) => (
+              <span
+                key={`new-${n}-${i}`}
+                className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 rounded-full px-2.5 py-1 text-xs text-emerald-100"
+                title="Upravo dodato"
+              >
+                + {n}
               </span>
             ))}
           </div>
