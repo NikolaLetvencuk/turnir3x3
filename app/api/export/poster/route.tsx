@@ -77,8 +77,10 @@ type BracketPayload = {
   layout?: "full" | "left" | "right";
 };
 
+type NewsPayload = { title: string; body: string };
+
 type PosterRequest = {
-  kind: "results" | "standings" | "scorers" | "draw" | "bracket";
+  kind: "results" | "standings" | "scorers" | "draw" | "bracket" | "news";
   format: "story" | "post";
   title?: string;
   subtitle?: string;
@@ -87,6 +89,7 @@ type PosterRequest = {
   scorers?: ScorerEntry[];
   draw?: DrawGroupBlock[];
   bracket?: BracketPayload;
+  news?: NewsPayload;
 };
 
 const C = {
@@ -139,6 +142,15 @@ export async function POST(request: Request) {
       content = (
         <BracketPoster
           payload={body.bracket ?? { rounds: [], matches: [], include_third_place: false }}
+          width={width}
+          height={height}
+          logoUrl={logoUrl}
+        />
+      );
+    } else if (kind === "news") {
+      content = (
+        <NewsPoster
+          news={body.news ?? { title: "", body: "" }}
           width={width}
           height={height}
           logoUrl={logoUrl}
@@ -1353,5 +1365,56 @@ function SlotRow({
     >
       {text}
     </div>
+  );
+}
+
+/* ============================ NEWS ============================ */
+
+function NewsPoster({
+  news,
+  width,
+  height,
+  logoUrl,
+}: {
+  news: NewsPayload;
+  width: number;
+  height: number;
+  logoUrl?: string;
+}) {
+  // Title font shrinks as the title gets longer so it always fits a few lines.
+  const titleLen = news.title.length;
+  const titleFs = titleLen > 60 ? 56 : titleLen > 40 ? 68 : titleLen > 24 ? 84 : 96;
+  const bodyLen = news.body.length;
+  const bodyFs = bodyLen > 600 ? 30 : bodyLen > 380 ? 36 : bodyLen > 200 ? 42 : 48;
+
+  return (
+    <PosterFrame heading="VEST" subheading="Obaveštenje" width={width} height={height} logoUrl={logoUrl}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            fontSize: titleFs,
+            fontWeight: 900,
+            color: C.accent,
+            lineHeight: 1.1,
+            letterSpacing: -1,
+            marginBottom: 36,
+          }}
+        >
+          {news.title}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: bodyFs,
+            color: C.text,
+            lineHeight: 1.4,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {news.body}
+        </div>
+      </div>
+    </PosterFrame>
   );
 }

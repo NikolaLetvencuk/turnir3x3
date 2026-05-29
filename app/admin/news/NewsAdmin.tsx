@@ -2,10 +2,38 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Megaphone, Trash2, Send } from "lucide-react";
+import { Megaphone, Trash2, Send, ImageDown } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { createNews, deleteNews } from "../actions";
+
+async function downloadNewsPoster(
+  title: string,
+  body: string,
+  format: "story" | "post",
+): Promise<boolean> {
+  const res = await fetch("/api/export/poster", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: "news", format, news: { title, body } }),
+  });
+  const ct = res.headers.get("content-type") ?? "";
+  if (!res.ok || !ct.startsWith("image/")) {
+    const txt = await res.text();
+    alert(`Greška pri generisanju (${res.status}):\n${txt.slice(0, 300)}`);
+    return false;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `vest-${format}-${title.slice(0, 24).replace(/\s+/g, "-").toLowerCase()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  return true;
+}
 
 export type NewsRow = {
   id: string;
@@ -136,6 +164,25 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
         >
           {pending ? "Snimam…" : sendToWaGroup ? "Objavi i otvori WhatsApp →" : "Objavi vest"}
         </button>
+
+        {title.trim() && body.trim() && (
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => downloadNewsPoster(title.trim(), body.trim(), "story")}
+              className="btn-secondary flex-1 !py-2 text-sm inline-flex items-center justify-center gap-1.5"
+            >
+              <ImageDown className="w-4 h-4" /> Slika za Stori
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadNewsPoster(title.trim(), body.trim(), "post")}
+              className="btn-secondary flex-1 !py-2 text-sm inline-flex items-center justify-center gap-1.5"
+            >
+              <ImageDown className="w-4 h-4" /> Slika za Objavu
+            </button>
+          </div>
+        )}
       </form>
 
       {/* Existing news */}
@@ -152,13 +199,27 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
                   <span className="text-[10px] text-zinc-500 shrink-0">{formatRelativeDate(n.created_at)}</span>
                 </div>
                 <p className="text-sm text-zinc-300 mt-1 whitespace-pre-wrap">{n.body}</p>
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <button
                     onClick={() => setPostPublish({ title: n.title, body: n.body })}
                     className="inline-flex items-center gap-1 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 text-xs font-medium"
                     title="Ponovo pošalji u WhatsApp"
                   >
                     <Send className="w-3.5 h-3.5" /> WA
+                  </button>
+                  <button
+                    onClick={() => downloadNewsPoster(n.title, n.body, "story")}
+                    className="inline-flex items-center gap-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 py-1 text-xs font-medium"
+                    title="Skini sliku za Stori"
+                  >
+                    <ImageDown className="w-3.5 h-3.5" /> Stori
+                  </button>
+                  <button
+                    onClick={() => downloadNewsPoster(n.title, n.body, "post")}
+                    className="inline-flex items-center gap-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 py-1 text-xs font-medium"
+                    title="Skini sliku za Objavu"
+                  >
+                    <ImageDown className="w-3.5 h-3.5" /> Objava
                   </button>
                   <button
                     onClick={async () => {
