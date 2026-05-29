@@ -1261,8 +1261,11 @@ function BracketPosterMatch({
   const winnerId = m.winner_team_id;
   const homeWin = winnerId && m.home_team && m.home_team.id === winnerId;
   const awayWin = winnerId && m.away_team && m.away_team.id === winnerId;
-  const homeText = m.home_team?.name ?? m.home_placeholder ?? "—";
-  const awayText = m.away_team?.name ?? m.away_placeholder ?? "—";
+  // Names longer than 11 chars are clipped to "first 10 + ." so they stay
+  // big and readable instead of shrinking to fit.
+  const shorten = (s: string) => (s.length > 11 ? s.slice(0, 10) + "." : s);
+  const homeText = shorten(m.home_team?.name ?? m.home_placeholder ?? "—");
+  const awayText = shorten(m.away_team?.name ?? m.away_placeholder ?? "—");
 
   // Font + padding scale with the column width so a split-mode poster
   // (wider columns) renders names large enough to read at a glance.
@@ -1355,7 +1358,7 @@ function SlotRow({
       style={{
         display: "flex",
         fontSize: fittedFs,
-        fontWeight: highlighted ? 900 : 600,
+        fontWeight: 900,
         color: highlighted ? C.accent : placeholder ? C.textFaint : C.text,
         padding: "4px 2px",
         fontStyle: placeholder ? "italic" : "normal",
