@@ -11,21 +11,29 @@ import { ChevronLeft } from "lucide-react";
  * query-param navigation (e.g. fantasy day switches), which felt broken.
  */
 function parentPathOf(pathname: string): string {
-  // Strip trailing slash, drop the last segment.
   const clean = pathname.replace(/\/+$/, "");
+
+  // Pattern rules for dynamic / nested routes (checked before the generic
+  // "drop last segment" fallback). Order matters — most specific first.
+  const rules: Array<[RegExp, string]> = [
+    [/^\/admin\/matches\/[^/]+\/live$/, "/admin/matches"], // finish match → match list
+    [/^\/fantasy\/leagues\/[^/]+$/, "/fantasy"], // a league → fantasy home
+    [/^\/fantasy\/leagues$/, "/fantasy"],
+    [/^\/fantasy\/team(\/.*)?$/, "/fantasy"], // team editor / history → fantasy home
+    [/^\/admin\/[^/]+$/, "/admin"], // any admin sub-tab → admin home
+    [/^\/players\/[^/]+$/, "/players"],
+    [/^\/teams\/[^/]+$/, "/standings"],
+    [/^\/matches\/[^/]+$/, "/matches"],
+  ];
+  for (const [re, target] of rules) {
+    if (re.test(clean)) return target;
+  }
+
+  // Generic fallback: drop the last path segment.
   const segments = clean.split("/").filter(Boolean);
   if (segments.length <= 1) return "/";
   segments.pop();
-  const parent = "/" + segments.join("/");
-
-  // Friendlier parents for known nested routes.
-  const map: Record<string, string> = {
-    "/fantasy/team": "/fantasy",
-    "/fantasy/team/history": "/fantasy",
-    "/fantasy/leagues": "/fantasy",
-    "/admin/matches": "/admin",
-  };
-  return map[clean] ?? parent;
+  return "/" + segments.join("/");
 }
 
 export function BackButton() {

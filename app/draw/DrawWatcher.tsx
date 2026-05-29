@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sparkles, Clock } from "lucide-react";
@@ -78,13 +78,32 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
   const animationDone =
     scheduledMs != null && totalAnimMs > 0 && now - scheduledMs >= totalAnimMs;
 
-  async function onCommit() {
+  // Auto-commit: the moment the animation finishes, the admin's client saves
+  // the draw to the DB automatically — no manual "Potvrdi i snimi" click.
+  // Guarded so it fires once per draw.
+  const autoCommittedRef = useRef(false);
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (!animationDone) return;
+    if (!state || state.state === "committed") return;
+    if (autoCommittedRef.current || committing) return;
+    autoCommittedRef.current = true;
+    void onCommit({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animationDone, isAdmin, state?.state]);
+
+  async function onCommit(opts?: { silent?: boolean }) {
     setCommitting(true);
     const res = await commitScheduledDraw();
     setCommitting(false);
-    if (!res.ok) { push(res.error, "error"); return; }
+    if (!res.ok) {
+      if (!opts?.silent) push(res.error, "error");
+      return;
+    }
     push("Žreb sačuvan!", "success");
-    router.push("/admin/schedule");
+    if (!opts?.silent) {
+      router.push("/admin/schedule");
+    }
     router.refresh();
   }
   async function onCancel() {
@@ -155,9 +174,11 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
         <FinalGroups result={state.result} />
         {isAdmin && (
           <div className="card border-dashed border-zinc-700">
-            <div className="text-xs text-zinc-500 mb-2">Admin kontrole (potrebno da bi se podaci stvarno snimili u bazi)</div>
+            <div className="text-xs text-zinc-500 mb-2">
+              {committing ? "Snimam žreb u bazu…" : "Žreb je automatski snimljen u bazu."}
+            </div>
             <div className="flex gap-2 flex-wrap">
-              <button onClick={onCommit} disabled={committing} className="btn-primary">{committing ? "Snimam…" : "Potvrdi i snimi u bazu"}</button>
+              <Link href="/admin/schedule" className="btn-primary">Raspored →</Link>
               <button onClick={onCancel} disabled={committing} className="btn-secondary">Otkaži ovaj žreb</button>
             </div>
           </div>
