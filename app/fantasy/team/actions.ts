@@ -103,19 +103,28 @@ export async function savePicksForDay(input: {
   if (pErr) return { ok: false, error: pErr.message };
   if (!players || players.length !== 3) return { ok: false, error: "Igrač nije pronađen" };
 
-  const range = belgradeDayRange(day);
-  if (!range) return { ok: false, error: "Neispravan datum" };
-
-  const { data: matchRows } = await admin
-    .from("matches")
-    .select("id, status, bracket_position")
-    .gte("kickoff_at", range.startUTC)
-    .lt("kickoff_at", range.endUTC);
-  const matches = (matchRows ?? []) as Array<{ id: string; status: string; bracket_position: string | null }>;
-
-  const started = matches.some((m) => m.status && m.status !== "scheduled");
-  if (started) {
-    return { ok: false, error: "Tim za ovaj dan je zaključan — prvi meč je već počeo." };
+  // Resolve the *effective* day. If the requested day's first match has
+  // already started, the team can't change that day anymore — instead of
+  // erroring we roll the save forward to the next day that has matches and
+  // hasn't started yet. This handles the "today's games started → this is
+  // really tomorrow's team" case transparently.
+  let effectiveDay = day;
+  let matches: Array<{ id: string; status: string; bracket_position: string | null }> = [];
+  for (let i = 0; i < 60; i++) {
+    const range = belgradeDayRange(effectiveDay);
+    if (!range) return { ok: false, error: "Neispravan datum" };
+    const { data: matchRows } = await admin
+      .from("matches")
+      .select("id, status, bracket_position")
+      .gte("kickoff_at", range.startUTC)
+      .lt("kickoff_at", range.endUTC);
+    const dayMatches = (matchRows ?? []) as Array<{ id: string; status: string; bracket_position: string | null }>;
+    const started = dayMatches.some((m) => m.status && m.status !== "scheduled");
+    if (!started) {
+      matches = dayMatches;
+      break;
+    }
+    effectiveDay = shiftDayUTC(effectiveDay, 1);
   }
 
   // QF+ day = any match in QF / SF / F / TP. R16 stays under the strict rule.
@@ -140,7 +149,7 @@ export async function savePicksForDay(input: {
   const { error: upErr } = await (admin as any)
     .from("fantasy_day_picks")
     .upsert(
-      { user_id: user.id, day, player1_id, player2_id, player3_id, updated_at: new Date().toISOString() },
+      { user_id: user.id, day: effectiveDay, player1_id, player2_id, player3_id, updated_at: new Date().toISOString() },
       { onConflict: "user_id,day" },
     );
   if (upErr) return { ok: false, error: upErr.message };
@@ -165,10 +174,10 @@ export async function savePicksForDay(input: {
 
   // Recompute points for the day (idempotent; covers re-saves after matches
   // finish too, though normal updates flow through the SQL trigger).
-  await admin.rpc("recalculate_day_points" as any, { p_day: day });
+  await admin.rpc("recalculate_day_points" as any, { p_day: effectiveDay });
 
   revalidatePath("/fantasy/team");
   revalidatePath("/fantasy");
   revalidatePath("/admin/users");
-  return { ok: true };
+  return { ok: true, data: { day: effectiveDay, rolledForward: effectiveDay !== day } };
 }

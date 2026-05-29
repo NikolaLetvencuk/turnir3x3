@@ -215,7 +215,8 @@ export function DailyTeamEditor({
       push(res.error, "error");
       return;
     }
-    push(`Tim sačuvan za ${formatSrDate(day)}`, "success");
+    const savedDay = (res.data as any)?.day ?? day;
+    push(`Tim sačuvan za ${formatSrDate(savedDay)}`, "success");
     router.refresh();
   }
 

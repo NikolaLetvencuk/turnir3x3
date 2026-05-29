@@ -35,6 +35,7 @@ export function DrawAnimation({
   result,
   onSkip,
   onDone,
+  onExit,
   perPickMs = DEFAULT_PER_PICK_MS,
   startedAtMs,
   allowSkip = true,
@@ -42,10 +43,23 @@ export function DrawAnimation({
   result: DrawResult;
   onSkip?: () => void;
   onDone?: () => void;
+  onExit?: () => void;
   perPickMs?: number;
   startedAtMs?: number;
   allowSkip?: boolean;
 }) {
+  // Lock body scroll while the full-screen animation is mounted so the page
+  // behind it can't rubber-band / scroll on mobile. Restored on unmount.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevOverscroll = (document.body.style as any).overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    (document.body.style as any).overscrollBehavior = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      (document.body.style as any).overscrollBehavior = prevOverscroll;
+    };
+  }, []);
   // Groups fill in order: pick 1 → Group A, pick 2 → B, pick 3 → C, ... wrapping rows.
   // Suspense lives in *which team* is being pulled, handled by the mystery crest below.
   const allPicks: Pick[] = useMemo(() => {
@@ -102,18 +116,26 @@ export function DrawAnimation({
   }, [phase, onDone]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-hidden overscroll-none touch-none" style={{ height: "100dvh" }}>
       <Background />
 
       <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2 text-white/90">
-          <Sparkles className="w-4 h-4 text-blue-400" />
-          <span className="text-xs uppercase tracking-[0.2em] font-semibold">Žreb · Petrovski Kula</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {onExit && (
+            <button
+              onClick={onExit}
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full px-3 py-1.5 text-xs font-medium border border-white/10 inline-flex items-center gap-1"
+            >
+              ← Izađi
+            </button>
+          )}
+          <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+          <span className="text-xs uppercase tracking-[0.2em] font-semibold text-white/90 truncate">Žreb · Petrovski Kula</span>
         </div>
         {allowSkip && phase !== "done" && (
           <button
             onClick={onSkip}
-            className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full px-3 py-1.5 text-xs font-medium border border-white/10"
+            className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full px-3 py-1.5 text-xs font-medium border border-white/10 shrink-0"
           >
             Preskoči
           </button>
@@ -282,7 +304,7 @@ function PicksStage({
         </AnimatePresence>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-3 max-h-[40vh] overflow-auto px-1 pb-2">
+      <div className="grid sm:grid-cols-2 gap-3 max-h-[40vh] overflow-auto overscroll-contain px-1 pb-2">
         {groups.map((g, gi) => (
           <div
             key={gi}
@@ -477,7 +499,7 @@ function FinaleScreen({ result, stillVisible = false }: { result: DrawResult; st
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.6 }}
-        className="grid sm:grid-cols-2 gap-3 max-h-[50vh] overflow-auto"
+        className="grid sm:grid-cols-2 gap-3 max-h-[50vh] overflow-auto overscroll-contain"
       >
         {result.groups.map((g, gi) => (
           <motion.div

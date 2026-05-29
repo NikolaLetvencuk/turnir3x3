@@ -187,13 +187,15 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
     );
   }
 
-  // Animation running (or about to start)
+  // Animation running (or about to start). Exit returns home; re-entering
+  // /draw resumes the animation (it's driven by draw_state timing).
   return (
     <DrawAnimation
       result={state.result}
       startedAtMs={scheduledMs ?? now}
       perPickMs={state.per_pick_ms}
       allowSkip={false}
+      onExit={() => router.push("/")}
     />
   );
 }

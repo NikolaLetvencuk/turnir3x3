@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Calendar, X, Lock, Zap, ListChecks, CalendarClock, Trash2, Plus } from "lucide-react";
 import { TeamCrest } from "@/components/TeamCrest";
@@ -100,7 +100,19 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
   const router = useRouter();
   const { push } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [dateFilter, setDateFilter] = useState<string>("");
+  // Default the date filter to today (or the next day with matches). If no
+  // match has a kickoff set yet, fall back to "Svi dani" ("").
+  const initialDateFilter = useMemo(() => {
+    const dated = matches.map((m: any) => toLocalDate(m.kickoff_at)).filter(Boolean) as string[];
+    if (dated.length === 0) return "";
+    const todayKey = toLocalDate(new Date().toISOString());
+    if (todayKey && dated.includes(todayKey)) return todayKey;
+    const future = dated.filter((d) => todayKey && d >= todayKey).sort();
+    return future[0] ?? "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [dateFilter, setDateFilter] = useState<string>(initialDateFilter);
+  const dateFilterTouched = useRef(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkStart, setBulkStart] = useState<string>("");
   const [bulkGap, setBulkGap] = useState<number>(40);
@@ -157,7 +169,13 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
     return selectedMatches.filter((m: any) => toLocalDate(m.kickoff_at) === dateFilter);
   }, [selectedMatches, dateFilter]);
 
+  // Reset the date filter when the user changes round — but not on the
+  // initial mount, so the "today" default survives the first render.
   useEffect(() => {
+    if (!dateFilterTouched.current) {
+      dateFilterTouched.current = true;
+      return;
+    }
     setDateFilter("");
   }, [selectedRoundId]);
 

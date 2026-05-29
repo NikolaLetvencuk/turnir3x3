@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
+import { FantasyHelp } from "./FantasyHelp";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -134,33 +135,8 @@ export default async function FantasyLandingPage() {
         )}
       </section>
 
-      <section className="card">
-        <h2 className="font-semibold mb-2">Pravila bodovanja</h2>
-        <ul className="text-sm space-y-1 text-zinc-300">
-          <li>⚽ Gol — <b>+3</b></li>
-          <li>🅰️ Asistencija — <b>+2</b></li>
-          <li>✅ Pobeda tima — <b>+1</b></li>
-          <li>🧤 Čista mreža — <b>+1</b></li>
-          <li>🟨 Žuti karton — <b>−1</b></li>
-          <li>🟥 Crveni karton — <b>−2</b></li>
-          <li>🥅 Autogol — <b>−1</b></li>
-        </ul>
-      </section>
-
-      <section className="card">
-        <h2 className="font-semibold mb-2">Kako se igra</h2>
-        <ol className="text-sm space-y-1 text-zinc-300 list-decimal list-inside">
-          <li>Postavi <b>ime tima</b> (jednom, ne menja se).</li>
-          <li>Svaki dan izabereš <b>3 igrača</b> — bez budžeta, bez cena, bez ograničenih transfera.</li>
-          <li>
-            U <b>grupnoj fazi</b>: sva 3 igrača iz različitih timova. Od <b>četvrtfinala</b> nadalje:
-            najviše 2 iz istog tima.
-          </li>
-          <li>Picks se zaključavaju kad prvi meč tog dana počne.</li>
-          <li>
-            Ako ne nameštaš tim za neki dan, automatski se koristi tvoj poslednji sastavljen tim.
-          </li>
-        </ol>
+      <section className="flex justify-center pt-1">
+        <FantasyHelp />
       </section>
     </div>
   );
