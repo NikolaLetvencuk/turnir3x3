@@ -59,11 +59,12 @@ export function DangerZoneClient() {
 
       <div className="card border-amber-200 bg-amber-50">
         <h2 className="font-semibold text-amber-800 flex items-center gap-2">
-          <RotateCcw className="w-4 h-4" /> Resetuj turnir (zadrži timove i igrače)
+          <RotateCcw className="w-4 h-4" /> Resetuj turnir (zadrži timove, igrače i korisnike)
         </h2>
         <p className="text-sm text-amber-700 mt-1">
-          Briše mečeve, događaje, žreb, grupnu fazu i fantasy podatke. <b>Timovi, igrači i njihove
-          slike ostaju.</b> Korisno za ponovno testiranje.
+          Briše mečeve, događaje, žreb i grupnu fazu — tako da možeš ponovo da pokreneš žreb i
+          simuliraš fantasy. <b>Timovi, igrači, registrovani korisnici i njihovi fantasy timovi
+          ostaju.</b>
         </p>
         <button onClick={() => setResetOpen("progress")} className="btn bg-amber-600 text-white hover:bg-amber-700 mt-3">Resetuj turnir</button>
       </div>
@@ -98,7 +99,7 @@ export function DangerZoneClient() {
             </h3>
             <p className="text-sm text-zinc-400 mb-3">
               {resetOpen === "progress"
-                ? <>Briše mečeve i fantasy, ali zadržava timove i igrače. Otkucaj <b className="font-mono">RESETUJ</b>:</>
+                ? <>Briše mečeve i žreb, ali zadržava timove, igrače i registrovane korisnike sa njihovim fantasy timovima. Otkucaj <b className="font-mono">RESETUJ</b>:</>
                 : <>Briše <b>SVE</b>. Otkucaj <b className="font-mono">IZBRISI SVE</b>:</>}
             </p>
             <input

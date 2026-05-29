@@ -14,11 +14,15 @@ export async function performReset(adminEmail: string, mode: ResetMode = "soft")
     if (dbErr) return { ok: false, error: `Soft reset: ${dbErr.message}` };
   }
 
-  // Always wipe non-admin auth users
-  const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  for (const u of usersList?.users ?? []) {
-    if (u.email !== adminEmail) {
-      await admin.auth.admin.deleteUser(u.id);
+  // Only the FULL reset wipes registered users. The soft reset keeps them
+  // (and their fantasy teams/leagues/picks) so the tournament can be re-drawn
+  // and fantasy re-simulated with the same people.
+  if (mode === "full") {
+    const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    for (const u of usersList?.users ?? []) {
+      if (u.email !== adminEmail) {
+        await admin.auth.admin.deleteUser(u.id);
+      }
     }
   }
 
