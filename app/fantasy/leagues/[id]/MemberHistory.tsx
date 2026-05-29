@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+
+function belgradeKeyOf(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Belgrade",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
 
 type PlayerLite = { id: string; name: string; photo_url: string | null; team_id: string | null };
 type PickRow = { day: string; player1_id: string; player2_id: string; player3_id: string };
@@ -35,12 +45,15 @@ export function MemberHistory({
   const [picks, setPicks] = useState<PickRow[]>([]);
   const [pointsByDay, setPointsByDay] = useState<Map<string, PointRow>>(new Map());
   const [playerMap, setPlayerMap] = useState<Map<string, PlayerLite>>(new Map());
+  // Belgrade days on which at least one match has started — only such days'
+  // teams are revealed for OTHER members.
+  const [startedDays, setStartedDays] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const supabase = createClient();
-      const [picksRes, pointsRes, playersRes] = await Promise.all([
+      const [picksRes, pointsRes, playersRes, matchesRes] = await Promise.all([
         (supabase as any)
           .from("fantasy_day_picks")
           .select("day, player1_id, player2_id, player3_id")
@@ -51,6 +64,7 @@ export function MemberHistory({
           .select("day, player1_points, player2_points, player3_points, total_points")
           .eq("user_id", userId),
         supabase.from("players").select("id, name, photo_url, team_id, team:teams(primary_color)"),
+        supabase.from("matches").select("status, kickoff_at").not("kickoff_at", "is", null),
       ]);
       if (cancelled) return;
       setPicks((picksRes.data ?? []) as PickRow[]);
@@ -65,6 +79,12 @@ export function MemberHistory({
         team_primary: p.team?.primary_color ?? null,
       }));
       setPlayerMap(new Map(players.map((p) => [p.id, p as any])));
+      const started = new Set<string>();
+      for (const m of (matchesRes.data ?? []) as Array<{ status: string; kickoff_at: string | null }>) {
+        if (!m.kickoff_at) continue;
+        if (m.status && m.status !== "scheduled") started.add(belgradeKeyOf(m.kickoff_at));
+      }
+      setStartedDays(started);
       setLoading(false);
     }
     load();
@@ -98,35 +118,46 @@ export function MemberHistory({
                 { id: pk.player2_id, pts: pts?.player2_points ?? 0 },
                 { id: pk.player3_id, pts: pts?.player3_points ?? 0 },
               ];
+              // Other members' team for a day is hidden until that day's first
+              // match starts (i.e. once nobody can edit it anymore). Your own
+              // team is always visible.
+              const hidden = !isMe && !startedDays.has(pk.day);
               return (
                 <div key={pk.day} className="card !p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-medium text-sm">{formatSrDate(pk.day)}</div>
-                    <div className="font-bold tabular-nums">{pts?.total_points ?? 0}</div>
+                    {!hidden && <div className="font-bold tabular-nums">{pts?.total_points ?? 0}</div>}
                   </div>
-                  <ul className="space-y-1.5">
-                    {slots.map((s, i) => {
-                      const p = playerMap.get(s.id) as any;
-                      return (
-                        <li key={i} className="flex items-center gap-2 text-sm">
-                          <PlayerAvatar
-                            name={p?.name ?? "?"}
-                            photoUrl={p?.photo_url ?? null}
-                            teamPrimary={p?.team_primary ?? null}
-                            size={24}
-                          />
-                          <span className="flex-1 truncate">{p?.name ?? "?"}</span>
-                          <span
-                            className={`tabular-nums font-semibold w-8 text-right ${
-                              s.pts > 0 ? "text-emerald-300" : s.pts < 0 ? "text-red-300" : "text-zinc-400"
-                            }`}
-                          >
-                            {s.pts > 0 ? `+${s.pts}` : s.pts}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  {hidden ? (
+                    <div className="text-xs text-zinc-500 inline-flex items-center gap-1.5 py-1">
+                      <Lock className="w-3.5 h-3.5" />
+                      Tim je skriven dok ne počne prvi meč tog dana.
+                    </div>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {slots.map((s, i) => {
+                        const p = playerMap.get(s.id) as any;
+                        return (
+                          <li key={i} className="flex items-center gap-2 text-sm">
+                            <PlayerAvatar
+                              name={p?.name ?? "?"}
+                              photoUrl={p?.photo_url ?? null}
+                              teamPrimary={p?.team_primary ?? null}
+                              size={24}
+                            />
+                            <span className="flex-1 truncate">{p?.name ?? "?"}</span>
+                            <span
+                              className={`tabular-nums font-semibold w-8 text-right ${
+                                s.pts > 0 ? "text-emerald-300" : s.pts < 0 ? "text-red-300" : "text-zinc-400"
+                              }`}
+                            >
+                              {s.pts > 0 ? `+${s.pts}` : s.pts}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
               );
             })}
