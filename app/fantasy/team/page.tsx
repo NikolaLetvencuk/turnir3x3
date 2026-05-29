@@ -37,7 +37,7 @@ function belgradeDayRange(day: string) {
   return { startUTC: startUTC ?? "", endUTC: endUTC ?? "" };
 }
 
-export default async function TeamPage({ searchParams }: { searchParams: { day?: string } }) {
+export default async function TeamPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/auth/login?next=/fantasy/team");
 
@@ -92,10 +92,9 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
     ? nextFutureDay
     : shiftDayUTC(today, 1);
 
-  // ---- Resolve requested day, clamp to allowed range ----------------------
-  let day = searchParams.day && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.day) ? searchParams.day : editableDay;
-  // Don't allow navigating past the editable day — future beyond that is empty.
-  if (day > editableDay) day = editableDay;
+  // This page is the composer — it always works on the editable (active) day.
+  // Past-day review lives on /fantasy/team/history.
+  const day = editableDay;
 
   const range = belgradeDayRange(day);
 
@@ -469,6 +468,7 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
       fallbackDay={!dayPick && fallbackPick ? (fallbackPick.day as string) : null}
       savedDays={savedDays}
       matchDays={matchDays}
+      composerMode
       matchCount={matches.length}
       stats={statsObj}
       teamMatchToday={teamMatchToday}

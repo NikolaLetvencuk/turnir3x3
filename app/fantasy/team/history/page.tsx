@@ -39,10 +39,13 @@ export default async function HistoryPage() {
   return (
     <div className="space-y-4">
       <div className="card flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Moja istorija</h1>
-        <div className="text-right">
-          <div className="text-xs text-zinc-500">Ukupno bodova</div>
-          <div className="text-2xl font-bold tabular-nums">{total}</div>
+        <div>
+          <h1 className="text-xl font-semibold">Pregled poena</h1>
+          <p className="text-xs text-zinc-500 mt-0.5">Koliko si imao bodova svaki dan i koliko je koji igrač doneo.</p>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-xs text-zinc-500">Ukupno</div>
+          <div className="text-2xl font-bold tabular-nums text-emerald-300">{total}</div>
         </div>
       </div>
       <div className="space-y-3">
@@ -50,30 +53,33 @@ export default async function HistoryPage() {
           const p = ptsMap.get(r.day);
           const slotPts = [p?.player1_points ?? 0, p?.player2_points ?? 0, p?.player3_points ?? 0];
           return (
-            <Link
-              key={r.day}
-              href={`/fantasy/team?day=${r.day}`}
-              className="card block hover:border-blue-300"
-            >
+            <div key={r.day} className="card">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="font-medium">{formatSrDate(r.day)}</h2>
-                <span className="font-bold tabular-nums">{p?.total_points ?? "—"}</span>
+                <span className="font-bold tabular-nums">{p ? p.total_points : "—"}</span>
               </div>
               <div className="space-y-1 text-sm">
                 {[r.player1_id, r.player2_id, r.player3_id].map((pid, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span>{playerMap.get(pid) ?? "?"}</span>
-                    <span className="text-zinc-500 text-xs">
-                      <b className="text-zinc-100">{slotPts[i]}</b>
+                  <div key={i} className="flex items-center justify-between border-b last:border-0 border-zinc-800/60 pb-1 last:pb-0">
+                    <span className="truncate">{playerMap.get(pid) ?? "?"}</span>
+                    <span
+                      className={`tabular-nums font-semibold text-xs w-8 text-right ${
+                        slotPts[i] > 0 ? "text-emerald-300" : slotPts[i] < 0 ? "text-red-300" : "text-zinc-400"
+                      }`}
+                    >
+                      {slotPts[i] > 0 ? `+${slotPts[i]}` : slotPts[i]}
                     </span>
                   </div>
                 ))}
               </div>
-            </Link>
+            </div>
           );
         })}
         {rows.length === 0 && (
-          <p className="text-sm text-zinc-500">Još nemaš sačuvane timove. Idi na <Link href="/fantasy/team" className="text-blue-300 underline">Sastavi tim</Link>.</p>
+          <p className="text-sm text-zinc-500">
+            Još nemaš sačuvane timove. Idi na{" "}
+            <Link href="/fantasy/team" className="text-blue-300 underline">Sastavi tim</Link>.
+          </p>
         )}
       </div>
     </div>

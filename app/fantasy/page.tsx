@@ -78,15 +78,26 @@ export default async function FantasyLandingPage() {
             </div>
           </div>
         </div>
-        <div className="mt-4 flex gap-2 flex-wrap">
-          <Link href="/fantasy/team" className="bg-zinc-900 text-blue-300 rounded-md px-4 py-2 text-sm font-medium">
-            Sastavi tim za danas
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Link
+            href="/fantasy/team"
+            className="bg-zinc-900 text-blue-300 rounded-md px-4 py-3 text-sm font-semibold text-center"
+          >
+            ⚽ Sastavi tim
           </Link>
           <Link
-            href="/fantasy/leagues"
-            className="bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium"
+            href="/fantasy/team/history"
+            className="bg-zinc-900 text-blue-300 rounded-md px-4 py-3 text-sm font-semibold text-center"
           >
-            Lige
+            📊 Pregledaj poene
+          </Link>
+        </div>
+        <div className="mt-2">
+          <Link
+            href="/fantasy/leagues"
+            className="block bg-white/15 text-white border border-white/40 rounded-md px-4 py-2 text-sm font-medium text-center"
+          >
+            🏆 Lige
           </Link>
         </div>
       </section>

@@ -120,6 +120,7 @@ export function DailyTeamEditor({
   fallbackDay,
   savedDays,
   matchDays,
+  composerMode = false,
   matchCount,
   stats,
   teamMatchToday,
@@ -138,6 +139,7 @@ export function DailyTeamEditor({
   fallbackDay: string | null;
   savedDays: string[];
   matchDays: string[];
+  composerMode?: boolean;
   matchCount: number;
   stats: Record<string, PlayerStats>;
   teamMatchToday: Record<string, TeamMatchToday>;
@@ -310,7 +312,15 @@ export function DailyTeamEditor({
           </div>
         </div>
 
-        {/* Day navigator — only steps between real match days */}
+        {/* Day navigator — only steps between real match days. Hidden in
+            composer mode where we only ever show the single active day. */}
+        {composerMode ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800 text-sm w-fit">
+            <Calendar className="w-4 h-4 text-zinc-400" />
+            <span className="font-semibold">{formatSrDate(day)}</span>
+            {day === today && <span className="text-[10px] uppercase tracking-wider text-emerald-300">danas</span>}
+          </div>
+        ) : (
         <div className="flex items-center gap-2 flex-wrap">
           {prevDayKey ? (
             <Link
@@ -343,6 +353,7 @@ export function DailyTeamEditor({
             <span className="text-xs text-zinc-500 italic ml-1">Poslednji aktivni dan</span>
           )}
         </div>
+        )}
 
         {canEdit && <div className="text-xs text-zinc-400">{teamRuleHint}</div>}
       </div>
