@@ -1,36 +1,47 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 /**
- * Inline back button rendered at the top of every non-home page. Lives in the
- * page content (not in the sticky navbar) so clicking it doesn't cause the
- * navbar to flicker / reflow during navigation.
+ * Inline back button rendered at the top of every non-home page. Navigates to
+ * a deterministic *parent* route derived from the current path rather than
+ * using browser history — browser-back could land on the same page after a
+ * query-param navigation (e.g. fantasy day switches), which felt broken.
  */
-export function BackButton() {
-  const router = useRouter();
-  const pathname = usePathname();
+function parentPathOf(pathname: string): string {
+  // Strip trailing slash, drop the last segment.
+  const clean = pathname.replace(/\/+$/, "");
+  const segments = clean.split("/").filter(Boolean);
+  if (segments.length <= 1) return "/";
+  segments.pop();
+  const parent = "/" + segments.join("/");
 
+  // Friendlier parents for known nested routes.
+  const map: Record<string, string> = {
+    "/fantasy/team": "/fantasy",
+    "/fantasy/team/history": "/fantasy",
+    "/fantasy/leagues": "/fantasy",
+    "/admin/matches": "/admin",
+  };
+  return map[clean] ?? parent;
+}
+
+export function BackButton() {
+  const pathname = usePathname();
   if (pathname === "/") return null;
 
-  function onClick() {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/");
-    }
-  }
+  const target = parentPathOf(pathname);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Link
+      href={target}
       aria-label="Nazad"
       className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-blue-300 mb-3 -ml-1 px-2 py-1 rounded-md hover:bg-zinc-800"
     >
       <ChevronLeft className="w-4 h-4" />
       <span>Nazad</span>
-    </button>
+    </Link>
   );
 }

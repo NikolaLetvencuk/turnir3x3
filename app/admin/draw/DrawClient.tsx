@@ -29,11 +29,10 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export function DrawClient({
   teams,
-  hasExisting,
   drawState,
 }: {
   teams: DrawTeam[];
-  hasExisting: boolean;
+  hasExisting?: boolean;
   drawState: DrawStateLite | null;
 }) {
   const router = useRouter();
@@ -67,9 +66,6 @@ export function DrawClient({
     if (teams.length < groupCount * 2) {
       push(`Za ${groupCount} grupa potrebno je najmanje ${groupCount * 2} timova`, "error");
       return;
-    }
-    if (hasExisting) {
-      if (!confirm("Postojeća kola, grupe i mečevi će biti obrisani kad se žreb potvrdi. Nastaviti?")) return;
     }
     const iso = when === "now" ? new Date().toISOString() : belgradeLocalToUTCISO(scheduleAt.trim());
     if (!iso) { push("Neispravan datum/vreme", "error"); return; }
@@ -128,9 +124,6 @@ export function DrawClient({
 
   async function commitManual() {
     if (!manualResult) return;
-    if (hasExisting) {
-      if (!confirm("Postojeća kola i mečevi će biti obrisani. Nastaviti?")) return;
-    }
     setManualPhase("saving");
     const payload = {
       groups: manualResult.groups.map((g) => ({ name: g.name, team_ids: g.teams.map((t) => t.id) })),

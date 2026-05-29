@@ -434,6 +434,18 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
     .map((r) => r.day)
     .filter((d) => d < day);
 
+  // All Belgrade dates that have at least one match, up to and including the
+  // editable day. Used to restrict day navigation to real match days (and
+  // never beyond the editable day).
+  const matchDaysSet = new Set<string>();
+  for (const m of allMatches) {
+    if (!m.kickoff_at) continue;
+    const k = belgradeKeyOf(m.kickoff_at);
+    if (k <= editableDay) matchDaysSet.add(k);
+  }
+  matchDaysSet.add(editableDay); // always allow the editable day even if no match yet
+  const matchDays = Array.from(matchDaysSet).sort();
+
   const initialPicks = dayPick
     ? { player1_id: dayPick.player1_id, player2_id: dayPick.player2_id, player3_id: dayPick.player3_id }
     : fallbackPick
@@ -454,6 +466,7 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
       isCurrentDayPick={!!dayPick}
       fallbackDay={!dayPick && fallbackPick ? (fallbackPick.day as string) : null}
       savedDays={savedDays}
+      matchDays={matchDays}
       matchCount={matches.length}
       stats={statsObj}
       teamMatchToday={teamMatchToday}

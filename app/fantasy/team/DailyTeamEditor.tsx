@@ -119,6 +119,7 @@ export function DailyTeamEditor({
   isCurrentDayPick,
   fallbackDay,
   savedDays,
+  matchDays,
   matchCount,
   stats,
   teamMatchToday,
@@ -136,6 +137,7 @@ export function DailyTeamEditor({
   isCurrentDayPick: boolean;
   fallbackDay: string | null;
   savedDays: string[];
+  matchDays: string[];
   matchCount: number;
   stats: Record<string, PlayerStats>;
   teamMatchToday: Record<string, TeamMatchToday>;
@@ -243,17 +245,20 @@ export function DailyTeamEditor({
     });
   }, [players, search, teamFilter]);
 
-  // Past day navigation: prev jumps to the most recent saved past day < current
-  // (or just day−1). Next is clamped at editableDay.
+  // Navigation hops only between real match days (matchDays is sorted asc and
+  // capped at editableDay) so the user never lands on an empty no-match day.
+  const dayIndex = matchDays.indexOf(day);
   const prevDayKey = useMemo(() => {
-    const cand = savedDays.find((d) => d < day);
-    if (cand) return cand;
-    return shiftDayUTC(day, -1);
-  }, [savedDays, day]);
+    if (dayIndex > 0) return matchDays[dayIndex - 1];
+    // current day isn't in the list (rare) → nearest earlier match day
+    const earlier = matchDays.filter((d) => d < day);
+    return earlier.length ? earlier[earlier.length - 1] : null;
+  }, [matchDays, dayIndex, day]);
   const nextDayKey = useMemo(() => {
-    const target = shiftDayUTC(day, 1);
-    return target <= editableDay ? target : null;
-  }, [day, editableDay]);
+    if (dayIndex >= 0 && dayIndex < matchDays.length - 1) return matchDays[dayIndex + 1];
+    const later = matchDays.filter((d) => d > day);
+    return later.length ? later[0] : null;
+  }, [matchDays, dayIndex, day]);
 
   const openPlayer = openPlayerId ? playerById.get(openPlayerId) ?? null : null;
 
@@ -305,14 +310,20 @@ export function DailyTeamEditor({
           </div>
         </div>
 
-        {/* Day navigator */}
+        {/* Day navigator — only steps between real match days */}
         <div className="flex items-center gap-2 flex-wrap">
-          <a
-            href={`/fantasy/team?day=${prevDayKey}`}
-            className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" /> Prethodni dan
-          </a>
+          {prevDayKey ? (
+            <Link
+              href={`/fantasy/team?day=${prevDayKey}`}
+              className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Prethodni dan
+            </Link>
+          ) : (
+            <span className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1 opacity-40 cursor-not-allowed">
+              <ChevronLeft className="w-3.5 h-3.5" /> Prethodni dan
+            </span>
+          )}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800 text-sm">
             <Calendar className="w-4 h-4 text-zinc-400" />
             <span className="font-semibold">{formatSrDate(day)}</span>
@@ -322,14 +333,14 @@ export function DailyTeamEditor({
             )}
           </div>
           {nextDayKey ? (
-            <a
+            <Link
               href={`/fantasy/team?day=${nextDayKey}`}
               className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1"
             >
               Sledeći dan <ChevronRight className="w-3.5 h-3.5" />
-            </a>
+            </Link>
           ) : (
-            <span className="text-xs text-zinc-500 italic ml-1">Aktivni dan je {formatSrDateShort(editableDay)}</span>
+            <span className="text-xs text-zinc-500 italic ml-1">Poslednji aktivni dan</span>
           )}
         </div>
 
@@ -344,7 +355,7 @@ export function DailyTeamEditor({
             <div className="font-medium">Pregled — tim za {formatSrDate(day)} se ne može menjati.</div>
             <div className="text-xs text-zinc-400">
               Aktivni dan koji se nameštaš je <b className="text-emerald-300">{formatSrDateShort(editableDay)}</b>
-              {editableDay === today ? " (danas)" : " (sutra)"}.
+              {editableDay === today ? " (danas)" : ""}.
             </div>
           </div>
         </div>
@@ -353,7 +364,7 @@ export function DailyTeamEditor({
         <div className="card border-amber-500/40 bg-amber-500/[0.06] flex items-start gap-2 text-sm">
           <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
           <div>
-            <div className="font-medium">Današnji mečevi su počeli — nameštaš tim za sutra.</div>
+            <div className="font-medium">Današnji mečevi su počeli — nameštaš tim za sledeći dan.</div>
             <div className="text-xs text-zinc-400">Tvoj poslednji tim važi za današnji dan.</div>
           </div>
         </div>

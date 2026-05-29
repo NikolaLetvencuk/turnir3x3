@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Megaphone } from "lucide-react";
+import { Megaphone, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type News = { id: string; title: string; body: string; created_at: string };
+
+const DISMISS_KEY = "dismissed_news_id";
 
 function formatDateTime(iso: string): string {
   try {
@@ -23,10 +25,31 @@ function formatDateTime(iso: string): string {
 
 export function NewsBanner({ initial }: { initial: News | null }) {
   const [news, setNews] = useState<News | null>(initial);
+  // Once the user closes a news item, remember its id so it stays hidden on
+  // the home screen until a *newer* news item is published.
+  const [dismissedId, setDismissedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setDismissedId(localStorage.getItem(DISMISS_KEY));
+    } catch {
+      /* localStorage blocked — banner just always shows */
+    }
+  }, []);
 
   useEffect(() => {
     setNews(initial);
   }, [initial]);
+
+  function dismiss() {
+    if (!news) return;
+    try {
+      localStorage.setItem(DISMISS_KEY, news.id);
+    } catch {
+      /* ignore */
+    }
+    setDismissedId(news.id);
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -54,6 +77,7 @@ export function NewsBanner({ initial }: { initial: News | null }) {
   }, []);
 
   if (!news) return null;
+  if (dismissedId === news.id) return null;
 
   return (
     <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 sm:p-4">
@@ -72,6 +96,13 @@ export function NewsBanner({ initial }: { initial: News | null }) {
             Vidi sve vesti →
           </Link>
         </div>
+        <button
+          onClick={dismiss}
+          aria-label="Zatvori"
+          className="shrink-0 text-amber-700 hover:text-amber-900 hover:bg-amber-100 rounded-md p-1 -mr-1 -mt-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
