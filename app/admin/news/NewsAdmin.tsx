@@ -62,7 +62,6 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
   const { push } = useToast();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [sendToWaGroup, setSendToWaGroup] = useState(true);
   const [pending, setPending] = useState(false);
   const [postPublish, setPostPublish] = useState<{ title: string; body: string } | null>(null);
 
@@ -76,10 +75,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
       push(res.error, "error");
       return;
     }
-    push("Vest objavljena", "success");
-    if (sendToWaGroup) {
-      setPostPublish({ title: title.trim(), body: body.trim() });
-    }
+    push("Vest objavljena — sad je dole možeš poslati u WA ili skinuti sliku", "success");
     setTitle("");
     setBody("");
     router.refresh();
@@ -90,7 +86,7 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
       <PageHeader
         icon={Megaphone}
         title="Vesti"
-        hint="Najnovija vest se vidi na početnoj. Po objavi se otvara WhatsApp sa porukom — biraš grupu kapitena i šalješ."
+        hint="Objavi vest pa je dole pošalji u WhatsApp ili skini kao sliku za Stori/Objavu."
         tone="amber"
       />
 
@@ -141,28 +137,13 @@ export function NewsAdmin({ news }: { news: NewsRow[] }) {
           <span className="text-[10px] text-zinc-400">{body.length} / 2000</span>
         </label>
 
-        <label className="flex items-start gap-2 text-sm cursor-pointer p-2 -mx-1 rounded hover:bg-zinc-800">
-          <input
-            type="checkbox"
-            checked={sendToWaGroup}
-            onChange={(e) => setSendToWaGroup(e.target.checked)}
-            className="mt-0.5"
-          />
-          <div className="flex-1">
-            <div className="font-medium">📱 Pošalji u WhatsApp grupu kapitena</div>
-            <div className="text-xs text-zinc-500">
-              Posle objave otvara se WhatsApp sa pripremljenom porukom — biraš
-              grupu i klikneš Send.
-            </div>
-          </div>
-        </label>
 
         <button
           type="submit"
           disabled={pending || !title.trim() || !body.trim()}
           className="btn-primary w-full !py-2.5 text-base"
         >
-          {pending ? "Snimam…" : sendToWaGroup ? "Objavi i otvori WhatsApp →" : "Objavi vest"}
+          {pending ? "Snimam…" : "Objavi vest"}
         </button>
 
         {title.trim() && body.trim() && (

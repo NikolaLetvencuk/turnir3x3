@@ -949,6 +949,11 @@ export async function commitDraw(payload: {
     await admin.from("group_teams").delete().neq("group_id", "00000000-0000-0000-0000-000000000000");
     await admin.from("rounds").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await admin.from("groups").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    // The old fixtures are gone, so any fantasy day picks/points tied to the
+    // previous schedule are meaningless — clear them. Leagues + memberships
+    // stay; users just rebuild their daily teams against the new fixtures.
+    await (admin as any).from("fantasy_day_points").delete().neq("user_id", "00000000-0000-0000-0000-000000000000");
+    await (admin as any).from("fantasy_day_picks").delete().neq("user_id", "00000000-0000-0000-0000-000000000000");
 
     // Insert groups
     const groupRows = payload.groups.map((g, i) => ({ name: g.name, display_order: i }));

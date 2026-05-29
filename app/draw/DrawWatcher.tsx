@@ -101,9 +101,9 @@ export function DrawWatcher({ initial, isAdmin = false }: { initial: DrawState |
       return;
     }
     push("Žreb sačuvan!", "success");
-    if (!opts?.silent) {
-      router.push("/admin/schedule");
-    }
+    // Once saved, send the admin straight to the matches screen — the draw
+    // screen otherwise just sits on "Povlačenje žreba…" even though it's done.
+    router.push("/admin/matches");
     router.refresh();
   }
   async function onCancel() {

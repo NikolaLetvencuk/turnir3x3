@@ -120,16 +120,29 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
     return map;
   }, [matches]);
 
-  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(() =>
-    defaultSelectedRound(rounds, matchesByRound),
-  );
+  // "__all__" = show every match across all rounds (default).
+  const ALL = "__all__";
+  const [selectedRoundId, setSelectedRoundId] = useState<string>(ALL);
 
   useEffect(() => {
-    if (selectedRoundId && rounds.find((r) => r.id === selectedRoundId)) return;
-    setSelectedRoundId(defaultSelectedRound(rounds, matchesByRound));
-  }, [rounds, matchesByRound, selectedRoundId]);
+    if (selectedRoundId === ALL) return;
+    if (rounds.find((r) => r.id === selectedRoundId)) return;
+    setSelectedRoundId(ALL);
+  }, [rounds, selectedRoundId]);
 
-  const selectedMatches = selectedRoundId ? matchesByRound.get(selectedRoundId) ?? [] : [];
+  const allMatchesSorted = useMemo(() => {
+    return [...matches].sort((a: any, b: any) => {
+      const ra = a.round?.display_order ?? 999;
+      const rb = b.round?.display_order ?? 999;
+      if (ra !== rb) return ra - rb;
+      const ak = a.kickoff_at ?? "";
+      const bk = b.kickoff_at ?? "";
+      return ak.localeCompare(bk);
+    });
+  }, [matches]);
+
+  const selectedMatches =
+    selectedRoundId === ALL ? allMatchesSorted : matchesByRound.get(selectedRoundId) ?? [];
   const datesInSelected = useMemo(() => {
     const set = new Set<string>();
     for (const m of selectedMatches) {
@@ -224,9 +237,22 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
 
           <ShiftSchedulePanel onSaved={() => router.refresh()} />
 
-          {/* Round tabs */}
+          {/* Round tabs — "Sva kola" first and selected by default */}
           <div className="card !p-2 overflow-x-auto">
             <div className="flex gap-1 whitespace-nowrap">
+              <button
+                onClick={() => setSelectedRoundId(ALL)}
+                className={`px-3 py-1.5 rounded-md text-sm inline-flex items-center gap-1.5 transition ${
+                  selectedRoundId === ALL
+                    ? "bg-blue-600 text-white"
+                    : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border border-zinc-800"
+                }`}
+              >
+                Sva kola
+                <span className={`text-xs ${selectedRoundId === ALL ? "text-blue-100" : "text-zinc-400"}`}>
+                  ({matches.length})
+                </span>
+              </button>
               {rounds.map((r) => {
                 const count = matchesByRound.get(r.id)?.length ?? 0;
                 const finished =
@@ -257,20 +283,24 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
             </div>
           </div>
 
-          {selectedMatches.length > 0 && (
-            <div className="card flex flex-wrap items-center gap-2 text-sm">
-              <button
-                onClick={openBulk}
-                className="btn-primary !py-1.5 !px-3 text-xs inline-flex items-center gap-1.5"
-                title="Automatski popuni termine za sve mečeve ovog kola"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Popuni termine samo za ovo kolo
-              </button>
-              <span className="text-xs text-zinc-500">
-                {selectedMatches.length} mečeva u kolu, sekvencijalno (početak + razmak).
-              </span>
-            </div>
+          {selectedRoundId !== ALL && selectedMatches.length > 0 && (
+            <details className="card !py-2">
+              <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200 select-none">
+                Napredno: popuni termine samo za ovo kolo
+              </summary>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={openBulk}
+                  className="btn-secondary !py-1.5 !px-3 text-xs inline-flex items-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Popuni termine za ovo kolo
+                </button>
+                <span className="text-xs text-zinc-500">
+                  {selectedMatches.length} mečeva, sekvencijalno (početak + razmak).
+                </span>
+              </div>
+            </details>
           )}
 
           {datesInSelected.length > 1 && (
@@ -566,18 +596,18 @@ function ShiftSchedulePanel({ onSaved }: { onSaved: () => void }) {
   }
 
   return (
-    <div className="card border-amber-500/40 bg-amber-500/[0.05]">
+    <div className="card !py-2.5 border-red-500/40 bg-red-500/[0.06]">
       <button onClick={() => setOpen((s) => !s)} className="w-full flex items-center justify-between text-left">
         <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-amber-300" />
+          <Calendar className="w-4 h-4 text-red-300 shrink-0" />
           <div>
-            <div className="font-semibold">Dodaj neradni dan (pomeri raspored)</div>
-            <div className="text-xs text-zinc-400">
-              Pošto su termini već popunjeni — odaberi dan kad se ne igra i svi mečevi od tog dana pomeraju se za jedan dan kasnije.
+            <div className="font-medium text-sm text-red-200">Neradni dan — pomeri raspored</div>
+            <div className="text-[11px] text-zinc-500">
+              Odaberi dan kad se ne igra; svi mečevi od tog dana se pomeraju +1 dan.
             </div>
           </div>
         </div>
-        <span className="text-xs text-amber-300">{open ? "Sakri" : "Otvori"}</span>
+        <span className="text-xs text-red-300 shrink-0">{open ? "Sakri" : "Otvori"}</span>
       </button>
 
       {open && (
