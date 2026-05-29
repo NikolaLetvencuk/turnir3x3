@@ -142,19 +142,23 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
     setSelectedRoundId(ALL);
   }, [rounds, selectedRoundId]);
 
-  const allMatchesSorted = useMemo(() => {
-    return [...matches].sort((a: any, b: any) => {
-      const ra = a.round?.display_order ?? 999;
-      const rb = b.round?.display_order ?? 999;
-      if (ra !== rb) return ra - rb;
-      const ak = a.kickoff_at ?? "";
-      const bk = b.kickoff_at ?? "";
-      return ak.localeCompare(bk);
-    });
-  }, [matches]);
+  // Always sort by kickoff date+time (earliest first); matches without a
+  // kickoff set go to the bottom.
+  function byKickoff(a: any, b: any) {
+    const ak = a.kickoff_at ?? "";
+    const bk = b.kickoff_at ?? "";
+    if (!ak && !bk) return 0;
+    if (!ak) return 1;
+    if (!bk) return -1;
+    return ak.localeCompare(bk);
+  }
 
-  const selectedMatches =
-    selectedRoundId === ALL ? allMatchesSorted : matchesByRound.get(selectedRoundId) ?? [];
+  const selectedMatchesRaw =
+    selectedRoundId === ALL ? matches : matchesByRound.get(selectedRoundId) ?? [];
+  const selectedMatches = useMemo(
+    () => [...selectedMatchesRaw].sort(byKickoff),
+    [selectedMatchesRaw],
+  );
   const datesInSelected = useMemo(() => {
     const set = new Set<string>();
     for (const m of selectedMatches) {
@@ -164,9 +168,10 @@ function MatchesTab({ matches, rounds }: { matches: Match[]; rounds: Round[] }) 
     return Array.from(set).sort();
   }, [selectedMatches]);
   const filtered = useMemo(() => {
-    if (!dateFilter) return selectedMatches;
-    if (dateFilter === "__none__") return selectedMatches.filter((m: any) => !m.kickoff_at);
-    return selectedMatches.filter((m: any) => toLocalDate(m.kickoff_at) === dateFilter);
+    let list = selectedMatches;
+    if (dateFilter === "__none__") list = selectedMatches.filter((m: any) => !m.kickoff_at);
+    else if (dateFilter) list = selectedMatches.filter((m: any) => toLocalDate(m.kickoff_at) === dateFilter);
+    return [...list].sort(byKickoff);
   }, [selectedMatches, dateFilter]);
 
   // Reset the date filter when the user changes round — but not on the

@@ -44,32 +44,6 @@ export default async function TeamPage() {
   const today = belgradeTodayKey();
   const admin = createAdminClient();
 
-  // ---- Determine the user's *editable* day --------------------------------
-  // Pick the next "active" day from today onwards:
-  //  1. If today has matches AND the first one hasn't started → today.
-  //  2. Otherwise look forward for the next day with at least one
-  //     scheduled match. We don't pre-pick "tomorrow" because the next
-  //     active day may be days/weeks away (pre-tournament use case).
-  //  3. If no future matches exist at all, fall back to tomorrow as a
-  //     placeholder so the picker is still usable.
-  const todayRange = belgradeDayRange(today);
-  const [{ data: todayMatchesRaw }, { data: futureMatchesRaw }] = await Promise.all([
-    admin
-      .from("matches")
-      .select("status, kickoff_at")
-      .gte("kickoff_at", todayRange.startUTC)
-      .lt("kickoff_at", todayRange.endUTC),
-    admin
-      .from("matches")
-      .select("kickoff_at")
-      .gte("kickoff_at", todayRange.endUTC)
-      .order("kickoff_at", { ascending: true })
-      .limit(50),
-  ]);
-  const todayMatches = (todayMatchesRaw ?? []) as Array<{ status: string }>;
-  const todayHasMatches = todayMatches.length > 0;
-  const todayStarted = todayMatches.some((m) => m.status && m.status !== "scheduled");
-
   function belgradeKeyOf(iso: string): string {
     const fmt = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Europe/Belgrade",
@@ -79,18 +53,32 @@ export default async function TeamPage() {
     });
     return fmt.format(new Date(iso));
   }
-  const futureDays = Array.from(
-    new Set(((futureMatchesRaw ?? []) as Array<{ kickoff_at: string | null }>)
-      .filter((r) => r.kickoff_at)
-      .map((r) => belgradeKeyOf(r.kickoff_at!))),
-  ).sort();
-  const nextFutureDay = futureDays[0] ?? null;
 
-  const editableDay = todayHasMatches && !todayStarted
-    ? today
-    : nextFutureDay
-    ? nextFutureDay
-    : shiftDayUTC(today, 1);
+  // ---- Determine the user's *editable* day --------------------------------
+  // Real-time "today" is irrelevant. The editable day is the EARLIEST match
+  // day (by date) where NOT A SINGLE match has started yet (every match still
+  // "scheduled"). The moment any match of a day starts, that whole day locks
+  // and the editable day rolls to the next all-scheduled day. This matches
+  // savePicksForDay's roll-forward exactly, so the button label, the player
+  // table and the actual save all agree.
+  const { data: allKickoffRaw } = await admin
+    .from("matches")
+    .select("status, kickoff_at")
+    .not("kickoff_at", "is", null)
+    .order("kickoff_at", { ascending: true });
+  const kickoffRows = (allKickoffRaw ?? []) as Array<{ status: string; kickoff_at: string | null }>;
+
+  // Group day → "has any started match".
+  const dayStarted = new Map<string, boolean>();
+  for (const r of kickoffRows) {
+    if (!r.kickoff_at) continue;
+    const k = belgradeKeyOf(r.kickoff_at);
+    const started = !!r.status && r.status !== "scheduled";
+    dayStarted.set(k, (dayStarted.get(k) ?? false) || started);
+  }
+  const sortedDaysAsc = Array.from(dayStarted.keys()).sort();
+  const editableDay =
+    sortedDaysAsc.find((d) => !dayStarted.get(d)) ?? shiftDayUTC(today, 1);
 
   // This page is the composer — it always works on the editable (active) day.
   // Past-day review lives on /fantasy/team/history.
