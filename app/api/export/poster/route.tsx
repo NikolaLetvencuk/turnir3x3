@@ -1261,9 +1261,17 @@ function BracketPosterMatch({
   const winnerId = m.winner_team_id;
   const homeWin = winnerId && m.home_team && m.home_team.id === winnerId;
   const awayWin = winnerId && m.away_team && m.away_team.id === winnerId;
-  // Names longer than 11 chars are clipped to "first 10 + ." so they stay
-  // big and readable instead of shrinking to fit.
-  const shorten = (s: string) => (s.length > 11 ? s.slice(0, 10) + "." : s);
+  // Keep names short so they stay big. Multi-word names become
+  // "FirstWord X." (initials of the rest); single long words get clipped.
+  const shorten = (s: string) => {
+    const words = s.trim().split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+      const first = words[0].length > 10 ? words[0].slice(0, 10) : words[0];
+      const initials = words.slice(1).map((w) => `${w[0].toUpperCase()}.`).join("");
+      return `${first} ${initials}`;
+    }
+    return s.length > 11 ? `${s.slice(0, 10)}.` : s;
+  };
   const homeText = shorten(m.home_team?.name ?? m.home_placeholder ?? "—");
   const awayText = shorten(m.away_team?.name ?? m.away_placeholder ?? "—");
 
