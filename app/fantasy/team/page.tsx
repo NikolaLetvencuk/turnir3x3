@@ -364,29 +364,31 @@ export default async function TeamPage({ searchParams }: { searchParams: { day?:
       acc.clean_sheet = isHome ? as === 0 : hs === 0;
     }
   }
-  // Layer in events.
+  // Layer in events. Use the player map (O(1)) instead of players.find (O(n))
+  // — events × players was the page's worst hot loop.
+  const playerByIdAll = new Map(players.map((p) => [p.id, p]));
   const matchById = new Map(allMatches.map((m) => [m.id, m]));
   for (const e of events) {
     const m = matchById.get(e.match_id);
     if (!m || m.status !== "finished") continue;
     if (e.event_type === "goal" && e.player_id) {
-      const p = players.find((pp) => pp.id === e.player_id);
+      const p = playerByIdAll.get(e.player_id);
       if (p?.team_id) ensure(e.player_id, m, p.team_id).goals++;
     }
     if (e.event_type === "goal" && e.assist_player_id) {
-      const p = players.find((pp) => pp.id === e.assist_player_id);
+      const p = playerByIdAll.get(e.assist_player_id);
       if (p?.team_id) ensure(e.assist_player_id, m, p.team_id).assists++;
     }
     if (e.event_type === "yellow_card" && e.player_id) {
-      const p = players.find((pp) => pp.id === e.player_id);
+      const p = playerByIdAll.get(e.player_id);
       if (p?.team_id) ensure(e.player_id, m, p.team_id).yellow_cards++;
     }
     if (e.event_type === "red_card" && e.player_id) {
-      const p = players.find((pp) => pp.id === e.player_id);
+      const p = playerByIdAll.get(e.player_id);
       if (p?.team_id) ensure(e.player_id, m, p.team_id).red_cards++;
     }
     if (e.event_type === "own_goal" && e.player_id) {
-      const p = players.find((pp) => pp.id === e.player_id);
+      const p = playerByIdAll.get(e.player_id);
       if (p?.team_id) ensure(e.player_id, m, p.team_id).own_goals++;
     }
   }
