@@ -37,6 +37,7 @@ export function brandMetadata(brand: typeof DEFAULT_BRAND): Metadata {
       images: [{ url: brand.og, width: 1200, height: 630, alt: title }],
     },
     twitter: { card: "summary_large_image", title, description: desc, images: [brand.og] },
+    icons: { icon: brand.icon, shortcut: brand.icon, apple: brand.icon },
   };
 }
 
@@ -65,11 +66,6 @@ export async function generateMetadata(): Promise<Metadata> {
     // "translate" it (which would also flip Latin → Cyrillic).
     other: { google: "notranslate" },
     verification: { google: "5ptTftJjWmoj15gM7npOm1elTW5_lxuwpwwUVUueV7Q" },
-    icons: {
-      icon: "/logo/mkpetrovski-gold.png",
-      shortcut: "/logo/mkpetrovski-gold.png",
-      apple: "/logo/mkpetrovski-gold.png",
-    },
   };
 }
 

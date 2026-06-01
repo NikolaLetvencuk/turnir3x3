@@ -19,6 +19,8 @@ export type Brand = {
   mark: string;
   /** 1200×630 social-share preview image (Instagram/FB/WhatsApp link preview). */
   og: string;
+  /** Browser-tab favicon (also apple-touch icon). */
+  icon: string;
   /** Hero gradient colors (hex). Brand theme = gold/black. */
   heroFrom: string;
   heroTo: string;
@@ -39,6 +41,7 @@ export const DEFAULT_BRAND: Brand = {
   heroLogo: "/logo/mkpetrovski.png",
   mark: "/logo/mkpetrovski-gold.png",
   og: "/og-image.png",
+  icon: "/logo/mkpetrovski-gold.png",
   heroFrom: "#4a3a0a", // gold-900 (dark gold)
   heroTo: "#0a0a0a", // ink (black)
   aliases: ["petrovski"], // so ?t=petrovski works like ?t=krstur
@@ -61,6 +64,7 @@ export const BRANDS: Record<string, Brand> = {
     heroLogo: "/logo/krstur/krstur.png",
     mark: "/logo/krstur/krstur.png",
     og: "/logo/krstur/og-image.png",
+    icon: "/logo/krstur/krstur.png",
     heroFrom: "#4a3a0a", // gold/black theme (same as default)
     heroTo: "#0a0a0a",
   },
