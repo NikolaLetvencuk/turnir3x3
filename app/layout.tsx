@@ -7,17 +7,29 @@ import { BackButton } from "@/components/nav/BackButton";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getCurrentProfile } from "@/lib/auth";
 
-const TITLE = 'Memorijalni Turnir "Vladislav Petrovski" Kula';
+const TITLE = 'Memorijalni Turnir "Vladislav Petrovski" Kula — 3x3 (3 na 3)';
 const DESC =
-  "Pratite rezultate, tabele i fantasy ligu — Memorijalni Turnir Vladislav Petrovski, Liparski put, Kula.";
+  "Turnir u malom fudbalu 3 na 3 (3x3) u Kuli — Memorijalni Turnir Vladislav Petrovski, Liparski put. Uživo rezultati, raspored utakmica, tabele, strelci, žreb grupa, eliminacije i fantasy liga.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://turnir3x3.vercel.app"),
   title: {
     default: TITLE,
-    template: `%s · ${TITLE}`,
+    template: `%s · Petrovski Kula 3x3`,
   },
   description: DESC,
+  keywords: [
+    "turnir 3 na 3",
+    "turnir 3x3",
+    "3v3",
+    "mali fudbal Kula",
+    "turnir Kula",
+    "Petrovski turnir",
+    "Vladislav Petrovski",
+    "Liparski put",
+    "fudbalski turnir Kula",
+    "3x3 turnir Srbija",
+  ],
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
   // Stop Chrome from misdetecting the page as Slovenian and offering to
   // "translate" it (which would also flip Latin → Cyrillic).

@@ -62,7 +62,7 @@ export default async function HomePage() {
             <div className="min-w-0">
               <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">Memorijalni Turnir</div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">&ldquo;Vladislav Petrovski&rdquo; Kula</h1>
-              <p className="text-blue-50 mt-0.5 text-sm">Liparski put · prijave su otvorene</p>
+              <p className="text-blue-50 mt-0.5 text-sm">Turnir 3 na 3 (3x3) · Liparski put, Kula · prijave su otvorene</p>
             </div>
           </div>
         </section>
@@ -140,7 +140,7 @@ export default async function HomePage() {
           <div className="min-w-0">
             <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">Memorijalni Turnir</div>
             <h1 className="text-xl sm:text-2xl font-bold leading-tight">&ldquo;Vladislav Petrovski&rdquo; Kula</h1>
-            <p className="text-blue-50 mt-0.5 text-sm">Liparski put · uživo rezultati, tabele i fantasy liga</p>
+            <p className="text-blue-50 mt-0.5 text-sm">Turnir 3 na 3 (3x3) · Liparski put, Kula · uživo rezultati, tabele i fantasy liga</p>
           </div>
         </div>
         <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-zinc-900 text-blue-300 rounded-md px-4 py-2 text-sm font-medium relative">
