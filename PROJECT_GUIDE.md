@@ -75,15 +75,17 @@ See the two memories (`demo-branding-and-clone-model`,
 - `lib/brand-server.ts` `getCurrentBrand()` reads the `brand` cookie (SSR).
 - `app/brand-actions.ts` set/clear cookie; middleware handles `?t=Name`.
 - `components/brand/BrandLogo` (image or monogram fallback) + `BrandPicker`.
-- Wired into root layout (`generateMetadata` + TopNav), admin layout, homepage
-  hero. Each brand carries `heroFrom`/`heroTo` so the **hero gradient is
-  per-brand**; the gold accent elsewhere is still global (full re-theme TBD).
-- First-visit **popup gate** (`components/brand/BrandGate`) blocks the homepage
-  until the visitor enters a name or skips. Unknown name / skip → Petrovski
-  default. `components/brand/BrandReopen` ("Promeni turnir", demo-only) clears
-  the cookie to re-demo.
-- In a **customer clone**, leave `NEXT_PUBLIC_DEMO_MODE` unset → no gate, the
-  baked-in brand only.
+- Wired into root layout (`generateMetadata`, TopNav, **body watermark** via
+  the `--brand-watermark` CSS var = `brand.mark`), admin layout, homepage hero,
+  and the **poster export route** (`brand.mark`, read from the `brand` cookie).
+  Each brand carries `heroFrom`/`heroTo` (hero gradient) and `mark` (logo on
+  dark surfaces: page watermark + posters). Gold accent elsewhere is global.
+- **No manual switching / no popup.** The brand is set ONLY by opening a demo
+  link `?t=<code>` (middleware sets the `brand` cookie + redirects to a clean
+  URL). After that the cookie persists, so the visitor keeps seeing that brand.
+  No cookie → Petrovski default. There is no on-page "change tournament" UI.
+- In a **customer clone**, leave `NEXT_PUBLIC_DEMO_MODE` unset → `?t=` is
+  ignored, the baked-in default brand only.
 
 ### Adding a brand (e.g. krstur-turnir)
 1. Generate the logo variants (see §7) into `/public/brands/krstur/`

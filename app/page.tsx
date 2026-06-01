@@ -10,11 +10,9 @@ import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 import { NewsBanner } from "@/components/NewsBanner";
 import { PopupAd } from "@/components/PopupAd";
 import { getPopupAdSetting } from "@/lib/settings";
-import { getCurrentBrand, hasBrandChoice } from "@/lib/brand-server";
-import { DEFAULT_BRAND, DEMO_MODE, type Brand } from "@/lib/brands";
+import { getCurrentBrand } from "@/lib/brand-server";
+import { DEFAULT_BRAND, type Brand } from "@/lib/brands";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { BrandGate } from "@/components/brand/BrandGate";
-import { BrandReopen } from "@/components/brand/BrandReopen";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -53,7 +51,6 @@ export default async function HomePage() {
   const adminRO = createAdminClient();
   const brand = getCurrentBrand();
   const isDefault = brand.code === DEFAULT_BRAND.code;
-  const showGate = DEMO_MODE && !hasBrandChoice();
 
   // Lightweight check first: do we have groups (= draw committed)?
   const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
@@ -78,7 +75,6 @@ export default async function HomePage() {
       <div className="space-y-6">
         <LiveRefresh tag="home-predraw" />
         <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
-        <BrandGate show={showGate} />
         <NewsBanner initial={newsRow} />
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
         <BrandHero
@@ -89,7 +85,6 @@ export default async function HomePage() {
               : "Turnir 3 na 3 (3x3) · prijave su otvorene"
           }
         />
-        {DEMO_MODE && <div className="flex justify-center"><BrandReopen /></div>}
 
         <section>
           <div className="flex items-baseline justify-between mb-2">
@@ -143,7 +138,6 @@ export default async function HomePage() {
     <div className="space-y-6">
       <LiveRefresh tag="home" />
       <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
-      <BrandGate show={showGate} />
       <NewsBanner initial={newsRow} />
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
       <BrandHero
@@ -158,7 +152,6 @@ export default async function HomePage() {
           Sastavi svoj fantasy tim →
         </Link>
       </BrandHero>
-      {DEMO_MODE && <div className="flex justify-center"><BrandReopen /></div>}
 
       {live.length > 0 && (
         <section>

@@ -67,7 +67,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const brand = getCurrentBrand();
   return (
     <html lang="sr-Latn-RS" translate="no">
-      <body className="min-h-screen flex flex-col font-sans notranslate">
+      <body
+        className="min-h-screen flex flex-col font-sans notranslate"
+        style={{ ["--brand-watermark" as string]: `url('${brand.mark}')` }}
+      >
         <ToastProvider>
           <TopNav profile={profile} brandName={brand.shortName} brandLogo={brand.navLogo} />
           <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-4 pb-24 pt-4">

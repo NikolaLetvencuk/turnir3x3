@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { resolveBrand } from "@/lib/brands";
 
 export const runtime = "edge";
 
@@ -116,7 +117,11 @@ export async function POST(request: Request) {
     const { kind, format } = body;
     const width = 1080;
     const height = format === "story" ? 1920 : 1350;
-    const logoUrl = `${new URL(request.url).origin}/logo/mkpetrovski-gold.png`;
+    // Brand-aware logo: read the `brand` cookie set via the demo `?t=` link.
+    const cookie = request.headers.get("cookie") ?? "";
+    const brandMatch = cookie.match(/(?:^|;\s*)brand=([^;]*)/);
+    const brand = resolveBrand(brandMatch ? decodeURIComponent(brandMatch[1]) : "");
+    const logoUrl = `${new URL(request.url).origin}${brand.mark}`;
 
     let content: React.ReactElement;
     if (kind === "results") {

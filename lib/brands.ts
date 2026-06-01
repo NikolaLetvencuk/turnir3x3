@@ -15,6 +15,8 @@ export type Brand = {
   navLogo: string | null;
   /** Logo for the hero block. null → monogram fallback. */
   heroLogo: string | null;
+  /** Logo used on dark surfaces: page background watermark + social posters. */
+  mark: string;
   /** Hero gradient colors (hex). Brand theme = gold/black. */
   heroFrom: string;
   heroTo: string;
@@ -31,6 +33,7 @@ export const DEFAULT_BRAND: Brand = {
   kicker: "Memorijalni Turnir",
   navLogo: "/logo/logomkpetrovskibela_pozadina.png",
   heroLogo: "/logo/mkpetrovski.png",
+  mark: "/logo/mkpetrovski-gold.png",
   heroFrom: "#4a3a0a", // gold-900 (dark gold)
   heroTo: "#0a0a0a", // ink (black)
 };
@@ -50,6 +53,7 @@ export const BRANDS: Record<string, Brand> = {
     kicker: "Turnir 3 na 3",
     navLogo: "/logo/krstur/krstur.png",
     heroLogo: "/logo/krstur/krstur.png",
+    mark: "/logo/krstur/krstur.png",
     heroFrom: "#4a3a0a", // gold/black theme (same as default)
     heroTo: "#0a0a0a",
   },
