@@ -13,9 +13,9 @@ export type Brand = {
   kicker: string;
   /** Logo for light/navbar surfaces (white-bg ok). null → monogram fallback. */
   navLogo: string | null;
-  /** Logo for the blue hero block. null → monogram fallback. */
+  /** Logo for the hero block. null → monogram fallback. */
   heroLogo: string | null;
-  /** Hero gradient colors (hex). Defaults to blue if omitted. */
+  /** Hero gradient colors (hex). Brand theme = gold/black. */
   heroFrom: string;
   heroTo: string;
 };
@@ -31,8 +31,8 @@ export const DEFAULT_BRAND: Brand = {
   kicker: "Memorijalni Turnir",
   navLogo: "/logo/logomkpetrovskibela_pozadina.png",
   heroLogo: "/logo/mkpetrovski.png",
-  heroFrom: "#2563eb", // blue-600
-  heroTo: "#1d4ed8", // blue-700
+  heroFrom: "#4a3a0a", // gold-900 (dark gold)
+  heroTo: "#0a0a0a", // ink (black)
 };
 
 // Known brands you pre-create for prospects. To add one:
@@ -41,19 +41,18 @@ export const DEFAULT_BRAND: Brand = {
 //   3. Send the prospect the `code` (or `name`) to type, or a link /?t=<code>.
 // Unknown / closed input falls back to DEFAULT_BRAND (Petrovski).
 //
-// Example (uncomment + drop logo files to enable):
-//   krstur: {
-//     code: "krstur",
-//     name: "Turnir Krstur",
-//     shortName: "Krstur",
-//     kicker: "Turnir",
-//     navLogo: "/brands/krstur/nav.png",
-//     heroLogo: "/brands/krstur/hero.png",
-//     heroFrom: "#c81e1e", // crvena
-//     heroTo: "#7f1212",
-//   },
 export const BRANDS: Record<string, Brand> = {
   kula: DEFAULT_BRAND,
+  krstur: {
+    code: "krstur",
+    name: "Turnir 3v3 Krstur",
+    shortName: "Krstur",
+    kicker: "Turnir 3 na 3",
+    navLogo: "/logo/krstur/krstur.png",
+    heroLogo: "/logo/krstur/krstur.png",
+    heroFrom: "#4a3a0a", // gold/black theme (same as default)
+    heroTo: "#0a0a0a",
+  },
 };
 
 function norm(s: string): string {
