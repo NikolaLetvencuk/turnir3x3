@@ -81,9 +81,15 @@ See the two memories (`demo-branding-and-clone-model`,
   Each brand carries `heroFrom`/`heroTo` (hero gradient) and `mark` (logo on
   dark surfaces: page watermark + posters). Gold accent elsewhere is global.
 - **No manual switching / no popup.** The brand is set ONLY by opening a demo
-  link `?t=<code>` (middleware sets the `brand` cookie + redirects to a clean
-  URL). After that the cookie persists, so the visitor keeps seeing that brand.
-  No cookie → Petrovski default. There is no on-page "change tournament" UI.
+  link `?t=<code>`. Middleware sets the `brand` cookie (on both request — so the
+  same render is branded — and response, so it persists) and **keeps the `?t=`
+  param** (no redirect). No cookie → Petrovski default. No on-page switcher.
+- **Social link previews are per-brand.** The homepage `generateMetadata` reads
+  the brand from the `?t=` URL param (cookieless crawlers like Instagram/FB/
+  WhatsApp can't read the cookie), so the shared link's title + preview image
+  match the brand. Each brand has an `og` field (1200×630 image). Default falls
+  back to the cookie. `brandMetadata()` (exported from `app/layout.tsx`) builds
+  the title/desc/OG and is shared by the layout (cookie) and homepage (URL).
 - In a **customer clone**, leave `NEXT_PUBLIC_DEMO_MODE` unset → `?t=` is
   ignored, the baked-in default brand only.
 
