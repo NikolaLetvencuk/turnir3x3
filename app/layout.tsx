@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   },
   description: DESC,
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
+  // Stop Chrome from misdetecting the page as Slovenian and offering to
+  // "translate" it (which would also flip Latin → Cyrillic).
+  other: { google: "notranslate" },
   openGraph: {
     title: TITLE,
     description: DESC,
@@ -51,8 +54,8 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
   return (
-    <html lang="sr-Latn">
-      <body className="min-h-screen flex flex-col font-sans">
+    <html lang="sr-Latn-RS" translate="no">
+      <body className="min-h-screen flex flex-col font-sans notranslate">
         <ToastProvider>
           <TopNav profile={profile} />
           <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-4 pb-24 pt-4">
