@@ -17,6 +17,8 @@ export type Brand = {
   heroLogo: string | null;
   /** Logo used on dark surfaces: page background watermark + social posters. */
   mark: string;
+  /** 1200×630 social-share preview image (Instagram/FB/WhatsApp link preview). */
+  og: string;
   /** Hero gradient colors (hex). Brand theme = gold/black. */
   heroFrom: string;
   heroTo: string;
@@ -36,6 +38,7 @@ export const DEFAULT_BRAND: Brand = {
   navLogo: "/logo/logomkpetrovskibela_pozadina.png",
   heroLogo: "/logo/mkpetrovski.png",
   mark: "/logo/mkpetrovski-gold.png",
+  og: "/og-image.png",
   heroFrom: "#4a3a0a", // gold-900 (dark gold)
   heroTo: "#0a0a0a", // ink (black)
   aliases: ["petrovski"], // so ?t=petrovski works like ?t=krstur
@@ -57,6 +60,7 @@ export const BRANDS: Record<string, Brand> = {
     navLogo: "/logo/krstur/krstur.png",
     heroLogo: "/logo/krstur/krstur.png",
     mark: "/logo/krstur/krstur.png",
+    og: "/logo/krstur/og-image.png",
     heroFrom: "#4a3a0a", // gold/black theme (same as default)
     heroTo: "#0a0a0a",
   },

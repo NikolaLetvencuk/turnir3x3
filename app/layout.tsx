@@ -11,22 +11,43 @@ import { DEFAULT_BRAND } from "@/lib/brands";
 
 // Rich SEO copy used for the default (Kula) brand. Custom demo brands just
 // use their own name for the title/OG.
-const DEFAULT_TITLE = `${DEFAULT_BRAND.name} — 3x3 (3 na 3)`;
-const DEFAULT_DESC =
+export const DEFAULT_TITLE = `${DEFAULT_BRAND.name} — 3x3 (3 na 3)`;
+export const DEFAULT_DESC =
   "Turnir u malom fudbalu 3 na 3 (3x3) u Kuli — Memorijalni Turnir Vladislav Petrovski, Liparski put. Uživo rezultati, raspored utakmica, tabele, strelci, žreb grupa, eliminacije i fantasy liga.";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const brand = getCurrentBrand();
+// Shared by the root layout (cookie-based) and the homepage (URL ?t= based).
+export function brandMetadata(brand: typeof DEFAULT_BRAND): Metadata {
   const isDefault = brand.code === DEFAULT_BRAND.code;
   const title = isDefault ? DEFAULT_TITLE : brand.name;
   const desc = isDefault
     ? DEFAULT_DESC
     : `${brand.name} — uživo rezultati, raspored, tabele, strelci i fantasy liga.`;
-
+  const url = isDefault ? "/" : `/?t=${brand.code}`;
   return {
     metadataBase: new URL("https://turnir3x3.vercel.app"),
-    title: { default: title, template: `%s · ${brand.shortName}` },
+    title: { absolute: title },
     description: desc,
+    openGraph: {
+      title,
+      description: desc,
+      url,
+      siteName: title,
+      type: "website",
+      locale: "sr_Latn_RS",
+      images: [{ url: brand.og, width: 1200, height: 630, alt: title }],
+    },
+    twitter: { card: "summary_large_image", title, description: desc, images: [brand.og] },
+  };
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = getCurrentBrand();
+  return {
+    // Brand title/desc/OG (cookie-based). The homepage re-derives these from
+    // the ?t= URL param so social link previews are correct without a cookie.
+    ...brandMetadata(brand),
+    // Subpages get "<page> · <brand>" via the template.
+    title: { default: brand.code === DEFAULT_BRAND.code ? DEFAULT_TITLE : brand.name, template: `%s · ${brand.shortName}` },
     keywords: [
       "turnir 3 na 3",
       "turnir 3x3",
@@ -44,16 +65,6 @@ export async function generateMetadata(): Promise<Metadata> {
     // "translate" it (which would also flip Latin → Cyrillic).
     other: { google: "notranslate" },
     verification: { google: "5ptTftJjWmoj15gM7npOm1elTW5_lxuwpwwUVUueV7Q" },
-    openGraph: {
-      title,
-      description: desc,
-      url: "/",
-      siteName: title,
-      type: "website",
-      locale: "sr_Latn_RS",
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: title }],
-    },
-    twitter: { card: "summary_large_image", title, description: desc, images: ["/og-image.png"] },
     icons: {
       icon: "/logo/mkpetrovski-gold.png",
       shortcut: "/logo/mkpetrovski-gold.png",

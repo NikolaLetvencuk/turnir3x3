@@ -10,12 +10,27 @@ import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 import { NewsBanner } from "@/components/NewsBanner";
 import { PopupAd } from "@/components/PopupAd";
 import { getPopupAdSetting } from "@/lib/settings";
+import type { Metadata } from "next";
 import { getCurrentBrand } from "@/lib/brand-server";
-import { DEFAULT_BRAND, type Brand } from "@/lib/brands";
+import { DEFAULT_BRAND, type Brand, resolveBrand } from "@/lib/brands";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { brandMetadata } from "./layout";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
+
+// Link-preview metadata for the homepage. Reads the brand from the ?t= URL
+// param (so Instagram/FB/WhatsApp crawlers, which send no cookie, still get
+// the right title + image), falling back to the cookie for normal visits.
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: { t?: string | string[] };
+}): Promise<Metadata> {
+  const t = Array.isArray(searchParams?.t) ? searchParams.t[0] : searchParams?.t;
+  const brand = t ? resolveBrand(t) : getCurrentBrand();
+  return brandMetadata(brand);
+}
 
 // Hero block branded per the active demo brand (logo + name + kicker).
 function BrandHero({ brand, tagline, children }: { brand: Brand; tagline: string; children?: React.ReactNode }) {
@@ -46,10 +61,17 @@ function BrandHero({ brand, tagline, children }: { brand: Brand; tagline: string
   );
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: { t?: string | string[] };
+}) {
   const supabase = createClient();
   const adminRO = createAdminClient();
-  const brand = getCurrentBrand();
+  // URL-first (so a fresh ?t= link shows the right brand on first paint, before
+  // the cookie middleware set takes effect on the next request), else cookie.
+  const t = Array.isArray(searchParams?.t) ? searchParams.t[0] : searchParams?.t;
+  const brand = t ? resolveBrand(t) : getCurrentBrand();
   const isDefault = brand.code === DEFAULT_BRAND.code;
 
   // Lightweight check first: do we have groups (= draw committed)?
