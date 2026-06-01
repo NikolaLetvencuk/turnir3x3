@@ -76,10 +76,23 @@ See the two memories (`demo-branding-and-clone-model`,
 - `app/brand-actions.ts` set/clear cookie; middleware handles `?t=Name`.
 - `components/brand/BrandLogo` (image or monogram fallback) + `BrandPicker`.
 - Wired into root layout (`generateMetadata` + TopNav), admin layout, homepage
-  hero. **Colors are still always gold** (Phase B = per-brand colors + dynamic
-  OG/poster).
-- In a **customer clone**, leave `NEXT_PUBLIC_DEMO_MODE` unset → no picker, the
+  hero. Each brand carries `heroFrom`/`heroTo` so the **hero gradient is
+  per-brand**; the gold accent elsewhere is still global (full re-theme TBD).
+- First-visit **popup gate** (`components/brand/BrandGate`) blocks the homepage
+  until the visitor enters a name or skips. Unknown name / skip → Petrovski
+  default. `components/brand/BrandReopen` ("Promeni turnir", demo-only) clears
+  the cookie to re-demo.
+- In a **customer clone**, leave `NEXT_PUBLIC_DEMO_MODE` unset → no gate, the
   baked-in brand only.
+
+### Adding a brand (e.g. krstur-turnir)
+1. Generate the logo variants (see §7) into `/public/brands/krstur/`
+   (`nav.png` for navbar/admin, `hero.png` for the hero).
+2. In `lib/brands.ts` add a row to `BRANDS` (uncomment the `krstur` example):
+   set `name`, `shortName`, `kicker`, `navLogo`, `heroLogo`, and the brand
+   colors `heroFrom`/`heroTo` (hex).
+3. `git push` + redeploy. Send them the `code` ("krstur") to type in the
+   popup, or a ready link `https://turnir3x3.vercel.app/?t=krstur`.
 
 ## 6. Deploying a new tournament
 
