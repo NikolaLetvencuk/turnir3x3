@@ -10,13 +10,45 @@ import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 import { NewsBanner } from "@/components/NewsBanner";
 import { PopupAd } from "@/components/PopupAd";
 import { getPopupAdSetting } from "@/lib/settings";
+import { getCurrentBrand } from "@/lib/brand-server";
+import { DEFAULT_BRAND, DEMO_MODE, type Brand } from "@/lib/brands";
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import { BrandPicker } from "@/components/brand/BrandPicker";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
+// Hero block branded per the active demo brand (logo + name + kicker).
+function BrandHero({ brand, tagline, children }: { brand: Brand; tagline: string; children?: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
+      {brand.heroLogo && (
+        <Image
+          src={brand.heroLogo}
+          alt=""
+          width={180}
+          height={180}
+          className="absolute -right-4 -top-4 opacity-25 rotate-12 pointer-events-none select-none"
+        />
+      )}
+      <div className="relative flex items-center gap-3">
+        <BrandLogo src={brand.heroLogo} name={brand.name} size={56} rounded="rounded-lg" className="shrink-0 bg-white/10 p-1" />
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">{brand.kicker}</div>
+          <h1 className="text-xl sm:text-2xl font-bold leading-tight">{brand.name}</h1>
+          <p className="text-blue-50 mt-0.5 text-sm">{tagline}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default async function HomePage() {
   const supabase = createClient();
   const adminRO = createAdminClient();
+  const brand = getCurrentBrand();
+  const isDefault = brand.code === DEFAULT_BRAND.code;
 
   // Lightweight check first: do we have groups (= draw committed)?
   const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
@@ -42,30 +74,16 @@ export default async function HomePage() {
         <LiveRefresh tag="home-predraw" />
         <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
         <NewsBanner initial={newsRow} />
+        {DEMO_MODE && <BrandPicker currentName={brand.name} isDefault={isDefault} />}
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
-        <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
-          <Image
-            src="/logo/mkpetrovski.png"
-            alt=""
-            width={180}
-            height={180}
-            className="absolute -right-4 -top-4 opacity-25 rotate-12 pointer-events-none select-none"
-          />
-          <div className="relative flex items-center gap-3">
-            <Image
-              src="/logo/mkpetrovski.png"
-              alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
-              width={56}
-              height={56}
-              className="rounded-lg shrink-0 bg-white/10 p-1"
-            />
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">Memorijalni Turnir</div>
-              <h1 className="text-xl sm:text-2xl font-bold leading-tight">&ldquo;Vladislav Petrovski&rdquo; Kula</h1>
-              <p className="text-blue-50 mt-0.5 text-sm">Turnir 3 na 3 (3x3) · Liparski put, Kula · prijave su otvorene</p>
-            </div>
-          </div>
-        </section>
+        <BrandHero
+          brand={brand}
+          tagline={
+            isDefault
+              ? "Turnir 3 na 3 (3x3) · Liparski put, Kula · prijave su otvorene"
+              : "Turnir 3 na 3 (3x3) · prijave su otvorene"
+          }
+        />
 
         <section>
           <div className="flex items-baseline justify-between mb-2">
@@ -120,33 +138,20 @@ export default async function HomePage() {
       <LiveRefresh tag="home" />
       <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
       <NewsBanner initial={newsRow} />
+      {DEMO_MODE && <BrandPicker currentName={brand.name} isDefault={isDefault} />}
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
-      <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
-        <Image
-          src="/logo/mkpetrovski.png"
-          alt=""
-          width={180}
-          height={180}
-          className="absolute -right-4 -top-4 opacity-25 rotate-12 pointer-events-none select-none"
-        />
-        <div className="relative flex items-center gap-3">
-          <Image
-            src="/logo/mkpetrovski.png"
-            alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
-            width={56}
-            height={56}
-            className="rounded-lg shrink-0 bg-white/10 p-1"
-          />
-          <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.18em] text-blue-50/90 font-semibold">Memorijalni Turnir</div>
-            <h1 className="text-xl sm:text-2xl font-bold leading-tight">&ldquo;Vladislav Petrovski&rdquo; Kula</h1>
-            <p className="text-blue-50 mt-0.5 text-sm">Turnir 3 na 3 (3x3) · Liparski put, Kula · uživo rezultati, tabele i fantasy liga</p>
-          </div>
-        </div>
+      <BrandHero
+        brand={brand}
+        tagline={
+          isDefault
+            ? "Turnir 3 na 3 (3x3) · Liparski put, Kula · uživo rezultati, tabele i fantasy liga"
+            : "Turnir 3 na 3 (3x3) · uživo rezultati, tabele i fantasy liga"
+        }
+      >
         <Link href="/fantasy" className="mt-4 inline-flex items-center gap-2 bg-zinc-900 text-blue-300 rounded-md px-4 py-2 text-sm font-medium relative">
           Sastavi svoj fantasy tim →
         </Link>
-      </section>
+      </BrandHero>
 
       {live.length > 0 && (
         <section>

@@ -1,24 +1,25 @@
 import Link from "next/link";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 type Profile = { email: string; role: string } | null;
 
-export function TopNav({ profile }: { profile: Profile }) {
+export function TopNav({
+  profile,
+  brandName = "Petrovski Kula",
+  brandLogo = "/logo/logomkpetrovskibela_pozadina.png",
+}: {
+  profile: Profile;
+  brandName?: string;
+  brandLogo?: string | null;
+}) {
   const isAdmin = profile?.role === "admin";
   return (
     <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1 min-w-0">
           <Link href="/" className="flex items-center gap-2 font-semibold shrink-0">
-            <Image
-              src="/logo/logomkpetrovskibela_pozadina.png"
-              alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
-              width={32}
-              height={32}
-              className="rounded"
-              priority
-            />
-            <span className="truncate">Petrovski Kula</span>
+            <BrandLogo src={brandLogo} name={brandName} size={32} />
+            <span className="truncate">{brandName}</span>
           </Link>
         </div>
         <nav className="hidden sm:flex items-center gap-4 text-sm">

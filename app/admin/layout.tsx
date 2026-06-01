@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   LayoutDashboard,
@@ -14,6 +13,8 @@ import {
   Crown,
 } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentBrand } from "@/lib/brand-server";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const revalidate = 0;
 
@@ -39,21 +40,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "admin") redirect("/auth/login?next=/admin");
 
+  const brand = getCurrentBrand();
+
   return (
     <div className="space-y-4">
       {/* Brand strip */}
       <div className="flex items-center gap-3 px-2">
-        <Image
-          src="/logo/logomkpetrovskibela_pozadina.png"
-          alt='Memorijalni Turnir "Vladislav Petrovski" Kula'
-          width={48}
-          height={48}
-          className="rounded-md shrink-0"
-        />
+        <BrandLogo src={brand.navLogo} name={brand.name} size={48} rounded="rounded-md" />
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-wider text-zinc-500">Admin panel</div>
-          <div className="font-bold truncate leading-tight">&ldquo;Vladislav Petrovski&rdquo;</div>
-          <div className="text-[11px] text-zinc-500 truncate">Memorijalni Turnir · Kula</div>
+          <div className="font-bold truncate leading-tight">{brand.shortName}</div>
+          <div className="text-[11px] text-zinc-500 truncate">{brand.kicker}</div>
         </div>
       </div>
 
