@@ -15,6 +15,9 @@ export type Brand = {
   navLogo: string | null;
   /** Logo for the blue hero block. null → monogram fallback. */
   heroLogo: string | null;
+  /** Hero gradient colors (hex). Defaults to blue if omitted. */
+  heroFrom: string;
+  heroTo: string;
 };
 
 // Demo mode is ON only on the main demo site (env flag). In a customer clone
@@ -28,11 +31,27 @@ export const DEFAULT_BRAND: Brand = {
   kicker: "Memorijalni Turnir",
   navLogo: "/logo/logomkpetrovskibela_pozadina.png",
   heroLogo: "/logo/mkpetrovski.png",
+  heroFrom: "#2563eb", // blue-600
+  heroTo: "#1d4ed8", // blue-700
 };
 
-// Known brands you pre-create for prospects (add a logo to /public/brands and
-// a row here, then send them the `code` or `name` to type). Unknown names
-// still work — they become an ad-hoc brand with a monogram logo.
+// Known brands you pre-create for prospects. To add one:
+//   1. Put the logo files in /public/brands/<code>/ (see PROJECT_GUIDE.md §7).
+//   2. Add a row below.
+//   3. Send the prospect the `code` (or `name`) to type, or a link /?t=<code>.
+// Unknown / closed input falls back to DEFAULT_BRAND (Petrovski).
+//
+// Example (uncomment + drop logo files to enable):
+//   krstur: {
+//     code: "krstur",
+//     name: "Turnir Krstur",
+//     shortName: "Krstur",
+//     kicker: "Turnir",
+//     navLogo: "/brands/krstur/nav.png",
+//     heroLogo: "/brands/krstur/hero.png",
+//     heroFrom: "#c81e1e", // crvena
+//     heroTo: "#7f1212",
+//   },
 export const BRANDS: Record<string, Brand> = {
   kula: DEFAULT_BRAND,
 };
@@ -51,9 +70,9 @@ export function monogram(name: string): string {
 
 /**
  * Resolve a brand from a cookie/URL value.
- * - empty / demo off → default (Kula)
+ * - empty / demo off / unknown name → default (Petrovski Kula)
  * - matches a known code or name → that brand
- * - anything else → ad-hoc brand using the typed text as the name
+ * Only pre-created brands show; anything else falls back to default.
  */
 export function resolveBrand(input: string | undefined | null): Brand {
   if (!DEMO_MODE) return DEFAULT_BRAND;
@@ -61,24 +80,21 @@ export function resolveBrand(input: string | undefined | null): Brand {
   if (!raw) return DEFAULT_BRAND;
 
   const key = norm(raw);
-  // exact code match
   if (BRANDS[key]) return BRANDS[key];
-  // name match against known brands
   const byName = Object.values(BRANDS).find(
     (b) => norm(b.name) === key || norm(b.shortName) === key,
   );
-  if (byName) return byName;
+  return byName ?? DEFAULT_BRAND;
+}
 
-  // Ad-hoc brand from free text.
-  const short = raw.length > 22 ? raw.slice(0, 22) : raw;
-  return {
-    code: "custom",
-    name: raw,
-    shortName: short,
-    kicker: "Turnir",
-    navLogo: null,
-    heroLogo: null,
-  };
+/** True if the input matches a known non-default brand (for picker feedback). */
+export function isKnownBrand(input: string): boolean {
+  const key = norm(input.trim());
+  if (!key) return false;
+  if (BRANDS[key] && key !== DEFAULT_BRAND.code) return true;
+  return Object.values(BRANDS).some(
+    (b) => b.code !== DEFAULT_BRAND.code && (norm(b.name) === key || norm(b.shortName) === key),
+  );
 }
 
 export const BRAND_COOKIE = "brand";

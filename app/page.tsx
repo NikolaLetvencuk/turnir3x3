@@ -10,10 +10,11 @@ import { DrawStatusBanner } from "@/components/DrawStatusBanner";
 import { NewsBanner } from "@/components/NewsBanner";
 import { PopupAd } from "@/components/PopupAd";
 import { getPopupAdSetting } from "@/lib/settings";
-import { getCurrentBrand } from "@/lib/brand-server";
+import { getCurrentBrand, hasBrandChoice } from "@/lib/brand-server";
 import { DEFAULT_BRAND, DEMO_MODE, type Brand } from "@/lib/brands";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { BrandPicker } from "@/components/brand/BrandPicker";
+import { BrandGate } from "@/components/brand/BrandGate";
+import { BrandReopen } from "@/components/brand/BrandReopen";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -21,7 +22,10 @@ export const dynamic = "force-dynamic";
 // Hero block branded per the active demo brand (logo + name + kicker).
 function BrandHero({ brand, tagline, children }: { brand: Brand; tagline: string; children?: React.ReactNode }) {
   return (
-    <section className="rounded-2xl p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
+    <section
+      className="rounded-2xl p-6 text-white relative overflow-hidden"
+      style={{ backgroundImage: `linear-gradient(to bottom right, ${brand.heroFrom}, ${brand.heroTo})` }}
+    >
       {brand.heroLogo && (
         <Image
           src={brand.heroLogo}
@@ -49,6 +53,7 @@ export default async function HomePage() {
   const adminRO = createAdminClient();
   const brand = getCurrentBrand();
   const isDefault = brand.code === DEFAULT_BRAND.code;
+  const showGate = DEMO_MODE && !hasBrandChoice();
 
   // Lightweight check first: do we have groups (= draw committed)?
   const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
@@ -73,8 +78,8 @@ export default async function HomePage() {
       <div className="space-y-6">
         <LiveRefresh tag="home-predraw" />
         <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
+        <BrandGate show={showGate} />
         <NewsBanner initial={newsRow} />
-        {DEMO_MODE && <BrandPicker currentName={brand.name} isDefault={isDefault} />}
         <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
         <BrandHero
           brand={brand}
@@ -84,6 +89,7 @@ export default async function HomePage() {
               : "Turnir 3 na 3 (3x3) · prijave su otvorene"
           }
         />
+        {DEMO_MODE && <div className="flex justify-center"><BrandReopen /></div>}
 
         <section>
           <div className="flex items-baseline justify-between mb-2">
@@ -137,8 +143,8 @@ export default async function HomePage() {
     <div className="space-y-6">
       <LiveRefresh tag="home" />
       <PopupAd enabled={popup.enabled} version={popup.updatedAt ?? "v0"} />
+      <BrandGate show={showGate} />
       <NewsBanner initial={newsRow} />
-      {DEMO_MODE && <BrandPicker currentName={brand.name} isDefault={isDefault} />}
       <DrawStatusBanner initial={(drawStateRow as any) ?? null} />
       <BrandHero
         brand={brand}
@@ -152,6 +158,7 @@ export default async function HomePage() {
           Sastavi svoj fantasy tim →
         </Link>
       </BrandHero>
+      {DEMO_MODE && <div className="flex justify-center"><BrandReopen /></div>}
 
       {live.length > 0 && (
         <section>
