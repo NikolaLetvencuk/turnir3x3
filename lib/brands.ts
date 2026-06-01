@@ -20,6 +20,8 @@ export type Brand = {
   /** Hero gradient colors (hex). Brand theme = gold/black. */
   heroFrom: string;
   heroTo: string;
+  /** Extra ?t= values that resolve to this brand (besides code/name). */
+  aliases?: string[];
 };
 
 // Demo mode is ON only on the main demo site (env flag). In a customer clone
@@ -36,6 +38,7 @@ export const DEFAULT_BRAND: Brand = {
   mark: "/logo/mkpetrovski-gold.png",
   heroFrom: "#4a3a0a", // gold-900 (dark gold)
   heroTo: "#0a0a0a", // ink (black)
+  aliases: ["petrovski"], // so ?t=petrovski works like ?t=krstur
 };
 
 // Known brands you pre-create for prospects. To add one:
@@ -85,7 +88,10 @@ export function resolveBrand(input: string | undefined | null): Brand {
   const key = norm(raw);
   if (BRANDS[key]) return BRANDS[key];
   const byName = Object.values(BRANDS).find(
-    (b) => norm(b.name) === key || norm(b.shortName) === key,
+    (b) =>
+      norm(b.name) === key ||
+      norm(b.shortName) === key ||
+      (b.aliases ?? []).some((a) => norm(a) === key),
   );
   return byName ?? DEFAULT_BRAND;
 }
