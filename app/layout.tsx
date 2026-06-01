@@ -34,6 +34,9 @@ export const metadata: Metadata = {
   // Stop Chrome from misdetecting the page as Slovenian and offering to
   // "translate" it (which would also flip Latin → Cyrillic).
   other: { google: "notranslate" },
+  verification: {
+    google: "5ptTftJjWmoj15gM7npOm1elTW5_lxuwpwwUVUueV7Q",
+  },
   openGraph: {
     title: TITLE,
     description: DESC,
