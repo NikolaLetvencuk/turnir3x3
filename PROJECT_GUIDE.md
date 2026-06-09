@@ -70,7 +70,8 @@ Production: https://turnir3x3.vercel.app · GitHub: NikolaLetvencuk/turnir3x3
 See the two memories (`demo-branding-and-clone-model`,
 `logo-variants-per-tournament`). Short version:
 
-- `lib/brands.ts` — `Brand` type, `DEFAULT_BRAND` (Kula), `BRANDS` registry,
+- `lib/brands.ts` — `Brand` type, `DEFAULT_BRAND` (**Krstur** — the demo/sales
+  default; Kula/Petrovski is a named brand via `?t=petrovski`), `BRANDS` registry,
   `resolveBrand()`, `monogram()`, `DEMO_MODE` (`NEXT_PUBLIC_DEMO_MODE==="true"`).
 - `lib/brand-server.ts` `getCurrentBrand()` reads the `brand` cookie (SSR).
 - `app/brand-actions.ts` set/clear cookie; middleware handles `?t=Name`.
@@ -83,7 +84,7 @@ See the two memories (`demo-branding-and-clone-model`,
 - **No manual switching / no popup.** The brand is set ONLY by opening a demo
   link `?t=<code>`. Middleware sets the `brand` cookie (on both request — so the
   same render is branded — and response, so it persists) and **keeps the `?t=`
-  param** (no redirect). No cookie → Petrovski default. No on-page switcher.
+  param** (no redirect). No cookie → Krstur default. No on-page switcher.
 - **Social link previews are per-brand.** The homepage `generateMetadata` reads
   the brand from the `?t=` URL param (cookieless crawlers like Instagram/FB/
   WhatsApp can't read the cookie), so the shared link's title + preview image
