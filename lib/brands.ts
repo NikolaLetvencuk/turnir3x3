@@ -32,7 +32,21 @@ export type Brand = {
 // the flag is unset → fixed default brand, no picker, no "enter name" screen.
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
-export const DEFAULT_BRAND: Brand = {
+const KRSTUR_BRAND: Brand = {
+  code: "krstur",
+  name: "Turnir 3v3 Krstur",
+  shortName: "Krstur",
+  kicker: "Turnir 3 na 3",
+  navLogo: "/logo/krstur/krstur.png",
+  heroLogo: "/logo/krstur/krstur.png",
+  mark: "/logo/krstur/krstur.png",
+  og: "/logo/krstur/og-image.png",
+  icon: "/logo/krstur/krstur.png",
+  heroFrom: "#4a3a0a", // gold/black theme
+  heroTo: "#0a0a0a",
+};
+
+const KULA_BRAND: Brand = {
   code: "kula",
   name: 'Memorijalni Turnir "Vladislav Petrovski" Kula',
   shortName: "Petrovski Kula",
@@ -44,30 +58,19 @@ export const DEFAULT_BRAND: Brand = {
   icon: "/logo/mkpetrovski-gold.png",
   heroFrom: "#4a3a0a", // gold-900 (dark gold)
   heroTo: "#0a0a0a", // ink (black)
-  aliases: ["petrovski"], // so ?t=petrovski works like ?t=krstur
+  aliases: ["petrovski"], // so ?t=petrovski works like ?t=kula
 };
 
+// Krstur is the DEFAULT brand: bare URL / no cookie / unknown input → Krstur.
+export const DEFAULT_BRAND: Brand = KRSTUR_BRAND;
+
 // Known brands you pre-create for prospects. To add one:
-//   1. Put the logo files in /public/brands/<code>/ (see PROJECT_GUIDE.md §7).
+//   1. Put the logo files in /public/logo/<code>/ (see PROJECT_GUIDE.md §7).
 //   2. Add a row below.
-//   3. Send the prospect the `code` (or `name`) to type, or a link /?t=<code>.
-// Unknown / closed input falls back to DEFAULT_BRAND (Petrovski).
-//
+//   3. Send the prospect a link /?t=<code> (the bare URL shows DEFAULT_BRAND).
 export const BRANDS: Record<string, Brand> = {
-  kula: DEFAULT_BRAND,
-  krstur: {
-    code: "krstur",
-    name: "Turnir 3v3 Krstur",
-    shortName: "Krstur",
-    kicker: "Turnir 3 na 3",
-    navLogo: "/logo/krstur/krstur.png",
-    heroLogo: "/logo/krstur/krstur.png",
-    mark: "/logo/krstur/krstur.png",
-    og: "/logo/krstur/og-image.png",
-    icon: "/logo/krstur/krstur.png",
-    heroFrom: "#4a3a0a", // gold/black theme (same as default)
-    heroTo: "#0a0a0a",
-  },
+  krstur: KRSTUR_BRAND,
+  kula: KULA_BRAND,
 };
 
 function norm(s: string): string {
@@ -84,7 +87,7 @@ export function monogram(name: string): string {
 
 /**
  * Resolve a brand from a cookie/URL value.
- * - empty / demo off / unknown name → default (Petrovski Kula)
+ * - empty / demo off / unknown name → default (Krstur)
  * - matches a known code or name → that brand
  * Only pre-created brands show; anything else falls back to default.
  */

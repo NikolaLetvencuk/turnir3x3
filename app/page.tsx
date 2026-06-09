@@ -12,7 +12,7 @@ import { PopupAd } from "@/components/PopupAd";
 import { getPopupAdSetting } from "@/lib/settings";
 import type { Metadata } from "next";
 import { getCurrentBrand } from "@/lib/brand-server";
-import { DEFAULT_BRAND, type Brand, resolveBrand } from "@/lib/brands";
+import { type Brand, resolveBrand } from "@/lib/brands";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { brandMetadata } from "./layout";
 
@@ -72,7 +72,7 @@ export default async function HomePage({
   // the cookie middleware set takes effect on the next request), else cookie.
   const t = Array.isArray(searchParams?.t) ? searchParams.t[0] : searchParams?.t;
   const brand = t ? resolveBrand(t) : getCurrentBrand();
-  const isDefault = brand.code === DEFAULT_BRAND.code;
+  const isKula = brand.code === "kula"; // Kula-specific location line in the hero
 
   // Lightweight check first: do we have groups (= draw committed)?
   const { data: groupCheck } = await supabase.from("groups").select("id").limit(1);
@@ -102,7 +102,7 @@ export default async function HomePage({
         <BrandHero
           brand={brand}
           tagline={
-            isDefault
+            isKula
               ? "Turnir 3 na 3 (3x3) · Liparski put, Kula · prijave su otvorene"
               : "Turnir 3 na 3 (3x3) · prijave su otvorene"
           }
@@ -165,7 +165,7 @@ export default async function HomePage({
       <BrandHero
         brand={brand}
         tagline={
-          isDefault
+          isKula
             ? "Turnir 3 na 3 (3x3) · Liparski put, Kula · uživo rezultati, tabele i fantasy liga"
             : "Turnir 3 na 3 (3x3) · uživo rezultati, tabele i fantasy liga"
         }

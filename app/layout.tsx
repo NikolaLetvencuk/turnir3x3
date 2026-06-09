@@ -13,7 +13,7 @@ import { DEFAULT_BRAND } from "@/lib/brands";
 // use their own name for the title/OG.
 export const DEFAULT_TITLE = `${DEFAULT_BRAND.name} — 3x3 (3 na 3)`;
 export const DEFAULT_DESC =
-  "Turnir u malom fudbalu 3 na 3 (3x3) u Kuli — Memorijalni Turnir Vladislav Petrovski, Liparski put. Uživo rezultati, raspored utakmica, tabele, strelci, žreb grupa, eliminacije i fantasy liga.";
+  "Turnir u malom fudbalu 3 na 3 (3x3) — uživo rezultati, raspored utakmica, tabele, strelci, žreb grupa, eliminacije i fantasy liga.";
 
 // Shared by the root layout (cookie-based) and the homepage (URL ?t= based).
 export function brandMetadata(brand: typeof DEFAULT_BRAND): Metadata {
@@ -53,13 +53,11 @@ export async function generateMetadata(): Promise<Metadata> {
       "turnir 3 na 3",
       "turnir 3x3",
       "3v3",
-      "mali fudbal Kula",
-      "turnir Kula",
-      "Petrovski turnir",
-      "Vladislav Petrovski",
-      "Liparski put",
-      "fudbalski turnir Kula",
+      "3x3 turnir",
+      "mali fudbal",
+      "fudbalski turnir",
       "3x3 turnir Srbija",
+      "ulični fudbal",
     ],
     viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
     // Stop Chrome from misdetecting the page as Slovenian and offering to
