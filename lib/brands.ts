@@ -61,6 +61,21 @@ const KULA_BRAND: Brand = {
   aliases: ["petrovski"], // so ?t=petrovski works like ?t=kula
 };
 
+const CELINAC_BRAND: Brand = {
+  code: "celinac",
+  name: "Turnir u fudbalu 3x3 Čelinac",
+  shortName: "Čelinac",
+  kicker: "Turnir 3 na 3",
+  navLogo: "/logo/celinac/celinac.png",
+  heroLogo: "/logo/celinac/celinac.png",
+  mark: "/logo/celinac/celinac.png",
+  og: "/logo/celinac/og-image.png",
+  icon: "/logo/celinac/celinac.png",
+  heroFrom: "#4a3a0a", // gold/black theme
+  heroTo: "#0a0a0a",
+  aliases: ["čelinac"], // so ?t=čelinac (with diacritic) also resolves here
+};
+
 // Krstur is the DEFAULT brand: bare URL / no cookie / unknown input → Krstur.
 export const DEFAULT_BRAND: Brand = KRSTUR_BRAND;
 
@@ -71,6 +86,7 @@ export const DEFAULT_BRAND: Brand = KRSTUR_BRAND;
 export const BRANDS: Record<string, Brand> = {
   krstur: KRSTUR_BRAND,
   kula: KULA_BRAND,
+  celinac: CELINAC_BRAND,
 };
 
 function norm(s: string): string {
