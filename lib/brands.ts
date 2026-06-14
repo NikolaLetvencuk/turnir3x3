@@ -76,8 +76,9 @@ const CELINAC_BRAND: Brand = {
   aliases: ["čelinac"], // so ?t=čelinac (with diacritic) also resolves here
 };
 
-// Krstur is the DEFAULT brand: bare URL / no cookie / unknown input → Krstur.
-export const DEFAULT_BRAND: Brand = KRSTUR_BRAND;
+// Čelinac is the DEFAULT brand: bare URL / no cookie / unknown input → Čelinac.
+// (Krstur and Kula/Petrovski remain reachable via ?t=krstur / ?t=petrovski.)
+export const DEFAULT_BRAND: Brand = CELINAC_BRAND;
 
 // Known brands you pre-create for prospects. To add one:
 //   1. Put the logo files in /public/logo/<code>/ (see PROJECT_GUIDE.md §7).
