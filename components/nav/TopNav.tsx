@@ -13,6 +13,7 @@ export function TopNav({
   brandLogo?: string | null;
 }) {
   const isAdmin = profile?.role === "admin";
+  const isScorer = profile?.role === "scorer";
   return (
     <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
@@ -32,6 +33,9 @@ export function TopNav({
           {isAdmin && (
             <Link href="/admin" className="text-blue-300 font-medium">Admin</Link>
           )}
+          {isScorer && (
+            <Link href="/admin/matches" className="text-blue-300 font-medium">Unos rezultata</Link>
+          )}
         </nav>
         <div className="flex items-center gap-2 text-sm min-w-0">
           {isAdmin && (
@@ -40,6 +44,14 @@ export function TopNav({
               className="sm:hidden inline-flex items-center gap-1 bg-blue-600 text-white rounded-md px-2.5 py-1.5 text-xs font-medium shrink-0"
             >
               Admin
+            </Link>
+          )}
+          {isScorer && (
+            <Link
+              href="/admin/matches"
+              className="sm:hidden inline-flex items-center gap-1 bg-blue-600 text-white rounded-md px-2.5 py-1.5 text-xs font-medium shrink-0"
+            >
+              Unos
             </Link>
           )}
           {profile ? (

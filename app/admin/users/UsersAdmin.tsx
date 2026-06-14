@@ -1,8 +1,49 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Crown, Search, Trophy } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { useToast } from "@/components/ui/Toast";
+import { setUserRole } from "@/app/admin/actions";
+
+const ROLE_LABEL: Record<string, string> = { user: "Korisnik", scorer: "Unos rezultata", admin: "Admin" };
+
+function RoleSelect({ userId, role }: { userId: string; role: string }) {
+  const router = useRouter();
+  const { push } = useToast();
+  const [value, setValue] = useState(role);
+  const [busy, setBusy] = useState(false);
+
+  async function onChange(next: string) {
+    const prev = value;
+    setValue(next);
+    setBusy(true);
+    const res = await setUserRole({ user_id: userId, role: next as "user" | "scorer" | "admin" });
+    setBusy(false);
+    if (!res.ok) {
+      setValue(prev);
+      push(res.error, "error");
+      return;
+    }
+    push(`Uloga: ${ROLE_LABEL[next] ?? next}`, "success");
+    router.refresh();
+  }
+
+  return (
+    <select
+      value={value}
+      disabled={busy}
+      onChange={(e) => onChange(e.target.value)}
+      className="input !py-1 !px-2 text-xs w-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <option value="user">Korisnik</option>
+      <option value="scorer">Unos rezultata</option>
+      <option value="admin">Admin</option>
+    </select>
+  );
+}
 
 type Row = {
   user_id: string;
@@ -196,8 +237,8 @@ function AllUsersTable({
           <thead className="text-[10px] text-zinc-500 uppercase tracking-wider">
             <tr>
               <th className="text-left py-2 px-3 font-medium">Email</th>
-              <th className="text-left py-2 px-2 font-medium">Tim</th>
-              <th className="text-left py-2 px-2 font-medium hidden md:table-cell">Sastav</th>
+              <th className="text-left py-2 px-2 font-medium">Uloga</th>
+              <th className="text-left py-2 px-2 font-medium hidden sm:table-cell">Tim</th>
               <th className="text-right py-2 px-2 font-medium">Bodovi</th>
               <th className="text-right py-2 px-3 font-medium hidden sm:table-cell">Registrovan</th>
             </tr>
@@ -207,13 +248,11 @@ function AllUsersTable({
               <tr key={r.user_id}>
                 <td className="py-2 px-3">
                   <div className="truncate max-w-[200px]">{r.email}</div>
-                  {r.role === "admin" && (
-                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-300 mt-0.5">
-                      <Crown className="w-3 h-3" /> admin
-                    </span>
-                  )}
                 </td>
                 <td className="py-2 px-2">
+                  <RoleSelect userId={r.user_id} role={r.role} />
+                </td>
+                <td className="py-2 px-2 hidden sm:table-cell">
                   {r.has_team ? (
                     <div className="text-xs">
                       <Trophy className="w-3 h-3 inline mr-1 text-emerald-400" />
@@ -221,13 +260,6 @@ function AllUsersTable({
                     </div>
                   ) : (
                     <span className="text-[10px] text-zinc-600 italic">nema fantazi</span>
-                  )}
-                </td>
-                <td className="py-2 px-2 hidden md:table-cell">
-                  {r.players.length === 0 ? (
-                    <span className="text-zinc-600 italic text-xs">—</span>
-                  ) : (
-                    <div className="text-xs text-zinc-400 truncate max-w-[260px]">{r.players.join(" · ")}</div>
                   )}
                 </td>
                 <td className="py-2 px-2 text-right tabular-nums font-medium">{r.total_points}</td>

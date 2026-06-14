@@ -27,6 +27,15 @@ export async function requireAdmin() {
   return profile;
 }
 
+/** Admin OR scorer (result-entry operator). Used by match-flow actions. */
+export async function requireScorerOrAdmin() {
+  const profile = await getCurrentProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "scorer")) {
+    throw new Error("Forbidden: admin or scorer only");
+  }
+  return profile;
+}
+
 export async function isAdmin(): Promise<boolean> {
   try {
     const profile = await getCurrentProfile();

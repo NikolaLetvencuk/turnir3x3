@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireScorerOrAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { belgradeLocalToUTCISO } from "@/lib/utils";
 
@@ -11,6 +11,27 @@ export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; er
 async function withAdmin<T>(fn: () => Promise<T>): Promise<T | { ok: false; error: string }> {
   try { await requireAdmin(); return await fn(); }
   catch (e: any) { return { ok: false, error: e.message ?? "Forbidden" }; }
+}
+
+// Match-flow actions (start/finish/events) are allowed for admin AND scorer.
+async function withScorer<T>(fn: () => Promise<T>): Promise<T | { ok: false; error: string }> {
+  try { await requireScorerOrAdmin(); return await fn(); }
+  catch (e: any) { return { ok: false, error: e.message ?? "Forbidden" }; }
+}
+
+// Admin-only: change a user's role (user | scorer | admin). Service-role client
+// bypasses the role-change guard (0003). Cannot change your own role here.
+export async function setUserRole(input: { user_id: string; role: "user" | "scorer" | "admin" }): Promise<ActionResult> {
+  return withAdmin(async () => {
+    if (!["user", "scorer", "admin"].includes(input.role)) return { ok: false, error: "Nevažeća uloga" };
+    const me = await requireAdmin();
+    if (me.id === input.user_id) return { ok: false, error: "Ne možeš menjati sopstvenu ulogu" };
+    const admin = createAdminClient();
+    const { error } = await admin.from("profiles").update({ role: input.role }).eq("id", input.user_id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/users");
+    return { ok: true };
+  }) as Promise<ActionResult>;
 }
 
 // TEAMS
@@ -576,7 +597,7 @@ export async function setMatchKickoff(formData: FormData): Promise<ActionResult>
 }
 
 export async function startFirstHalf(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
     const { data: match } = await admin.from("matches").select("round_id").eq("id", id).maybeSingle();
@@ -595,7 +616,7 @@ export async function startFirstHalf(formData: FormData): Promise<ActionResult> 
 }
 
 export async function endFirstHalf(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
     const { error } = await admin.from("matches").update({ phase: "halftime" }).eq("id", id);
@@ -607,7 +628,7 @@ export async function endFirstHalf(formData: FormData): Promise<ActionResult> {
 }
 
 export async function startSecondHalf(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
     const { error } = await admin.from("matches")
@@ -621,7 +642,7 @@ export async function startSecondHalf(formData: FormData): Promise<ActionResult>
 }
 
 export async function startExtraTime(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
     const { error } = await admin.from("matches")
@@ -636,7 +657,7 @@ export async function startExtraTime(formData: FormData): Promise<ActionResult> 
 
 // End ET. If still tied, move to penalty shootout. Otherwise finish with goal-based winner.
 export async function endExtraTime(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const admin = createAdminClient();
     const { data: m } = await admin
@@ -672,7 +693,7 @@ export async function endExtraTime(formData: FormData): Promise<ActionResult> {
 // side has more pen kicks scored after both have taken at least 3 wins —
 // admin enters the final tally so we don't model kick-by-kick.
 export async function finishPenalties(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const homePen = Number(formData.get("home_pen"));
     const awayPen = Number(formData.get("away_pen"));
@@ -711,7 +732,7 @@ export async function finishPenalties(formData: FormData): Promise<ActionResult>
 }
 
 export async function finishMatch(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const knockoutWinnerId = (formData.get("knockout_winner_id") as string) || null;
     const admin = createAdminClient();
@@ -763,7 +784,7 @@ const eventSchema = z.object({
 });
 
 export async function createMatchEvent(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const parsed = eventSchema.safeParse({
       match_id: formData.get("match_id"),
       player_id: formData.get("player_id"),
@@ -783,7 +804,7 @@ export async function createMatchEvent(formData: FormData): Promise<ActionResult
 }
 
 export async function deleteMatchEvent(formData: FormData): Promise<ActionResult> {
-  return withAdmin(async () => {
+  return withScorer(async () => {
     const id = formData.get("id") as string;
     const match_id = formData.get("match_id") as string;
     const admin = createAdminClient();

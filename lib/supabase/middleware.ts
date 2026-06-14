@@ -47,8 +47,18 @@ export async function updateSession(request: NextRequest) {
       .select("role")
       .eq("id", user.id)
       .maybeSingle();
-    const profile = profileData as { role: string } | null;
-    if (profile?.role !== "admin") {
+    const role = (profileData as { role: string } | null)?.role;
+    const isMatches = path.startsWith("/admin/matches");
+    if (role === "admin") {
+      // full access
+    } else if (role === "scorer") {
+      // Scorer (result-entry operator) may use ONLY the Matches tab.
+      if (!isMatches) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/matches";
+        return NextResponse.redirect(url);
+      }
+    } else {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);

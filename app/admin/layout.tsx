@@ -38,7 +38,11 @@ const NAV: Array<{
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") redirect("/auth/login?next=/admin");
+  if (!profile || (profile.role !== "admin" && profile.role !== "scorer")) redirect("/auth/login?next=/admin");
+
+  const isScorer = profile.role === "scorer";
+  // Scorer (result-entry operator) sees only the Matches tab.
+  const nav = isScorer ? NAV.filter((n) => n.href === "/admin/matches") : NAV;
 
   const brand = getCurrentBrand();
 
@@ -48,15 +52,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex items-center gap-3 px-2">
         <BrandLogo src={brand.navLogo} name={brand.name} size={48} rounded="rounded-md" />
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wider text-zinc-500">Admin panel</div>
+          <div className="text-xs uppercase tracking-wider text-zinc-500">{isScorer ? "Unos rezultata" : "Admin panel"}</div>
           <div className="font-bold truncate leading-tight">{brand.shortName}</div>
           <div className="text-[11px] text-zinc-500 truncate">{brand.kicker}</div>
         </div>
       </div>
 
-      {/* Module grid — tap-friendly tiles, no horizontal scrolling */}
-      <nav className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-        {NAV.map(({ href, label, icon: Icon, tone }) => (
+      {/* Module grid — tap-friendly tiles, no horizontal scrolling.
+          Scorer sees only the Matches tile. */}
+      <nav className={isScorer ? "hidden" : "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"}>
+        {nav.map(({ href, label, icon: Icon, tone }) => (
           <Link
             key={href}
             href={href}
