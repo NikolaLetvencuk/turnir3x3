@@ -256,8 +256,8 @@ export function ExportClient({
   // Title resolution: respects manual override → mode default
   function effectiveTitle(): string {
     if (resultsTitle) return resultsTitle;
-    if (resultsMode === "round") return round?.name ?? "PETROVSKI KULA";
-    return selectedDay ? formatDateLabel(selectedDay).toUpperCase() : "PETROVSKI KULA";
+    if (resultsMode === "round") return round?.name ?? "TURNIR 3X3";
+    return selectedDay ? formatDateLabel(selectedDay).toUpperCase() : "TURNIR 3X3";
   }
   function effectiveSubtitle(): string {
     if (resultsMode === "round") {

@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     if (kind === "results") {
       content = (
         <ResultsPoster
-          title={body.title ?? "PETROVSKI KULA"}
+          title={body.title ?? "TURNIR 3X3"}
           subtitle={body.subtitle ?? "Grupna faza"}
           matches={body.matches ?? []}
           width={width}
@@ -279,7 +279,7 @@ function PosterFrame({
             padding: "10px 22px",
           }}
         >
-          PETROVSKI · @turnir3x3
+          Turnir 3x3
         </div>
       </div>
     </div>
