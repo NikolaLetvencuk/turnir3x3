@@ -48,12 +48,12 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
     const role = (profileData as { role: string } | null)?.role;
-    const isMatches = path.startsWith("/admin/matches");
+    // Scorer (result-entry operator) may use the Matches and Export tabs only.
+    const scorerArea = path.startsWith("/admin/matches") || path.startsWith("/admin/export");
     if (role === "admin") {
       // full access
     } else if (role === "scorer") {
-      // Scorer (result-entry operator) may use ONLY the Matches tab.
-      if (!isMatches) {
+      if (!scorerArea) {
         const url = request.nextUrl.clone();
         url.pathname = "/admin/matches";
         return NextResponse.redirect(url);

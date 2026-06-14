@@ -41,8 +41,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!profile || (profile.role !== "admin" && profile.role !== "scorer")) redirect("/auth/login?next=/admin");
 
   const isScorer = profile.role === "scorer";
-  // Scorer (result-entry operator) sees only the Matches tab.
-  const nav = isScorer ? NAV.filter((n) => n.href === "/admin/matches") : NAV;
+  // Scorer (result-entry operator) sees only the Matches + Export tabs.
+  const scorerHrefs = ["/admin/matches", "/admin/export"];
+  const nav = isScorer ? NAV.filter((n) => scorerHrefs.includes(n.href)) : NAV;
 
   const brand = getCurrentBrand();
 
@@ -59,8 +60,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
 
       {/* Module grid — tap-friendly tiles, no horizontal scrolling.
-          Scorer sees only the Matches tile. */}
-      <nav className={isScorer ? "hidden" : "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"}>
+          Scorer sees only the Matches + Export tiles. */}
+      <nav className={isScorer ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"}>
         {nav.map(({ href, label, icon: Icon, tone }) => (
           <Link
             key={href}
